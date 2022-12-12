@@ -15,6 +15,9 @@ import org.slf4j.Logger;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotBlank;
 
+import java.util.HashMap;
+import java.util.List;
+
 import static io.micronaut.runtime.Micronaut.build;
 
 @SuperBuilder
@@ -40,10 +43,16 @@ public class RedisTask extends Task implements RunnableTask<RedisTask.Output> {
     private String operation;
 
     @Schema(
-            title = "Redis keys",
+            title = "Redis key",
             description = "The redis key you want to fetch"
     )
     private String key;
+
+    @Schema(
+            title = "Redis keys",
+            description = "The redis keys you want to fetch"
+    )
+    private List<String> keys;
 
     @Schema(
             title = "Redis value to store",
@@ -61,15 +70,27 @@ public class RedisTask extends Task implements RunnableTask<RedisTask.Output> {
 
 
         switch (render) {
+            case "GET_STRING": {
+                output = Output.builder()
+                        .child(new OutputChild(redisApiService.getString(key)))
+                        .build();
+                break;
+            }
             case "GET": {
                 output = Output.builder()
-                        .child(new OutputChild(redisApiService.get(key)))
+                        .child(new OutputChild(redisApiService.get(key).toString()))
                         .build();
                 break;
             }
             case "SET": {
                 output = Output.builder()
                         .child(new OutputChild(redisApiService.set(key, value)))
+                        .build();
+                break;
+            }
+            case "DEL": {
+                output = Output.builder()
+                        .map(new OutputMap(redisApiService.delete(keys)))
                         .build();
                 break;
             }
@@ -87,19 +108,34 @@ public class RedisTask extends Task implements RunnableTask<RedisTask.Output> {
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Short description for this output",
-            description = "Full description of this output"
+                title = "Short description for this output",
+                description = "Full description of this output"
         )
         private final OutputChild child;
+        @Schema(
+                title = "Short description for this output",
+                description = "Full description of this output"
+        )
+        private final OutputMap map;
     }
 
     @Builder
     @Getter
     public static class OutputChild implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Short description for this output",
-            description = "Full description of this output"
+                title = "Short description for this output",
+                description = "Full description of this output"
         )
         private final String value;
+    }
+
+    @Builder
+    @Getter
+    public static class OutputMap implements io.kestra.core.models.tasks.Output {
+        @Schema(
+                title = "Operation output from redis",
+                description = "A map containing operation output from redis"
+        )
+        private final HashMap results;
     }
 }

@@ -2,6 +2,7 @@ package io.kestra.plugin.templates;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import io.kestra.plugin.templates.client.RedisApiService;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -14,6 +15,10 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 
 import jakarta.inject.Inject;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -57,7 +62,7 @@ class RedisApiTest {
 
         RedisTask task = RedisTask.builder()
                 .redisApiService(redisApiService)
-                .operation("GET")
+                .operation("GET_STRING")
                 .key("key")
                 .build();
 
@@ -68,12 +73,13 @@ class RedisApiTest {
 
     @Test
     void testGetJson() throws Exception {
+        redisApiService.setSerdeType("JSON");
         // store something in redis
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("somekey", "somevalue");
-        redisApiService.set("key", jsonObject.getAsString());
+        redisApiService.set("key", jsonObject.toString());
 
-        RunContext runContext = runContextFactory.of(ImmutableMap.of("key", "secret"));
+        RunContext runContext = runContextFactory.of(ImmutableMap.of("key", jsonObject.toString()));
 
         RedisTask task = RedisTask.builder()
                 .redisApiService(redisApiService)
@@ -83,6 +89,31 @@ class RedisApiTest {
 
         RedisTask.Output runOutput = task.run(runContext);
 
-        assertThat(runOutput.getChild().getValue(), is("secret"));
+        assertThat(runOutput.getChild().getValue(), is(jsonObject.toString()));
+    }
+
+    @Test
+    void testDel() throws Exception {
+        // store something in redis
+        redisApiService.set("key1", "secret1");
+        redisApiService.set("key2", "secret2");
+        redisApiService.set("key3", "secret2");
+
+        List<String> keys = new ArrayList<>(List.of(new String[]{"key1", "key2", "key9"})) ;
+
+        RunContext runContext = runContextFactory.of(ImmutableMap.of("keys", keys));
+
+        RedisTask task = RedisTask.builder()
+                .redisApiService(redisApiService)
+                .operation("DEL")
+                .keys(keys)
+                .build();
+
+        RedisTask.Output runOutput = task.run(runContext);
+        HashMap results = runOutput.getMap().getResults();
+
+
+        assertThat(results.get("removed"), is(2));
+        assertThat(results.get("failedOnMissing"), is(true));
     }
 }

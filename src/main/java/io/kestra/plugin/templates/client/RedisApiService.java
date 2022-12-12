@@ -1,5 +1,7 @@
 package io.kestra.plugin.templates.client;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
@@ -7,6 +9,9 @@ import io.micronaut.context.annotation.Value;
 import jakarta.inject.Singleton;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import java.util.HashMap;
+import java.util.List;
 
 @Singleton
 public class RedisApiService {
@@ -70,9 +75,20 @@ public class RedisApiService {
      * @param key
      * @return
      */
-    public String get(String key) {
+    public String getString(String key) {
         RedisCommands<String, String> syncCommands = connection.sync();
         return syncCommands.get(key);
+    }
+
+    /**
+     * Return a stored value by key as a JsonObject
+     * @param key
+     * @return
+     */
+    public JsonObject get(String key) {
+        RedisCommands<String, String> syncCommands = connection.sync();
+        String keyString = syncCommands.get(key);
+        return JsonParser.parseString(keyString).getAsJsonObject();
     }
 
     /**
@@ -87,5 +103,34 @@ public class RedisApiService {
 
         RedisCommands<String, String> syncCommands = connection.sync();
         return syncCommands.set(key, value);
+    }
+
+    public void setSerdeType(String serdeType) {
+        this.serdeType = serdeType;
+    }
+
+    /**
+     * DELETES a key
+     * @param key
+     * @return
+     */
+    public HashMap<String, Object> delete(List<String> keys) {
+        HashMap results = new HashMap();
+        int removed = 0;
+        if (connection == null) {
+            this.connection = redisClient.connect();
+        }
+
+        RedisCommands<String, String> syncCommands = connection.sync();
+        for (String key : keys) {
+            long res = syncCommands.del(key);
+            if(res != 0) {
+                removed++;
+            }
+        }
+
+        results.put("removed", removed);
+        results.put("failedOnMissing", keys.size() - removed != 0);
+        return results;
     }
 }
