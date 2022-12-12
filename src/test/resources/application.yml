@@ -1,0 +1,15 @@
+kestra:
+  repository:
+    type: memory
+  queue:
+    type: memory
+  storage:
+    type: local
+    local:
+      base-path: /tmp/unittest
+  redis:
+    db: 0
+    host: localhost
+    protocol: redis
+    port: 6379
+    password: redis
