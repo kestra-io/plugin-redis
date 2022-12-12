@@ -7,3 +7,10 @@ kestra:
     type: local
     local:
       base-path: /tmp/unittest
+  redis:
+    db: 0
+    host: localhost
+    protocol: redis
+    port: 6379
+    password: redis
+    serdeType: "STRING"
