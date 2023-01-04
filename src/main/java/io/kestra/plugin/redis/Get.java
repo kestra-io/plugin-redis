@@ -30,7 +30,7 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     private String key;
 
     @Builder.Default
-    private SerdeType serdeType = SerdeType.JSON;
+    private SerdeType serdeType = SerdeType.STRING;
 
     @Override
     public Output run(RunContext runContext) throws Exception {
@@ -38,7 +38,7 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
         String data = connection.get(key);
 
         connection.close();
-        return Output.builder().data(data).build();
+        return Output.builder().data(this.serdeType.deserialize(data)).build();
     }
 
     @Builder
@@ -48,6 +48,6 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
                 title = "Data from the key",
                 description = "Data we get from the key"
         )
-        private String data;
+        private Object data;
     }
 }

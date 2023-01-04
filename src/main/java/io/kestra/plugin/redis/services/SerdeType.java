@@ -13,14 +13,6 @@ public enum SerdeType {
     STRING,
     JSON;
 
-    public Object deserialize(byte[] payload) throws IOException {
-        if (this == SerdeType.JSON) {
-            return JacksonMapper.ofJson(false).readValue(payload, Object.class);
-        } else {
-            return new String(payload, Charset.defaultCharset());
-        }
-    }
-
     public Object deserialize(String payload) throws IOException {
         if (this == SerdeType.JSON) {
             return JacksonMapper.ofJson(false).readValue(payload, Object.class);
