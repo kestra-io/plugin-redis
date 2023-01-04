@@ -66,7 +66,6 @@ class DeleteTest {
                 .uri(REDIS_URI)
                 .key(key)
                 .value(value)
-                .get(true)
                 .build();
     }
 }

@@ -27,13 +27,20 @@ class SetTest {
     void testSetGet() throws Exception {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
+        Set taskInit = Set.builder()
+                .uri(REDIS_URI)
+                .key("keySetGet")
+                .value("value")
+                .build();
+
         Set task = Set.builder()
                 .uri(REDIS_URI)
-                .key("key")
+                .key("keySetGet")
                 .value("value")
                 .get(true)
                 .build();
 
+        taskInit.run(runContext);
         Set.Output runOutput = task.run(runContext);
 
         assertThat(runOutput.getOldValue(), is("value"));
