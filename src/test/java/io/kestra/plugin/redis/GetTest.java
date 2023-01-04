@@ -15,7 +15,7 @@ class GetTest {
     @Inject
     private RunContextFactory runContextFactory;
 
-    private static final String REDIS_URI = "redis://localhost:6379/0";
+    private static final String REDIS_URI = "redis://:redis@localhost:6379/0";
 
     @Test
     void testGet() throws Exception {

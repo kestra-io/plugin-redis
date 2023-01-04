@@ -13,4 +13,3 @@ kestra:
     protocol: redis
     port: 6379
     password: redis
-    serdeType: "STRING"
