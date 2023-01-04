@@ -1,0 +1,14 @@
+id: trigger
+namespace: io.kestra.tests
+
+triggers:
+  - id: watch
+    type: io.kestra.plugin.redis.Trigger
+    uri: redis://localhost:6379/0
+    key: mytriggerkey
+    count: 2
+
+tasks:
+  - id: end
+    type: io.kestra.core.tasks.debugs.Return
+    format: "{{task.id}} > {{taskrun.startDate}}"
