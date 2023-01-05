@@ -7,6 +7,7 @@ triggers:
     uri: redis://:redis@localhost:6379/0
     key: mytriggerkey
     count: 2
+    maxRecords: 2
 
 tasks:
   - id: end

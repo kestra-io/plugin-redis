@@ -8,7 +8,6 @@ import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.redis.services.SerdeType;
 import io.kestra.plugin.redis.services.RedisFactory;
 import io.kestra.plugin.redis.services.RedisInterface;
-import io.reactivex.Flowable;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -16,7 +15,14 @@ import lombok.experimental.SuperBuilder;
 import javax.validation.constraints.NotNull;
 import java.io.*;
 import java.net.URI;
+import java.time.Duration;
+import java.time.ZonedDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static io.kestra.core.utils.Rethrow.throwRunnable;
 
 @SuperBuilder
 @ToString
@@ -37,45 +43,85 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
     private String key;
 
     @Schema(
-            title = "Count",
-            description = "The number of value you want to retrieve"
-    )
-    @Builder.Default
-    private Integer count = 1;
-
-    @Schema(
             title = "Deserialization type",
             description = "Format of the data contained in Redis"
     )
     @Builder.Default
     private SerdeType serdeType = SerdeType.STRING;
 
+    @Schema(
+            title = "The max number of rows to fetch before stopping.",
+            description = "It's not an hard limit and is evaluated every second."
+    )
+    private Integer maxRecords;
+
+    @Schema(
+            title = "The max duration waiting for new rows.",
+            description = "It's not an hard limit and is evaluated every second."
+    )
+    private Duration maxDuration;
+
+    @Schema(
+            title = "Number of elements that should be pop at once"
+    )
+    @Builder.Default
+    private Integer count = 1;
+
     @Override
+
     public Output run(RunContext runContext) throws Exception {
         RedisInterface connection = RedisFactory.create(runContext, this);
 
-        List<String> data = connection.listPop(key, count);
-        Flowable<Object> flowable;
-        Flowable<Integer> resultFlowable;
         File tempFile = runContext.tempFile(".ion").toFile();
-        Integer countRes;
-        try (OutputStream output = new FileOutputStream(tempFile)) {
-            flowable = Flowable.fromArray(data.toArray());
-            resultFlowable = flowable
-                    .map(row -> {
-                        FileSerde.write(output, getSerdeType().deserialize((String) row));
-                        return 1;
-                    });
+        Thread thread = null;
 
-            countRes = resultFlowable
-                    .reduce(Integer::sum)
-                    .blockingGet();
+        if (this.maxDuration == null && this.maxRecords == null) {
+            throw new Exception("maxDuration or maxRecords must be set to avoid infinite loop");
         }
-        Output output = Output.builder().uri(runContext.putTempFile(tempFile)).count(countRes).build();
-        runContext.metric(Counter.of("lineProcessed", count));
 
-        connection.close();
-        return output;
+        try (BufferedOutputStream output = new BufferedOutputStream(new FileOutputStream(tempFile))) {
+            Map<String, Integer> lineCount = new HashMap<>();
+            AtomicInteger total = new AtomicInteger();
+            ZonedDateTime started = ZonedDateTime.now();
+
+            thread = new Thread(throwRunnable(() -> {
+                while(true) {
+                    List<String> data = connection.listPop(key, count);
+                    for (String str : data) {
+                        FileSerde.write(output, str);
+                    }
+                    total.getAndIncrement();
+                    lineCount.compute(key, (s, integer) -> integer == null ? 1 : integer + 1);
+                }
+            }));
+
+            lineCount.forEach((s, integer) -> runContext.metric(Counter.of("records", integer, "topic", s)));
+            thread.setDaemon(true);
+            thread.setName("mqtt-subscribe");
+            thread.start();
+
+            while (!this.ended(total, started)) {
+                //noinspection BusyWait
+                Thread.sleep(100);
+            }
+
+            connection.close();
+            return Output.builder().uri(runContext.putTempFile(tempFile)).count(total.get()).build();
+
+        }
+    }
+
+    @SuppressWarnings("RedundantIfStatement")
+    private boolean ended(AtomicInteger count, ZonedDateTime start) {
+        if (this.maxRecords != null && count.get() >= this.maxRecords) {
+            return true;
+        }
+
+        if (this.maxDuration != null && ZonedDateTime.now().toEpochSecond() > start.plus(this.maxDuration).toEpochSecond()) {
+            return true;
+        }
+
+        return false;
     }
 
     @Builder

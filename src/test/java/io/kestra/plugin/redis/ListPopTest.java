@@ -14,7 +14,7 @@ import org.junit.jupiter.api.TestInstance;
 import java.util.Arrays;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 
 @MicronautTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -35,11 +35,12 @@ class ListPopTest {
                 .uri(REDIS_URI)
                 .key("mypopkey")
                 .count(2)
+                .maxRecords(1)
                 .build();
 
         ListPop.Output runOutput = task.run(runContext);
 
-        assertThat(runOutput.getCount(), is(2));
+        assertThat(runOutput.getCount(), greaterThanOrEqualTo(2));
     }
 
     @Test
@@ -50,11 +51,12 @@ class ListPopTest {
                 .uri(REDIS_URI)
                 .key("mypopkeyjson")
                 .serdeType(SerdeType.JSON)
+                .maxRecords(1)
                 .build();
 
         ListPop.Output runOutput = task.run(runContext);
 
-        assertThat(runOutput.getCount(), is(1));
+        assertThat(runOutput.getCount(), greaterThanOrEqualTo(1));
     }
 
     @BeforeEach

@@ -62,8 +62,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     private String key;
 
     @Schema(
-            title = "Count",
-            description = "The number of value you want to retrieve"
+            title = "Number of elements that should be pop at once"
     )
     @Builder.Default
     private Integer count = 1;
@@ -75,6 +74,18 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Builder.Default
     private SerdeType serdeType = SerdeType.STRING;
 
+    @Schema(
+            title = "The max number of rows to fetch before stopping.",
+            description = "It's not an hard limit and is evaluated every second."
+    )
+    private Integer maxRecords;
+
+    @Schema(
+            title = "The max duration waiting for new rows.",
+            description = "It's not an hard limit and is evaluated every second."
+    )
+    private Duration maxDuration;
+
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
         RunContext runContext = conditionContext.getRunContext();
@@ -84,6 +95,8 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                 .uri(this.uri)
                 .key(this.key)
                 .count(this.count)
+                .maxRecords(this.maxRecords)
+                .maxDuration(this.maxDuration)
                 .serdeType(this.serdeType)
                 .build();
         ListPop.Output run = task.run(runContext);
