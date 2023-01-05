@@ -3,9 +3,9 @@ package io.kestra.plugin.redis;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.redis.services.RedisFactory;
-import io.kestra.plugin.redis.services.RedisInterface;
-import io.kestra.plugin.redis.services.SetOptions;
+import io.kestra.plugin.redis.services.RedisService;
+import io.kestra.plugin.redis.services.SerdeType;
+import io.kestra.plugin.redis.services.Options;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -44,7 +44,7 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
             "See https://redis.io/commands/set/"
     )
     @Builder.Default
-    private SetOptions setOptions = SetOptions.builder().build();
+    private Options options = Options.builder().build();
 
     @Schema(
         title = "Redis get options",
@@ -53,12 +53,14 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     @Builder.Default
     private Boolean get = false;
 
+    @Builder.Default
+    private SerdeType serdeType = SerdeType.STRING;
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        RedisInterface connection = RedisFactory.create(runContext, this);
+        RedisService connection = this.redisFactory(runContext);
 
-        String oldValue = connection.set(runContext.render(key), runContext.render(value), get, setOptions.getRedisSetArgs());
+        String oldValue = connection.set(runContext.render(key), serdeType.serialize(runContext.render(value)), get, options.getRedisSetArgs());
 
         Output output = Output.builder().build();
         if (oldValue != null) {
@@ -66,6 +68,7 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
         }
 
         connection.close();
+
         return output;
     }
 

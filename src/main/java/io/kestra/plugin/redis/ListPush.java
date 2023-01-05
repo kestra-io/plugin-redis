@@ -5,8 +5,8 @@ import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
-import io.kestra.plugin.redis.services.RedisFactory;
-import io.kestra.plugin.redis.services.RedisInterface;
+import io.kestra.plugin.redis.services.RedisService;
+import io.kestra.plugin.redis.services.SerdeType;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -46,10 +46,12 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     @PluginProperty(dynamic = true)
     private Object from;
 
+    @Builder.Default
+    private SerdeType serdeType = SerdeType.STRING;
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        RedisInterface connection = RedisFactory.create(runContext, this);
+        RedisService connection = this.redisFactory(runContext);
 
         Integer count = 0;
         if (this.from instanceof String || this.from instanceof List) {
@@ -79,14 +81,16 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
         Output output = Output.builder().count(count).build();
 
         connection.close();
+
         return output;
     }
 
     @SuppressWarnings("unchecked")
-    private Flowable<Integer> buildFlowable(Flowable<Object> flowable, RunContext runContext, RedisInterface connection) {
+    private Flowable<Integer> buildFlowable(Flowable<Object> flowable, RunContext runContext, RedisService connection) {
         return flowable
             .map(row -> {
-                connection.listPush(runContext.render(key), Arrays.asList(String.valueOf(row)));
+                connection.listPush(runContext.render(key), Arrays.asList(serdeType.serialize(String.valueOf(row))));
+
                 return 1;
             });
     }

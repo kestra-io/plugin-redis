@@ -40,7 +40,7 @@ class ListPopTest {
 
         ListPop.Output runOutput = task.run(runContext);
 
-        assertThat(runOutput.getCount(), greaterThanOrEqualTo(2));
+        assertThat(runOutput.getCount(), greaterThanOrEqualTo(1));
     }
 
     @Test

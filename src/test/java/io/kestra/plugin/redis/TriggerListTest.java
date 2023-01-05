@@ -14,7 +14,7 @@ import io.kestra.core.utils.TestsUtils;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
-import jdk.jfr.Name;
+import jakarta.inject.Named;
 import org.junit.jupiter.api.Test;
 import io.kestra.core.models.executions.Execution;
 
@@ -29,7 +29,7 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 
 @MicronautTest
-class TriggerTest {
+class TriggerListTest {
     @Inject
     private ApplicationContext applicationContext;
 
@@ -43,7 +43,7 @@ class TriggerTest {
     private FlowListeners flowListenersService;
 
     @Inject
-    @Name(QueueFactoryInterface.EXECUTION_NAMED)
+    @Named(QueueFactoryInterface.EXECUTION_NAMED)
     private QueueInterface<Execution> executionQueue;
 
     @Inject
@@ -65,14 +65,14 @@ class TriggerTest {
         )) {
             AtomicReference<Execution> last = new AtomicReference<>();
 
-            executionQueue.receive(TriggerTest.class, execution -> {
+            executionQueue.receive(TriggerListTest.class, execution -> {
                 last.set(execution);
 
                 queueCount.countDown();
                 assertThat(execution.getFlowId(), is("trigger"));
             });
             ListPush task = ListPush.builder()
-                .id(TriggerTest.class.getSimpleName())
+                .id(TriggerListTest.class.getSimpleName())
                 .type(ListPush.class.getName())
                 .uri(REDIS_URI)
                 .key("mytriggerkey")
@@ -81,7 +81,7 @@ class TriggerTest {
 
             scheduler.run();
 
-            repositoryLoader.load(Objects.requireNonNull(TriggerTest.class.getClassLoader().getResource("flows")));
+            repositoryLoader.load(Objects.requireNonNull(TriggerListTest.class.getClassLoader().getResource("flows")));
 
             task.run(TestsUtils.mockRunContext(runContextFactory, task, ImmutableMap.of()));
 

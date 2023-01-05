@@ -44,7 +44,7 @@ import java.util.Optional;
         )
     }
 )
-public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<ListPop.Output>, RedisConnectionInterface {
+public class TriggerList extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<ListPop.Output>, ListPopInterface {
     @NotNull
     @PluginProperty(dynamic = true)
     @Schema(
@@ -53,37 +53,16 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     )
     private String uri;
 
-    @Schema(
-        title = "Redis key",
-        description = "The redis key you want to set"
-    )
-    @NotNull
-    @PluginProperty(dynamic = true)
     private String key;
 
-    @Schema(
-        title = "Number of elements that should be pop at once"
-    )
     @Builder.Default
     private Integer count = 1;
 
-    @Schema(
-        title = "Deserialization type",
-        description = "Format of the data contained in Redis"
-    )
     @Builder.Default
     private SerdeType serdeType = SerdeType.STRING;
 
-    @Schema(
-        title = "The max number of rows to fetch before stopping.",
-        description = "It's not an hard limit and is evaluated every second."
-    )
     private Integer maxRecords;
 
-    @Schema(
-        title = "The max duration waiting for new rows.",
-        description = "It's not an hard limit and is evaluated every second."
-    )
     private Duration maxDuration;
 
     @Override

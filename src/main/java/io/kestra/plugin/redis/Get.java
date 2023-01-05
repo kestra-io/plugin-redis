@@ -3,9 +3,8 @@ package io.kestra.plugin.redis;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+import io.kestra.plugin.redis.services.RedisService;
 import io.kestra.plugin.redis.services.SerdeType;
-import io.kestra.plugin.redis.services.RedisFactory;
-import io.kestra.plugin.redis.services.RedisInterface;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -39,11 +38,12 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        RedisInterface connection = RedisFactory.create(runContext, this);
+        RedisService connection = this.redisFactory(runContext);
         String data = connection.get(runContext.render(key));
 
         connection.close();
-        return Output.builder().data(this.serdeType.deserialize(data)).build();
+
+        return Output.builder().data(serdeType.deserialize(data)).build();
     }
 
     @Builder

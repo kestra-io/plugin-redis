@@ -6,7 +6,7 @@ import lombok.extern.jackson.Jacksonized;
 
 @Builder
 @Jacksonized
-public class SetOptions {
+public class Options {
     private Long ex;
 
     private Long exAt;

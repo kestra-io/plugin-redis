@@ -10,12 +10,11 @@ import io.lettuce.core.api.sync.RedisCommands;
 
 import java.util.List;
 
-public class RedisService implements RedisInterface {
+public class RedisService {
     RedisClient redisClient;
     StatefulRedisConnection redisConnection;
     RedisCommands<String, String> syncCommands;
 
-    @Override
     @SuppressWarnings("unchecked")
     public void connect(RunContext runContext, AbstractRedisConnection connection) throws IllegalVariableEvaluationException {
         redisClient = RedisClient.create(runContext.render(connection.getUri()));
@@ -23,7 +22,6 @@ public class RedisService implements RedisInterface {
         syncCommands = redisConnection.sync();
     }
 
-    @Override
     public String set(String key, String value, Boolean get, SetArgs setArgs) {
         if (get) {
             return syncCommands.setGet(key, value);
@@ -33,27 +31,23 @@ public class RedisService implements RedisInterface {
         }
     }
 
-    @Override
     public String get(String key) {
         return syncCommands.get(key);
     }
 
-    @Override
     public long del(List<String> keys) {
         return syncCommands.del(keys.toArray(new String[0]));
     }
 
-    @Override
     public long listPush(String key, List<String> values) {
+
         return syncCommands.lpush(key, values.toArray(new String[0]));
     }
 
-    @Override
     public List<String> listPop(String key, Integer count) {
         return syncCommands.lpop(key, count);
     }
 
-    @Override
     public void close() {
         this.redisConnection.close();
         this.redisClient.shutdown();

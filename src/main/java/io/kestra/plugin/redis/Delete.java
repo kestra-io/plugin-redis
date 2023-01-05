@@ -4,8 +4,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.redis.services.RedisFactory;
-import io.kestra.plugin.redis.services.RedisInterface;
+import io.kestra.plugin.redis.services.RedisService;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -41,7 +40,7 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        RedisInterface connection = RedisFactory.create(runContext, this);
+        RedisService connection = this.redisFactory(runContext);
         Long count;
         boolean AllKeyDeleted;
 
@@ -54,6 +53,7 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
         }
         connection.close();
         runContext.metric(Counter.of("keyProcessed", count));
+
         return Output.builder().count(count.intValue()).build();
     }
 

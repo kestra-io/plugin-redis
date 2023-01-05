@@ -3,7 +3,6 @@ package io.kestra.plugin.redis.services;
 import io.kestra.core.serializers.JacksonMapper;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 
 @io.swagger.v3.oas.annotations.media.Schema(
     title = "Serializer / Deserializer use for the value",
@@ -18,6 +17,14 @@ public enum SerdeType {
             return JacksonMapper.ofJson(false).readValue(payload, Object.class);
         } else {
             return payload;
+        }
+    }
+
+    public String serialize(Object message) throws IOException {
+        if (this == SerdeType.JSON) {
+            return JacksonMapper.ofJson(false).writeValueAsString(message);
+        } else {
+            return (String) message;
         }
     }
 }
