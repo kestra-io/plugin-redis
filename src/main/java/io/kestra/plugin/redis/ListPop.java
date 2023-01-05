@@ -1,5 +1,7 @@
 package io.kestra.plugin.redis;
 
+import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -28,6 +30,19 @@ import static io.kestra.core.utils.Rethrow.throwRunnable;
 @NoArgsConstructor
 @Schema(
     title = "Remove elements in a list"
+)
+@Plugin(
+    examples = {
+        @Example(
+            code = {
+                "type: io.kestra.plugin.redis.ListPop",
+                "uri: redis://:redis@localhost:6379/0",
+                "key: mypopkeyjson",
+                "serdeType: JSON",
+                "maxRecords: 1"
+            }
+        )
+    }
 )
 public class ListPop extends AbstractRedisConnection implements RunnableTask<ListPop.Output>, ListPopInterface {
 

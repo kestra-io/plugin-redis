@@ -1,5 +1,7 @@
 package io.kestra.plugin.redis;
 
+import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
@@ -27,6 +29,20 @@ import java.util.List;
 @NoArgsConstructor
 @Schema(
     title = "Prepend one or multiple values to a list"
+)
+@Plugin(
+    examples = {
+        @Example(
+            code = {
+                "type: io.kestra.plugin.redis.ListPush",
+                "uri: redis://:redis@localhost:6379/0",
+                "key: mykey",
+                "from:",
+                "   - value1",
+                "   - value2"
+            }
+        )
+    }
 )
 public class ListPush extends AbstractRedisConnection implements RunnableTask<ListPush.Output> {
 

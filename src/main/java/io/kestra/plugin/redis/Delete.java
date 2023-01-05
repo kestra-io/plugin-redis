@@ -1,5 +1,7 @@
 package io.kestra.plugin.redis;
 
+import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
@@ -19,6 +21,19 @@ import java.util.List;
 @NoArgsConstructor
 @Schema(
     title = "Delete one or more keys."
+)
+@Plugin(
+    examples = {
+        @Example(
+            code = {
+                "type: io.kestra.plugin.redis.Delete",
+                "uri: redis://:redis@localhost:6379/0",
+                "keys:",
+                "   - keyDelete1",
+                "   - keyDelete2"
+            }
+        )
+    }
 )
 public class Delete extends AbstractRedisConnection implements RunnableTask<Delete.Output> {
 

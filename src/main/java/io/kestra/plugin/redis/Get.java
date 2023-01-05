@@ -1,5 +1,7 @@
 package io.kestra.plugin.redis;
 
+import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -18,6 +20,17 @@ import javax.validation.constraints.NotNull;
 @NoArgsConstructor
 @Schema(
     title = "Get the value of a key."
+)
+@Plugin(
+    examples = {
+        @Example(
+            code = {
+                "type: io.kestra.plugin.redis.Get",
+                "uri: redis://:redis@localhost:6379/0",
+                "key: mykey"
+            }
+        )
+    }
 )
 public class Get extends AbstractRedisConnection implements RunnableTask<Get.Output> {
 

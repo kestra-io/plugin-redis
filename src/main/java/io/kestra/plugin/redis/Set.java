@@ -1,5 +1,7 @@
 package io.kestra.plugin.redis;
 
+import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -19,6 +21,19 @@ import javax.validation.constraints.NotNull;
 @NoArgsConstructor
 @Schema(
     title = "Set the string value of a key."
+)
+@Plugin(
+    examples = {
+        @Example(
+            code = {
+                "type: io.kestra.plugin.redis.Set",
+                "uri: amqp://guest:guest@localhost:5672/my_vhost",
+                "key: mykey",
+                "value: myvalue",
+                "serdeType: STRING"
+            }
+        )
+    }
 )
 public class Set extends AbstractRedisConnection implements RunnableTask<Set.Output> {
 
