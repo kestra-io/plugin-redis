@@ -58,10 +58,10 @@ class TriggerTest {
         CountDownLatch queueCount = new CountDownLatch(1);
 
         try (AbstractScheduler scheduler = new DefaultScheduler(
-                this.applicationContext,
-                this.flowListenersService,
-                this.executionState,
-                this.triggerState
+            this.applicationContext,
+            this.flowListenersService,
+            this.executionState,
+            this.triggerState
         )) {
             AtomicReference<Execution> last = new AtomicReference<>();
 
@@ -72,12 +72,12 @@ class TriggerTest {
                 assertThat(execution.getFlowId(), is("trigger"));
             });
             ListPush task = ListPush.builder()
-                    .id(TriggerTest.class.getSimpleName())
-                    .type(ListPush.class.getName())
-                    .uri(REDIS_URI)
-                    .key("mytriggerkey")
-                    .from(Arrays.asList("value1", "value2"))
-                    .build();
+                .id(TriggerTest.class.getSimpleName())
+                .type(ListPush.class.getName())
+                .uri(REDIS_URI)
+                .key("mytriggerkey")
+                .from(Arrays.asList("value1", "value2"))
+                .build();
 
             scheduler.run();
 

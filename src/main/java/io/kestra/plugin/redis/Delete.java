@@ -19,21 +19,21 @@ import java.util.List;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Delete one or more keys."
+    title = "Delete one or more keys."
 )
 public class Delete extends AbstractRedisConnection implements RunnableTask<Delete.Output> {
 
     @Schema(
-            title = "Redis keys",
-            description = "The list of redis keys you want to delete"
+        title = "Redis keys",
+        description = "The list of redis keys you want to delete"
     )
     @NotNull
     @PluginProperty(dynamic = true)
     private List<String> keys;
 
     @Schema(
-            title = "failedOnMissing",
-            description = "If some keys are not deleted, failed the task"
+        title = "failedOnMissing",
+        description = "If some keys are not deleted, failed the task"
     )
     @Builder.Default
     private Boolean failedOnMissing = false;
@@ -48,7 +48,7 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
         count = connection.del(runContext.render(keys));
         AllKeyDeleted = count == keys.size();
 
-        if(!AllKeyDeleted && failedOnMissing){
+        if (!AllKeyDeleted && failedOnMissing) {
             connection.close();
             throw new NullPointerException("Missing keys, only " + count + " key deleted");
         }
@@ -61,7 +61,7 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-                title = "Number of key deleted"
+            title = "Number of key deleted"
         )
         private Integer count;
     }

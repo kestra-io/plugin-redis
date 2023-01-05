@@ -28,9 +28,9 @@ class DeleteTest {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
         Delete task = Delete.builder()
-                .uri(REDIS_URI)
-                .keys(Arrays.asList("keyDelete1", "keyDelete2"))
-                .build();
+            .uri(REDIS_URI)
+            .keys(Arrays.asList("keyDelete1", "keyDelete2"))
+            .build();
 
         Delete.Output runOutput = task.run(runContext);
 
@@ -43,10 +43,10 @@ class DeleteTest {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
         Delete task = Delete.builder()
-                .uri(REDIS_URI)
-                .keys(Arrays.asList("keyDeleted", "keyDeleted2"))
-                .failedOnMissing(true)
-                .build();
+            .uri(REDIS_URI)
+            .keys(Arrays.asList("keyDeleted", "keyDeleted2"))
+            .failedOnMissing(true)
+            .build();
 
         Exception e = Assertions.assertThrows(NullPointerException.class, () -> task.run(runContext));
         assertThat(e.getMessage(), is("Missing keys, only 1 key deleted"));
@@ -63,9 +63,9 @@ class DeleteTest {
 
     static Set createSetTask(String key, String value) {
         return Set.builder()
-                .uri(REDIS_URI)
-                .key(key)
-                .value(value)
-                .build();
+            .uri(REDIS_URI)
+            .key(key)
+            .value(value)
+            .build();
     }
 }

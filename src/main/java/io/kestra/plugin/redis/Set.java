@@ -18,37 +18,37 @@ import javax.validation.constraints.NotNull;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Set the string value of a key."
+    title = "Set the string value of a key."
 )
 public class Set extends AbstractRedisConnection implements RunnableTask<Set.Output> {
 
     @Schema(
-            title = "Redis key",
-            description = "The redis key you want to set"
+        title = "Redis key",
+        description = "The redis key you want to set"
     )
     @NotNull
     @PluginProperty(dynamic = true)
     private String key;
 
     @Schema(
-            title = "Redis value",
-            description = "The value you want to set"
+        title = "Redis value",
+        description = "The value you want to set"
     )
     @NotNull
     @PluginProperty(dynamic = true)
     private String value;
 
     @Schema(
-            title = "Redis Set options",
-            description = "Options available when setting a key in Redis\n" +
-                    "See https://redis.io/commands/set/"
+        title = "Redis Set options",
+        description = "Options available when setting a key in Redis\n" +
+            "See https://redis.io/commands/set/"
     )
     @Builder.Default
     private SetOptions setOptions = SetOptions.builder().build();
 
     @Schema(
-            title = "Redis get options",
-            description = "Define if you get the older value in response, does not work with Redis 5.X"
+        title = "Redis get options",
+        description = "Define if you get the older value in response, does not work with Redis 5.X"
     )
     @Builder.Default
     private Boolean get = false;
@@ -61,7 +61,7 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
         String oldValue = connection.set(runContext.render(key), runContext.render(value), get, setOptions.getRedisSetArgs());
 
         Output output = Output.builder().build();
-        if(oldValue != null){
+        if (oldValue != null) {
             output.oldValue = oldValue;
         }
 
@@ -74,9 +74,9 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-                title = "Old value",
-                description = "The old value if you replaced an existing key\n" +
-                        "Required Get to true"
+            title = "Old value",
+            description = "The old value if you replaced an existing key\n" +
+                "Required Get to true"
         )
         private String oldValue;
     }

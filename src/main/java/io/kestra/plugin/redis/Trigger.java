@@ -29,60 +29,60 @@ import java.util.Optional;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Wait for key of type list in Redis database"
+    title = "Wait for key of type list in Redis database"
 )
 @Plugin(
-        examples = {
-                @Example(
-                        code = {
-                                "id: watch",
-                                "type: io.kestra.plugin.redis.Trigger",
-                                "uri: redis://localhost:6379/0",
-                                "key: mytriggerkey",
-                                "count: 2"
-                        }
-                )
-        }
+    examples = {
+        @Example(
+            code = {
+                "id: watch",
+                "type: io.kestra.plugin.redis.Trigger",
+                "uri: redis://localhost:6379/0",
+                "key: mytriggerkey",
+                "count: 2"
+            }
+        )
+    }
 )
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<ListPop.Output>, RedisConnectionInterface {
     @NotNull
     @PluginProperty(dynamic = true)
     @Schema(
-            title = "Redis URI",
-            description = "The URI to connect to the Redis Database."
+        title = "Redis URI",
+        description = "The URI to connect to the Redis Database."
     )
     private String uri;
 
     @Schema(
-            title = "Redis key",
-            description = "The redis key you want to set"
+        title = "Redis key",
+        description = "The redis key you want to set"
     )
     @NotNull
     @PluginProperty(dynamic = true)
     private String key;
 
     @Schema(
-            title = "Number of elements that should be pop at once"
+        title = "Number of elements that should be pop at once"
     )
     @Builder.Default
     private Integer count = 1;
 
     @Schema(
-            title = "Deserialization type",
-            description = "Format of the data contained in Redis"
+        title = "Deserialization type",
+        description = "Format of the data contained in Redis"
     )
     @Builder.Default
     private SerdeType serdeType = SerdeType.STRING;
 
     @Schema(
-            title = "The max number of rows to fetch before stopping.",
-            description = "It's not an hard limit and is evaluated every second."
+        title = "The max number of rows to fetch before stopping.",
+        description = "It's not an hard limit and is evaluated every second."
     )
     private Integer maxRecords;
 
     @Schema(
-            title = "The max duration waiting for new rows.",
-            description = "It's not an hard limit and is evaluated every second."
+        title = "The max duration waiting for new rows.",
+        description = "It's not an hard limit and is evaluated every second."
     )
     private Duration maxDuration;
 
@@ -92,13 +92,13 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         Logger logger = runContext.logger();
 
         ListPop task = ListPop.builder()
-                .uri(runContext.render(this.uri))
-                .key(runContext.render(this.key))
-                .count(this.count)
-                .maxRecords(this.maxRecords)
-                .maxDuration(this.maxDuration)
-                .serdeType(this.serdeType)
-                .build();
+            .uri(runContext.render(this.uri))
+            .key(runContext.render(this.key))
+            .count(this.count)
+            .maxRecords(this.maxRecords)
+            .maxDuration(this.maxDuration)
+            .serdeType(this.serdeType)
+            .build();
         ListPop.Output run = task.run(runContext);
 
         if (logger.isDebugEnabled()) {
@@ -112,18 +112,18 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         String executionId = IdUtils.create();
 
         ExecutionTrigger executionTrigger = ExecutionTrigger.of(
-                this,
-                run
+            this,
+            run
         );
 
         Execution execution = Execution.builder()
-                .id(executionId)
-                .namespace(context.getNamespace())
-                .flowId(context.getFlowId())
-                .flowRevision(context.getFlowRevision())
-                .state(new State())
-                .trigger(executionTrigger)
-                .build();
+            .id(executionId)
+            .namespace(context.getNamespace())
+            .flowId(context.getFlowId())
+            .flowRevision(context.getFlowRevision())
+            .state(new State())
+            .trigger(executionTrigger)
+            .build();
 
         return Optional.of(execution);
     }

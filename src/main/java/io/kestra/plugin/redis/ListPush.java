@@ -26,21 +26,21 @@ import java.util.List;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Prepend one or multiple values to a list"
+    title = "Prepend one or multiple values to a list"
 )
 public class ListPush extends AbstractRedisConnection implements RunnableTask<ListPush.Output> {
 
     @Schema(
-            title = "Redis key",
-            description = "The redis key you want to set"
+        title = "Redis key",
+        description = "The redis key you want to set"
     )
     @NotNull
     @PluginProperty(dynamic = true)
     private String key;
 
     @Schema(
-            title = "Redis value",
-            description = "The list of value you want to push"
+        title = "Redis value",
+        description = "The list of value you want to push"
     )
     @NotNull
     @PluginProperty(dynamic = true)
@@ -62,16 +62,16 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
                     resultFlowable = this.buildFlowable(flowable, runContext, connection);
 
                     count = resultFlowable
-                            .reduce(Integer::sum)
-                            .blockingGet();
+                        .reduce(Integer::sum)
+                        .blockingGet();
                 }
             } else {
                 flowable = Flowable.fromArray(((List<Object>) this.from).toArray());
                 resultFlowable = this.buildFlowable(flowable, runContext, connection);
 
                 count = resultFlowable
-                        .reduce(Integer::sum)
-                        .blockingGet();
+                    .reduce(Integer::sum)
+                    .blockingGet();
                 runContext.metric(Counter.of("lineProcessed", count));
             }
         }
@@ -85,18 +85,18 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     @SuppressWarnings("unchecked")
     private Flowable<Integer> buildFlowable(Flowable<Object> flowable, RunContext runContext, RedisInterface connection) {
         return flowable
-                .map(row -> {
-                    connection.listPush(runContext.render(key), Arrays.asList(String.valueOf(row)));
-                    return 1;
-                });
+            .map(row -> {
+                connection.listPush(runContext.render(key), Arrays.asList(String.valueOf(row)));
+                return 1;
+            });
     }
 
     @Builder
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-                title = "Count",
-                description = "The number of value inserted"
+            title = "Count",
+            description = "The number of value inserted"
         )
         private Integer count;
     }

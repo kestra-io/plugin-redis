@@ -30,39 +30,39 @@ import static io.kestra.core.utils.Rethrow.throwRunnable;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Remove elements in a list"
+    title = "Remove elements in a list"
 )
 public class ListPop extends AbstractRedisConnection implements RunnableTask<ListPop.Output> {
 
     @Schema(
-            title = "Redis key",
-            description = "The redis key you want to set"
+        title = "Redis key",
+        description = "The redis key you want to set"
     )
     @NotNull
     @PluginProperty(dynamic = true)
     private String key;
 
     @Schema(
-            title = "Deserialization type",
-            description = "Format of the data contained in Redis"
+        title = "Deserialization type",
+        description = "Format of the data contained in Redis"
     )
     @Builder.Default
     private SerdeType serdeType = SerdeType.STRING;
 
     @Schema(
-            title = "The max number of rows to fetch before stopping.",
-            description = "It's not an hard limit and is evaluated every second."
+        title = "The max number of rows to fetch before stopping.",
+        description = "It's not an hard limit and is evaluated every second."
     )
     private Integer maxRecords;
 
     @Schema(
-            title = "The max duration waiting for new rows.",
-            description = "It's not an hard limit and is evaluated every second."
+        title = "The max duration waiting for new rows.",
+        description = "It's not an hard limit and is evaluated every second."
     )
     private Duration maxDuration;
 
     @Schema(
-            title = "Number of elements that should be pop at once"
+        title = "Number of elements that should be pop at once"
     )
     @Builder.Default
     private Integer count = 1;
@@ -85,7 +85,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
             ZonedDateTime started = ZonedDateTime.now();
 
             thread = new Thread(throwRunnable(() -> {
-                while(true) {
+                while (true) {
                     List<String> data = connection.listPop(runContext.render(key), count);
                     for (String str : data) {
                         FileSerde.write(output, str);
@@ -128,12 +128,12 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-                title = "Number of data retrieved"
+            title = "Number of data retrieved"
         )
         private Integer count;
 
         @Schema(
-                title = "URI of a kestra internal storage file"
+            title = "URI of a kestra internal storage file"
         )
         private URI uri;
     }

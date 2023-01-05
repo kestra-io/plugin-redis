@@ -24,27 +24,27 @@ public class SetOptions {
     @Builder.Default
     private boolean keepttl = false;
 
-    public SetArgs getRedisSetArgs(){
+    public SetArgs getRedisSetArgs() {
         SetArgs setArgs = new SetArgs();
-        if(ex != null){
+        if (ex != null) {
             setArgs.ex(ex);
         }
-        if(exAt != null){
+        if (exAt != null) {
             setArgs.exAt(exAt);
         }
-        if(px != null){
+        if (px != null) {
             setArgs.px(px);
         }
-        if(pxAt != null){
+        if (pxAt != null) {
             setArgs.pxAt(pxAt);
         }
-        if(nx){
+        if (nx) {
             setArgs.nx();
         }
-        if(xx){
+        if (xx) {
             setArgs.xx();
         }
-        if(keepttl){
+        if (keepttl) {
             setArgs.keepttl();
         }
         return setArgs;

@@ -6,8 +6,8 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 
 @io.swagger.v3.oas.annotations.media.Schema(
-        title = "Serializer / Deserializer use for the value",
-        description = "List are not handled."
+    title = "Serializer / Deserializer use for the value",
+    description = "List are not handled."
 )
 public enum SerdeType {
     STRING,

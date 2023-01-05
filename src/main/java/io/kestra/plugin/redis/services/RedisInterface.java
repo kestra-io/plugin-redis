@@ -21,7 +21,7 @@ public interface RedisInterface {
 
     void close() throws Exception;
 
-    default RedisInterface create(){
+    default RedisInterface create() {
         return new RedisService();
     }
 }

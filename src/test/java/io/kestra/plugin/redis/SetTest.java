@@ -28,17 +28,17 @@ class SetTest {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
         Set taskInit = Set.builder()
-                .uri(REDIS_URI)
-                .key("keySetGet")
-                .value("value")
-                .build();
+            .uri(REDIS_URI)
+            .key("keySetGet")
+            .value("value")
+            .build();
 
         Set task = Set.builder()
-                .uri(REDIS_URI)
-                .key("keySetGet")
-                .value("value")
-                .get(true)
-                .build();
+            .uri(REDIS_URI)
+            .key("keySetGet")
+            .value("value")
+            .get(true)
+            .build();
 
         taskInit.run(runContext);
         Set.Output runOutput = task.run(runContext);
@@ -51,10 +51,10 @@ class SetTest {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
         Set task = Set.builder()
-                .uri(REDIS_URI)
-                .key("key2")
-                .value("{\"value\":\"1\"}")
-                .build();
+            .uri(REDIS_URI)
+            .key("key2")
+            .value("{\"value\":\"1\"}")
+            .build();
 
         Set.Output runOutput = task.run(runContext);
 

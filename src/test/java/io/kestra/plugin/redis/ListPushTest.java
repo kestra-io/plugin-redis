@@ -38,10 +38,10 @@ class ListPushTest {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
         ListPush task = ListPush.builder()
-                .uri(REDIS_URI)
-                .key("mykey")
-                .from(Arrays.asList("value1", "value2"))
-                .build();
+            .uri(REDIS_URI)
+            .key("mykey")
+            .from(Arrays.asList("value1", "value2"))
+            .build();
 
         ListPush.Output runOutput = task.run(runContext);
 
@@ -52,13 +52,13 @@ class ListPushTest {
     void testListPushAsFile() throws Exception {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
-        URI uri =  createTestFile();
+        URI uri = createTestFile();
 
         ListPush task = ListPush.builder()
-                .uri(REDIS_URI)
-                .key("mykeyFile")
-                .from(uri.toString())
-                .build();
+            .uri(REDIS_URI)
+            .key("mykeyFile")
+            .from(uri.toString())
+            .build();
 
         ListPush.Output runOutput = task.run(runContext);
 
@@ -69,13 +69,13 @@ class ListPushTest {
     void setUp() throws Exception {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
         Delete.builder()
-                .uri(REDIS_URI)
-                .keys(Arrays.asList("mykey"))
-                .build().run(runContext);
+            .uri(REDIS_URI)
+            .keys(Arrays.asList("mykey"))
+            .build().run(runContext);
         Delete.builder()
-                .uri(REDIS_URI)
-                .keys(Arrays.asList("mykeyFile"))
-                .build().run(runContext);
+            .uri(REDIS_URI)
+            .keys(Arrays.asList("mykeyFile"))
+            .build().run(runContext);
     }
 
     URI createTestFile() throws Exception {
