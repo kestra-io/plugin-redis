@@ -58,7 +58,7 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     public Output run(RunContext runContext) throws Exception {
         RedisInterface connection = RedisFactory.create(runContext, this);
 
-        String oldValue = connection.set(key, value, get, setOptions.getRedisSetArgs());
+        String oldValue = connection.set(runContext.render(key), runContext.render(value), get, setOptions.getRedisSetArgs());
 
         Output output = Output.builder().build();
         if(oldValue != null){

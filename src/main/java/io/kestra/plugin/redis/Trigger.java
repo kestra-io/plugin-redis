@@ -92,8 +92,8 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         Logger logger = runContext.logger();
 
         ListPop task = ListPop.builder()
-                .uri(this.uri)
-                .key(this.key)
+                .uri(runContext.render(this.uri))
+                .key(runContext.render(this.key))
                 .count(this.count)
                 .maxRecords(this.maxRecords)
                 .maxDuration(this.maxDuration)

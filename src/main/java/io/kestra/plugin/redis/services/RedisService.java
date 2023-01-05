@@ -1,5 +1,6 @@
 package io.kestra.plugin.redis.services;
 
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.lettuce.core.RedisClient;
@@ -16,8 +17,8 @@ public class RedisService implements RedisInterface {
 
     @Override
     @SuppressWarnings("unchecked")
-    public void connect(RunContext runContext, AbstractRedisConnection connection) {
-        redisClient = RedisClient.create(connection.getUri());
+    public void connect(RunContext runContext, AbstractRedisConnection connection) throws IllegalVariableEvaluationException {
+        redisClient = RedisClient.create(runContext.render(connection.getUri()));
         redisConnection = redisClient.connect();
         syncCommands = redisConnection.sync();
     }

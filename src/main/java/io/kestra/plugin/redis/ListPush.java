@@ -59,7 +59,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
                 URI from = new URI(runContext.render((String) this.from));
                 try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.uriToInputStream(from)))) {
                     flowable = Flowable.create(FileSerde.reader(inputStream), BackpressureStrategy.BUFFER);
-                    resultFlowable = this.buildFlowable(flowable, connection);
+                    resultFlowable = this.buildFlowable(flowable, runContext, connection);
 
                     count = resultFlowable
                             .reduce(Integer::sum)
@@ -67,7 +67,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
                 }
             } else {
                 flowable = Flowable.fromArray(((List<Object>) this.from).toArray());
-                resultFlowable = this.buildFlowable(flowable, connection);
+                resultFlowable = this.buildFlowable(flowable, runContext, connection);
 
                 count = resultFlowable
                         .reduce(Integer::sum)
@@ -83,10 +83,10 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     }
 
     @SuppressWarnings("unchecked")
-    private Flowable<Integer> buildFlowable(Flowable<Object> flowable, RedisInterface connection) {
+    private Flowable<Integer> buildFlowable(Flowable<Object> flowable, RunContext runContext, RedisInterface connection) {
         return flowable
                 .map(row -> {
-                    connection.listPush(key, Arrays.asList(String.valueOf(row)));
+                    connection.listPush(runContext.render(key), Arrays.asList(String.valueOf(row)));
                     return 1;
                 });
     }

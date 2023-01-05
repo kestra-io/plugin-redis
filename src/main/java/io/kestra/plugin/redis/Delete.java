@@ -45,7 +45,7 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
         Long count;
         boolean AllKeyDeleted;
 
-        count = connection.del(keys);
+        count = connection.del(runContext.render(keys));
         AllKeyDeleted = count == keys.size();
 
         if(!AllKeyDeleted && failedOnMissing){

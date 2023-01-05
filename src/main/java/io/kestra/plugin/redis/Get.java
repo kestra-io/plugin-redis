@@ -40,7 +40,7 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     @Override
     public Output run(RunContext runContext) throws Exception {
         RedisInterface connection = RedisFactory.create(runContext, this);
-        String data = connection.get(key);
+        String data = connection.get(runContext.render(key));
 
         connection.close();
         return Output.builder().data(this.serdeType.deserialize(data)).build();

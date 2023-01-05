@@ -86,7 +86,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
 
             thread = new Thread(throwRunnable(() -> {
                 while(true) {
-                    List<String> data = connection.listPop(key, count);
+                    List<String> data = connection.listPop(runContext.render(key), count);
                     for (String str : data) {
                         FileSerde.write(output, str);
                     }
