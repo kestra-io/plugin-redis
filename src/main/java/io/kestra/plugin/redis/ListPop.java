@@ -1,5 +1,6 @@
 package io.kestra.plugin.redis;
 
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -23,8 +24,7 @@ import java.util.List;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Redis Client Task",
-        description = "Interact with REDIS"
+        title = "Remove elements in a list"
 )
 public class ListPop extends AbstractRedisConnection implements RunnableTask<ListPop.Output> {
 
@@ -33,6 +33,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
             description = "The redis key you want to set"
     )
     @NotNull
+    @PluginProperty(dynamic = true)
     private String key;
 
     @Schema(

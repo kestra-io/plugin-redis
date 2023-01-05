@@ -2,6 +2,7 @@ package io.kestra.plugin.redis;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.executions.ExecutionTrigger;
@@ -28,7 +29,7 @@ import java.util.Optional;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Wait for key list in Redis database"
+        title = "Wait for key of type list in Redis database"
 )
 @Plugin(
         examples = {
@@ -45,6 +46,11 @@ import java.util.Optional;
 )
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<ListPop.Output>, RedisConnectionInterface {
     @NotNull
+    @PluginProperty(dynamic = true)
+    @Schema(
+            title = "Redis URI",
+            description = "The URI to connect to the Redis Database."
+    )
     private String uri;
 
     @Schema(
@@ -52,6 +58,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             description = "The redis key you want to set"
     )
     @NotNull
+    @PluginProperty(dynamic = true)
     private String key;
 
     @Schema(

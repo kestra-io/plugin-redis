@@ -1,27 +1,22 @@
 package io.kestra.plugin.redis;
 
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.redis.services.RedisFactory;
 import io.kestra.plugin.redis.services.RedisInterface;
-import io.kestra.plugin.redis.services.RedisService;
-import io.kestra.plugin.redis.services.SetOptions;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.slf4j.Logger;
 
 import javax.validation.constraints.NotNull;
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.InputStreamReader;
 import java.net.URI;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
 
@@ -31,8 +26,7 @@ import java.util.List;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Redis Client Task",
-        description = "Interact with REDIS"
+        title = "Prepend one or multiple values to a list"
 )
 public class ListPush extends AbstractRedisConnection implements RunnableTask<ListPush.Output> {
 
@@ -41,6 +35,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
             description = "The redis key you want to set"
     )
     @NotNull
+    @PluginProperty(dynamic = true)
     private String key;
 
     @Schema(
@@ -48,6 +43,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
             description = "The list of value you want to push"
     )
     @NotNull
+    @PluginProperty(dynamic = true)
     private Object from;
 
 

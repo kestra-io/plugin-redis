@@ -1,5 +1,6 @@
 package io.kestra.plugin.redis;
 
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.services.RedisFactory;
@@ -17,8 +18,7 @@ import javax.validation.constraints.NotNull;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Redis Client Task",
-        description = "Interact with REDIS"
+        title = "Set the string value of a key."
 )
 public class Set extends AbstractRedisConnection implements RunnableTask<Set.Output> {
 
@@ -27,6 +27,7 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
             description = "The redis key you want to set"
     )
     @NotNull
+    @PluginProperty(dynamic = true)
     private String key;
 
     @Schema(
@@ -34,6 +35,7 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
             description = "The value you want to set"
     )
     @NotNull
+    @PluginProperty(dynamic = true)
     private String value;
 
     @Schema(

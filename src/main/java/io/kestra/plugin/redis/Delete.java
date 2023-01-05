@@ -1,5 +1,6 @@
 package io.kestra.plugin.redis;
 
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -18,17 +19,16 @@ import java.util.List;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Redis Client Task",
-        description = "Interact with REDIS"
+        title = "Delete one or more keys."
 )
 public class Delete extends AbstractRedisConnection implements RunnableTask<Delete.Output> {
 
     @Schema(
             title = "Redis keys",
-            description = "The list of redis keys you want to delete" +
-                    "Can not be used with key property"
+            description = "The list of redis keys you want to delete"
     )
     @NotNull
+    @PluginProperty(dynamic = true)
     private List<String> keys;
 
     @Schema(

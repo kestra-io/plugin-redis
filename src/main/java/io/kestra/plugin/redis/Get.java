@@ -1,5 +1,6 @@
 package io.kestra.plugin.redis;
 
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.services.SerdeType;
@@ -17,8 +18,7 @@ import javax.validation.constraints.NotNull;
 @Getter
 @NoArgsConstructor
 @Schema(
-        title = "Redis Client Task",
-        description = "Interact with REDIS"
+        title = "Get the value of a key."
 )
 public class Get extends AbstractRedisConnection implements RunnableTask<Get.Output>{
 
@@ -27,9 +27,14 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
             description = "The redis key you want to get"
     )
     @NotNull
+    @PluginProperty(dynamic = true)
     private String key;
 
     @Builder.Default
+    @Schema(
+            title = "Deserialization type",
+            description = "Format of the data contained in Redis"
+    )
     private SerdeType serdeType = SerdeType.STRING;
 
     @Override

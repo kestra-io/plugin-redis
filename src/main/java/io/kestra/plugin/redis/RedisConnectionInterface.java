@@ -6,8 +6,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public interface RedisConnectionInterface {
 
     @Schema(
-            title = "Redis protocol",
-            description = "The protocol used for the connection"
+            title = "Redis URI",
+            description = "The URI to connect to the Redis Database."
     )
     String getUri();
 
