@@ -8,7 +8,7 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.redis.services.RedisService;
-import io.kestra.plugin.redis.services.SerdeType;
+import io.kestra.plugin.redis.models.SerdeType;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -34,7 +34,6 @@ import java.util.List;
     examples = {
         @Example(
             code = {
-                "type: io.kestra.plugin.redis.ListPush",
                 "uri: redis://:redis@localhost:6379/0",
                 "key: mykey",
                 "from:",

@@ -1,7 +1,7 @@
 package io.kestra.plugin.redis;
 
 import io.kestra.core.models.annotations.PluginProperty;
-import io.kestra.plugin.redis.services.SerdeType;
+import io.kestra.plugin.redis.models.SerdeType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import javax.validation.constraints.NotNull;

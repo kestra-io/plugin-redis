@@ -26,7 +26,6 @@ import java.util.List;
     examples = {
         @Example(
             code = {
-                "type: io.kestra.plugin.redis.Delete",
                 "uri: redis://:redis@localhost:6379/0",
                 "keys:",
                 "   - keyDelete1",
@@ -56,18 +55,16 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
     @Override
     public Output run(RunContext runContext) throws Exception {
         RedisService connection = this.redisFactory(runContext);
-        Long count;
-        boolean AllKeyDeleted;
 
-        count = connection.del(runContext.render(keys));
-        AllKeyDeleted = count == keys.size();
+        Long count = connection.del(runContext.render(keys));
+        boolean isAllKeyDeleted = count == keys.size();
 
-        if (!AllKeyDeleted && failedOnMissing) {
+        if (!isAllKeyDeleted && failedOnMissing) {
             connection.close();
             throw new NullPointerException("Missing keys, only " + count + " key deleted");
         }
         connection.close();
-        runContext.metric(Counter.of("keyProcessed", count));
+        runContext.metric(Counter.of("keys.deleted", count));
 
         return Output.builder().count(count.intValue()).build();
     }

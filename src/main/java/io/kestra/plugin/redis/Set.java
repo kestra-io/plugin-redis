@@ -6,8 +6,8 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.services.RedisService;
-import io.kestra.plugin.redis.services.SerdeType;
-import io.kestra.plugin.redis.services.Options;
+import io.kestra.plugin.redis.models.SerdeType;
+import io.kestra.plugin.redis.models.Options;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -26,7 +26,6 @@ import javax.validation.constraints.NotNull;
     examples = {
         @Example(
             code = {
-                "type: io.kestra.plugin.redis.Set",
                 "uri: amqp://guest:guest@localhost:5672/my_vhost",
                 "key: mykey",
                 "value: myvalue",
@@ -75,7 +74,7 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     public Output run(RunContext runContext) throws Exception {
         RedisService connection = this.redisFactory(runContext);
 
-        String oldValue = connection.set(runContext.render(key), serdeType.serialize(runContext.render(value)), get, options.getRedisSetArgs());
+        String oldValue = connection.set(runContext.render(key), serdeType.serialize(runContext.render(value)), get, options.asRedisSet());
 
         Output output = Output.builder().build();
         if (oldValue != null) {

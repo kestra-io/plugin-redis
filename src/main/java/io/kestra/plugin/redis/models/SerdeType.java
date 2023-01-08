@@ -1,10 +1,11 @@
-package io.kestra.plugin.redis.services;
+package io.kestra.plugin.redis.models;
 
 import io.kestra.core.serializers.JacksonMapper;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.io.IOException;
 
-@io.swagger.v3.oas.annotations.media.Schema(
+@Schema(
     title = "Serializer / Deserializer use for the value",
     description = "List are not handled."
 )

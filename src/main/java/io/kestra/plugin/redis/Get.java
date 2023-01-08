@@ -6,7 +6,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.services.RedisService;
-import io.kestra.plugin.redis.services.SerdeType;
+import io.kestra.plugin.redis.models.SerdeType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -25,7 +25,6 @@ import javax.validation.constraints.NotNull;
     examples = {
         @Example(
             code = {
-                "type: io.kestra.plugin.redis.Get",
                 "uri: redis://:redis@localhost:6379/0",
                 "key: mykey"
             }
@@ -51,12 +50,13 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
 
     @Override
     public Output run(RunContext runContext) throws Exception {
+        String key = runContext.render((this.key));
         RedisService connection = this.redisFactory(runContext);
-        String data = connection.get(runContext.render(key));
+        String data = connection.get(key);
 
         connection.close();
 
-        return Output.builder().data(serdeType.deserialize(data)).build();
+        return Output.builder().data(serdeType.deserialize(data)).key(key).build();
     }
 
     @Builder
@@ -67,5 +67,9 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
             description = "Data we get from the key"
         )
         private Object data;
+        @Schema(
+            title =  "Key of the retrieved data"
+        )
+        private String key;
     }
 }

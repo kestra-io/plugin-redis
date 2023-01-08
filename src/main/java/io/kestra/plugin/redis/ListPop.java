@@ -7,7 +7,7 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.redis.services.RedisService;
-import io.kestra.plugin.redis.services.SerdeType;
+import io.kestra.plugin.redis.models.SerdeType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -16,9 +16,7 @@ import java.io.*;
 import java.net.URI;
 import java.time.Duration;
 import java.time.ZonedDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.kestra.core.utils.Rethrow.throwRunnable;
@@ -35,7 +33,6 @@ import static io.kestra.core.utils.Rethrow.throwRunnable;
     examples = {
         @Example(
             code = {
-                "type: io.kestra.plugin.redis.ListPop",
                 "uri: redis://:redis@localhost:6379/0",
                 "key: mypopkeyjson",
                 "serdeType: JSON",
@@ -61,7 +58,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
     @Override
     public Output run(RunContext runContext) throws Exception {
         RedisService connection = this.redisFactory(runContext);
-
+        String key = runContext.render(this.key);
         File tempFile = runContext.tempFile(".ion").toFile();
         Thread thread = null;
 
@@ -70,22 +67,21 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
         }
 
         try (BufferedOutputStream output = new BufferedOutputStream(new FileOutputStream(tempFile))) {
-            Map<String, Integer> lineCount = new HashMap<>();
+            AtomicInteger lineCount;
             AtomicInteger total = new AtomicInteger();
             ZonedDateTime started = ZonedDateTime.now();
 
             thread = new Thread(throwRunnable(() -> {
                 while (!this.ended(total, started)) {
-                    List<String> data = connection.listPop(runContext.render(key), count);
+                    List<String> data = connection.listPop(key, count);
                     for (String str : data) {
                         FileSerde.write(output, this.serdeType.deserialize(str));
                     }
                     total.getAndIncrement();
-                    lineCount.compute(key, (s, integer) -> integer == null ? 1 : integer + 1);
                 }
             }));
 
-            lineCount.forEach((s, integer) -> runContext.metric(Counter.of("records", integer, "topic", s)));
+            runContext.metric(Counter.of("records", total.get(), "key", key));
             thread.setDaemon(true);
             thread.setName("redis-listPop");
             thread.start();
@@ -121,7 +117,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Number of data retrieved"
+            title = "Number of elements retrieved"
         )
         private Integer count;
 
