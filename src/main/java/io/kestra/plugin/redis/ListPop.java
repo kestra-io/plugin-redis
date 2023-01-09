@@ -6,7 +6,6 @@ import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
-import io.kestra.plugin.redis.services.RedisService;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -57,44 +56,45 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        RedisService connection = this.redisFactory(runContext);
-        String key = runContext.render(this.key);
-        File tempFile = runContext.tempFile(".ion").toFile();
-        Thread thread = null;
+        try (RedisFactory factory = this.redisFactory(runContext)) {
+            String key = runContext.render(this.key);
+            File tempFile = runContext.tempFile(".ion").toFile();
+            Thread thread = null;
 
-        if (this.maxDuration == null && this.maxRecords == null) {
-            throw new Exception("maxDuration or maxRecords must be set to avoid infinite loop");
-        }
-
-        try (BufferedOutputStream output = new BufferedOutputStream(new FileOutputStream(tempFile))) {
-            AtomicInteger lineCount;
-            AtomicInteger total = new AtomicInteger();
-            ZonedDateTime started = ZonedDateTime.now();
-
-            thread = new Thread(throwRunnable(() -> {
-                while (!this.ended(total, started)) {
-                    List<String> data = connection.listPop(key, count);
-                    for (String str : data) {
-                        FileSerde.write(output, this.serdeType.deserialize(str));
-                    }
-                    total.getAndIncrement();
-                }
-            }));
-
-            runContext.metric(Counter.of("records", total.get(), "key", key));
-            thread.setDaemon(true);
-            thread.setName("redis-listPop");
-            thread.start();
-
-            while (!this.ended(total, started)) {
-                //noinspection BusyWait
-                Thread.sleep(100);
+            if (this.maxDuration == null && this.maxRecords == null) {
+                throw new Exception("maxDuration or maxRecords must be set to avoid infinite loop");
             }
-            connection.close();
-            thread.join();
 
-            return Output.builder().uri(runContext.putTempFile(tempFile)).count(total.get()).build();
+            try (BufferedOutputStream output = new BufferedOutputStream(new FileOutputStream(tempFile))) {
+                AtomicInteger lineCount;
+                AtomicInteger total = new AtomicInteger();
+                ZonedDateTime started = ZonedDateTime.now();
 
+                thread = new Thread(throwRunnable(() -> {
+                    while (!this.ended(total, started)) {
+                        List<String> data = factory.listPop(key, count);
+                        for (String str : data) {
+                            FileSerde.write(output, this.serdeType.deserialize(str));
+                        }
+                        total.getAndIncrement();
+                    }
+                }));
+
+                runContext.metric(Counter.of("records", total.get(), "key", key));
+                thread.setDaemon(true);
+                thread.setName("redis-listPop");
+                thread.start();
+
+                while (!this.ended(total, started)) {
+                    //noinspection BusyWait
+                    Thread.sleep(100);
+                }
+                factory.close();
+                thread.join();
+
+                return Output.builder().uri(runContext.putTempFile(tempFile)).count(total.get()).build();
+
+            }
         }
     }
 

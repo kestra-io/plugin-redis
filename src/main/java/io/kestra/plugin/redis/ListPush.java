@@ -7,7 +7,6 @@ import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
-import io.kestra.plugin.redis.services.RedisService;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
@@ -66,45 +65,46 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        RedisService connection = this.redisFactory(runContext);
+        try (RedisFactory factory = this.redisFactory(runContext)) {
 
-        Integer count = 0;
-        if (this.from instanceof String || this.from instanceof List) {
-            Flowable<Object> flowable;
-            Flowable<Integer> resultFlowable;
-            if (this.from instanceof String) {
-                URI from = new URI(runContext.render((String) this.from));
-                try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.uriToInputStream(from)))) {
-                    flowable = Flowable.create(FileSerde.reader(inputStream), BackpressureStrategy.BUFFER);
-                    resultFlowable = this.buildFlowable(flowable, runContext, connection);
+            Integer count = 0;
+            if (this.from instanceof String || this.from instanceof List) {
+                Flowable<Object> flowable;
+                Flowable<Integer> resultFlowable;
+                if (this.from instanceof String) {
+                    URI from = new URI(runContext.render((String) this.from));
+                    try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.uriToInputStream(from)))) {
+                        flowable = Flowable.create(FileSerde.reader(inputStream), BackpressureStrategy.BUFFER);
+                        resultFlowable = this.buildFlowable(flowable, runContext, factory);
+
+                        count = resultFlowable
+                            .reduce(Integer::sum)
+                            .blockingGet();
+                    }
+                } else {
+                    flowable = Flowable.fromArray(((List<Object>) this.from).toArray());
+                    resultFlowable = this.buildFlowable(flowable, runContext, factory);
 
                     count = resultFlowable
                         .reduce(Integer::sum)
                         .blockingGet();
+                    runContext.metric(Counter.of("lineProcessed", count));
                 }
-            } else {
-                flowable = Flowable.fromArray(((List<Object>) this.from).toArray());
-                resultFlowable = this.buildFlowable(flowable, runContext, connection);
-
-                count = resultFlowable
-                    .reduce(Integer::sum)
-                    .blockingGet();
-                runContext.metric(Counter.of("lineProcessed", count));
             }
+
+            Output output = Output.builder().count(count).build();
+
+            factory.close();
+
+            return output;
         }
-
-        Output output = Output.builder().count(count).build();
-
-        connection.close();
-
-        return output;
     }
 
     @SuppressWarnings("unchecked")
-    private Flowable<Integer> buildFlowable(Flowable<Object> flowable, RunContext runContext, RedisService connection) {
+    private Flowable<Integer> buildFlowable(Flowable<Object> flowable, RunContext runContext, RedisFactory factory) {
         return flowable
             .map(row -> {
-                connection.listPush(runContext.render(key), Arrays.asList(serdeType.serialize(String.valueOf(row))));
+                factory.listPush(runContext.render(key), Arrays.asList(serdeType.serialize(String.valueOf(row))));
 
                 return 1;
             });

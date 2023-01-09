@@ -5,7 +5,6 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.plugin.redis.services.RedisService;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.kestra.plugin.redis.models.Options;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -72,18 +71,18 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        RedisService connection = this.redisFactory(runContext);
+        try (RedisFactory factory = this.redisFactory(runContext)) {
+            String oldValue = factory.set(runContext.render(key), serdeType.serialize(runContext.render(value)), get, options.asRedisSet());
 
-        String oldValue = connection.set(runContext.render(key), serdeType.serialize(runContext.render(value)), get, options.asRedisSet());
+            Output output = Output.builder().build();
+            if (oldValue != null) {
+                output.oldValue = oldValue;
+            }
 
-        Output output = Output.builder().build();
-        if (oldValue != null) {
-            output.oldValue = oldValue;
+            factory.close();
+
+            return output;
         }
-
-        connection.close();
-
-        return output;
     }
 
 
