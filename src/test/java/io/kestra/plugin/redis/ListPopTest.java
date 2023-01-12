@@ -32,7 +32,7 @@ class ListPopTest {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
         ListPop task = ListPop.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .key("mypopkey")
             .count(2)
             .maxRecords(1)
@@ -48,7 +48,7 @@ class ListPopTest {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
         ListPop task = ListPop.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .key("mypopkeyjson")
             .serdeType(SerdeType.JSON)
             .maxRecords(1)
@@ -63,16 +63,16 @@ class ListPopTest {
     void setUp() throws Exception {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
         Delete.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .keys(Arrays.asList("mypopkey"))
             .build().run(runContext);
         ListPush.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .key("mypopkey")
             .from(Arrays.asList("value1", "value2", "value3"))
             .build().run(runContext);
         ListPush.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .key("mypopkeyjson")
             .from(Arrays.asList("{\"city\":\"Paris\"}", "{\"city\":\"London\"}"))
             .build().run(runContext);

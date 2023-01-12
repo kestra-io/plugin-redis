@@ -12,15 +12,13 @@ import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
-
 @SuperBuilder
 @ToString
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
 public abstract class AbstractRedisConnection extends Task implements RedisConnectionInterface {
-
-    private String uri;
+    private String url;
 
     public RedisFactory redisFactory(RunContext runContext) throws Exception {
         RedisFactory factory = new RedisFactory();
@@ -33,14 +31,13 @@ public abstract class AbstractRedisConnection extends Task implements RedisConne
         private RedisClient redisClient;
 
         @Getter(AccessLevel.NONE)
-        private StatefulRedisConnection redisConnection;
+        private StatefulRedisConnection<String, String> redisConnection;
 
         @Getter(AccessLevel.NONE)
         private RedisCommands<String, String> syncCommands;
 
-        @SuppressWarnings("unchecked")
         public void connect(RunContext runContext) throws IllegalVariableEvaluationException {
-            redisClient = RedisClient.create(runContext.render(uri));
+            redisClient = RedisClient.create(runContext.render(url));
             redisConnection = redisClient.connect();
             syncCommands = redisConnection.sync();
         }
@@ -63,7 +60,6 @@ public abstract class AbstractRedisConnection extends Task implements RedisConne
         }
 
         public long listPush(String key, List<String> values) {
-
             return syncCommands.lpush(key, values.toArray(new String[0]));
         }
 
@@ -76,5 +72,4 @@ public abstract class AbstractRedisConnection extends Task implements RedisConne
             this.redisClient.shutdown();
         }
     }
-
 }

@@ -18,23 +18,21 @@ import javax.validation.constraints.NotNull;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Get the value of a key."
+    title = "Get a key."
 )
 @Plugin(
     examples = {
         @Example(
             code = {
-                "uri: redis://:redis@localhost:6379/0",
+                "url: redis://:redis@localhost:6379/0",
                 "key: mykey"
             }
         )
     }
 )
 public class Get extends AbstractRedisConnection implements RunnableTask<Get.Output> {
-
     @Schema(
-        title = "Redis key",
-        description = "The redis key you want to get"
+        title = "The redis key you want to get"
     )
     @NotNull
     @PluginProperty(dynamic = true)
@@ -42,9 +40,9 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
 
     @Builder.Default
     @Schema(
-        title = "Deserialization type",
-        description = "Format of the data contained in Redis"
+        title = "Format of the data contained in Redis"
     )
+    @NotNull
     private SerdeType serdeType = SerdeType.STRING;
 
     @Override
@@ -62,12 +60,12 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Data from the key",
-            description = "Data we get from the key"
+            title = "The fetched data."
         )
         private Object data;
+
         @Schema(
-            title = "Key of the retrieved data"
+            title = "The fetched key."
         )
         private String key;
     }

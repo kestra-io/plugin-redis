@@ -27,7 +27,7 @@ class GetTest {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
         Get task = Get.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .key("key")
             .build();
 
@@ -41,15 +41,14 @@ class GetTest {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
         Get task = Get.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .key("keyJson")
             .serdeType(SerdeType.JSON)
             .build();
 
         Get.Output runOutput = task.run(runContext);
 
-        assertThat(runOutput.getData(),
-            is(JacksonMapper.ofJson(false).readValue("{\"data\":5}", Object.class)));
+        assertThat(runOutput.getData(), is(JacksonMapper.ofJson(false).readValue("{\"data\":5}", Object.class)));
     }
 
     @BeforeAll
@@ -61,7 +60,7 @@ class GetTest {
 
     static Set createSetTask(String key, String value) {
         return Set.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .key(key)
             .value(value)
             .build();

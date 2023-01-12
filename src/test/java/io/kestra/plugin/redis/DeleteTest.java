@@ -28,14 +28,13 @@ class DeleteTest {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
         Delete task = Delete.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .keys(Arrays.asList("keyDelete1", "keyDelete2"))
             .build();
 
         Delete.Output runOutput = task.run(runContext);
 
         assertThat(runOutput.getCount(), is(2));
-
     }
 
     @Test
@@ -43,7 +42,7 @@ class DeleteTest {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
         Delete task = Delete.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .keys(Arrays.asList("keyDeleted", "keyDeleted2"))
             .failedOnMissing(true)
             .build();
@@ -63,7 +62,7 @@ class DeleteTest {
 
     static Set createSetTask(String key, String value) {
         return Set.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .key(key)
             .value(value)
             .build();

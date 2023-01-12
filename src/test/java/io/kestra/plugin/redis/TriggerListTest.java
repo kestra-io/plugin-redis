@@ -74,7 +74,7 @@ class TriggerListTest {
             ListPush task = ListPush.builder()
                 .id(TriggerListTest.class.getSimpleName())
                 .type(ListPush.class.getName())
-                .uri(REDIS_URI)
+                .url(REDIS_URI)
                 .key("mytriggerkey")
                 .from(Arrays.asList("value1", "value2"))
                 .build();

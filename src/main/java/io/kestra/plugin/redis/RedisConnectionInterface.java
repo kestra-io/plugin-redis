@@ -10,7 +10,7 @@ public interface RedisConnectionInterface {
     @NotNull
     @PluginProperty(dynamic = true)
     @Schema(
-        title = "The connection string"
+        title = "The connection string."
     )
-    String getUri();
+    String getUrl();
 }

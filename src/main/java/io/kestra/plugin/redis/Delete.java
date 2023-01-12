@@ -25,7 +25,7 @@ import java.util.List;
     examples = {
         @Example(
             code = {
-                "uri: redis://:redis@localhost:6379/0",
+                "url: redis://:redis@localhost:6379/0",
                 "keys:",
                 "   - keyDelete1",
                 "   - keyDelete2"
@@ -35,15 +35,14 @@ import java.util.List;
 )
 public class Delete extends AbstractRedisConnection implements RunnableTask<Delete.Output> {
     @Schema(
-        title = "Redis keys",
-        description = "The list of redis keys you want to delete"
+        title = "The list of redis keys you want to delete"
     )
     @NotNull
     @PluginProperty(dynamic = true)
     private List<String> keys;
+
     @Schema(
-        title = "failedOnMissing",
-        description = "If some keys are not deleted, failed the task"
+        title = "If some keys are not deleted, failed the task"
     )
     @Builder.Default
     private Boolean failedOnMissing = false;
@@ -52,16 +51,20 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
 
-            Long count = factory.del(runContext.render(keys));
+            long count = factory.del(runContext.render(keys));
             boolean isAllKeyDeleted = count == keys.size();
 
             if (!isAllKeyDeleted && failedOnMissing) {
                 factory.close();
                 throw new NullPointerException("Missing keys, only " + count + " key deleted");
             }
+
             runContext.metric(Counter.of("keys.deleted", count));
             factory.close();
-            return Output.builder().count(count.intValue()).build();
+
+            return Output.builder()
+                .count((int) count)
+                .build();
         }
     }
 

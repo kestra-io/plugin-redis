@@ -33,7 +33,7 @@ import java.util.Optional;
     examples = {
         @Example(
             code = {
-                "id: storage-listen",
+                "id: list-listen",
                 "namespace: io.kestra.tests",
                 "",
                 "tasks:",
@@ -44,7 +44,7 @@ import java.util.Optional;
                 "triggers:",
                 "  - id: watch",
                 "    type: io.kestra.plugin.redis.Trigger",
-                "    uri: redis://localhost:6379/0",
+                "    url: redis://localhost:6379/0",
                 "    key: mytriggerkey",
                 "    maxRecords: 2",
             }
@@ -52,12 +52,12 @@ import java.util.Optional;
     }
 )
 public class TriggerList extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<ListPop.Output>, ListPopInterface, RedisConnectionInterface {
-    private String uri;
+    private String url;
 
     private String key;
 
     @Builder.Default
-    private Integer count = 1;
+    private Integer count = 100;
 
     @Builder.Default
     private SerdeType serdeType = SerdeType.STRING;
@@ -72,7 +72,7 @@ public class TriggerList extends AbstractTrigger implements PollingTriggerInterf
         Logger logger = runContext.logger();
 
         ListPop task = ListPop.builder()
-            .uri(runContext.render(this.uri))
+            .url(runContext.render(this.url))
             .key(runContext.render(this.key))
             .count(this.count)
             .maxRecords(this.maxRecords)

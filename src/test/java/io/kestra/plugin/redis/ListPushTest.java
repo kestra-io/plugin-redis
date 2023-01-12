@@ -18,6 +18,7 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -38,7 +39,7 @@ class ListPushTest {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
         ListPush task = ListPush.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .key("mykey")
             .from(Arrays.asList("value1", "value2"))
             .build();
@@ -55,7 +56,7 @@ class ListPushTest {
         URI uri = createTestFile();
 
         ListPush task = ListPush.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .key("mykeyFile")
             .from(uri.toString())
             .build();
@@ -69,12 +70,12 @@ class ListPushTest {
     void setUp() throws Exception {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
         Delete.builder()
-            .uri(REDIS_URI)
-            .keys(Arrays.asList("mykey"))
+            .url(REDIS_URI)
+            .keys(List.of("mykey"))
             .build().run(runContext);
         Delete.builder()
-            .uri(REDIS_URI)
-            .keys(Arrays.asList("mykeyFile"))
+            .url(REDIS_URI)
+            .keys(List.of("mykeyFile"))
             .build().run(runContext);
     }
 
@@ -88,5 +89,4 @@ class ListPushTest {
         }
         return storageInterface.put(URI.create("/" + IdUtils.create() + ".ion"), new FileInputStream(tempFile));
     }
-
 }

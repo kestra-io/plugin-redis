@@ -32,7 +32,7 @@ import static io.kestra.core.utils.Rethrow.throwRunnable;
     examples = {
         @Example(
             code = {
-                "uri: redis://:redis@localhost:6379/0",
+                "url: redis://:redis@localhost:6379/0",
                 "key: mypopkeyjson",
                 "serdeType: JSON",
                 "maxRecords: 1"
@@ -52,25 +52,23 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
     private Duration maxDuration;
 
     @Builder.Default
-    private Integer count = 1;
+    private Integer count = 100;
 
     @Override
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
             String key = runContext.render(this.key);
             File tempFile = runContext.tempFile(".ion").toFile();
-            Thread thread = null;
 
             if (this.maxDuration == null && this.maxRecords == null) {
                 throw new Exception("maxDuration or maxRecords must be set to avoid infinite loop");
             }
 
             try (BufferedOutputStream output = new BufferedOutputStream(new FileOutputStream(tempFile))) {
-                AtomicInteger lineCount;
                 AtomicInteger total = new AtomicInteger();
                 ZonedDateTime started = ZonedDateTime.now();
 
-                thread = new Thread(throwRunnable(() -> {
+                Thread thread = new Thread(throwRunnable(() -> {
                     while (!this.ended(total, started)) {
                         List<String> data = factory.listPop(key, count);
                         for (String str : data) {
@@ -89,7 +87,6 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
                     //noinspection BusyWait
                     Thread.sleep(100);
                 }
-                factory.close();
                 thread.join();
 
                 return Output.builder().uri(runContext.putTempFile(tempFile)).count(total.get()).build();

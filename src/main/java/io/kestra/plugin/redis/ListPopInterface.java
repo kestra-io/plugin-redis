@@ -10,16 +10,14 @@ import java.time.Duration;
 public interface ListPopInterface {
 
     @Schema(
-        title = "Redis key",
-        description = "The redis key you want to set"
+        title = "The redis key for the list."
     )
     @NotNull
     @PluginProperty(dynamic = true)
     String getKey();
 
     @Schema(
-        title = "Deserialization type",
-        description = "Format of the data contained in Redis"
+        title = "Format of the data contained in Redis"
     )
     SerdeType getSerdeType();
 

@@ -12,10 +12,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
-/**
- * This test will only test the main task, this allow you to send any input
- * parameters to your task and test the returning behaviour easily.
- */
 @MicronautTest
 class SetTest {
     @Inject
@@ -28,13 +24,13 @@ class SetTest {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
         Set taskInit = Set.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .key("keySetGet")
             .value("value")
             .build();
 
         Set task = Set.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .key("keySetGet")
             .value("value")
             .get(true)
@@ -51,7 +47,7 @@ class SetTest {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
 
         Set task = Set.builder()
-            .uri(REDIS_URI)
+            .url(REDIS_URI)
             .key("key2")
             .value("{\"value\":\"1\"}")
             .build();
@@ -60,5 +56,4 @@ class SetTest {
 
         assertThat(runOutput.getOldValue(), is(nullValue()));
     }
-
 }

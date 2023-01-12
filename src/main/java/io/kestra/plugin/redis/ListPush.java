@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 @SuperBuilder
@@ -33,7 +34,7 @@ import java.util.List;
     examples = {
         @Example(
             code = {
-                "uri: redis://:redis@localhost:6379/0",
+                "url: redis://:redis@localhost:6379/0",
                 "key: mykey",
                 "from:",
                 "   - value1",
@@ -43,18 +44,15 @@ import java.util.List;
     }
 )
 public class ListPush extends AbstractRedisConnection implements RunnableTask<ListPush.Output> {
-
     @Schema(
-        title = "Redis key",
-        description = "The redis key you want to set"
+        title = "The redis key for the list."
     )
     @NotNull
     @PluginProperty(dynamic = true)
     private String key;
 
     @Schema(
-        title = "Redis value",
-        description = "The list of value you want to push"
+        title = "The list of value to push at head of the list"
     )
     @NotNull
     @PluginProperty(dynamic = true)
@@ -88,7 +86,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
                     count = resultFlowable
                         .reduce(Integer::sum)
                         .blockingGet();
-                    runContext.metric(Counter.of("lineProcessed", count));
+                    runContext.metric(Counter.of("records", count));
                 }
             }
 
@@ -100,11 +98,13 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
         }
     }
 
-    @SuppressWarnings("unchecked")
     private Flowable<Integer> buildFlowable(Flowable<Object> flowable, RunContext runContext, RedisFactory factory) {
         return flowable
             .map(row -> {
-                factory.listPush(runContext.render(key), Arrays.asList(serdeType.serialize(String.valueOf(row))));
+                factory.listPush(
+                    runContext.render(key),
+                    Collections.singletonList(serdeType.serialize(String.valueOf(row)))
+                );
 
                 return 1;
             });
