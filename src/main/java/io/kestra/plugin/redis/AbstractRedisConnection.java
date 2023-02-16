@@ -67,6 +67,14 @@ public abstract class AbstractRedisConnection extends Task implements RedisConne
             return syncCommands.lpop(key, count);
         }
 
+        public long publish(String channel, List<String> values) {
+            long result = 0;
+            for (String value : values) {
+                result += syncCommands.publish(channel, value);
+            }
+            return result;
+        }
+
         public void close() {
             this.redisConnection.close();
             this.redisClient.shutdown();
