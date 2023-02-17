@@ -52,7 +52,7 @@ dependencies {
     compileOnly group: "io.kestra", name: "core", version: kestraVersion
 
     // lettuce client
-    implementation 'io.lettuce:lettuce-core:6.2.2.RELEASE'
+    implementation 'io.lettuce:lettuce-core:6.2.3.RELEASE'
 
 
     // libs included in the final jar
