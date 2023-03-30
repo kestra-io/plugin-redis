@@ -24,7 +24,7 @@ public enum SerdeType {
         if (this == SerdeType.JSON) {
             return JacksonMapper.ofJson(false).writeValueAsString(message);
         } else {
-            return (String) message;
+            return String.valueOf(message);
         }
     }
 }
