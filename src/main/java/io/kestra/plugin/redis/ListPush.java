@@ -103,7 +103,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
             .map(row -> {
                 factory.listPush(
                     runContext.render(key),
-                    Collections.singletonList(serdeType.serialize(String.valueOf(row)))
+                    Collections.singletonList(serdeType.serialize(row))
                 );
 
                 return 1;

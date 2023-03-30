@@ -103,6 +103,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
             .map(row -> {
                 factory.publish(
                     runContext.render(channel),
+                    // FIXME
                     Collections.singletonList(serdeType.serialize(runContext.render(String.valueOf(row))))
                 );
 
