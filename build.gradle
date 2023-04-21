@@ -107,8 +107,9 @@ nexusPublishing {
 jar {
     manifest {
         attributes(
-                "X-Kestra-Title": project.name,
-                "X-Kestra-Group": project.group + ".templates",
+                "X-Kestra-Name": project.name,
+                "X-Kestra-Title": "Redis",
+                "X-Kestra-Group": project.group + ".redis",
                 "X-Kestra-Description": project.description,
                 "X-Kestra-Version": project.version
         )
