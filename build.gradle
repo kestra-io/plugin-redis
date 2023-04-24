@@ -22,7 +22,7 @@ repositories {
 
 sourceCompatibility = 11
 group "io.kestra.plugin"
-description 'Plugin template for Kestra'
+description 'Redis plugin for Kestra'
 
 tasks.withType(JavaCompile) {
     options.encoding = "UTF-8"
@@ -107,8 +107,9 @@ nexusPublishing {
 jar {
     manifest {
         attributes(
-                "X-Kestra-Title": project.name,
-                "X-Kestra-Group": project.group + ".templates",
+                "X-Kestra-Name": project.name,
+                "X-Kestra-Title": "Redis",
+                "X-Kestra-Group": project.group + ".redis",
                 "X-Kestra-Description": project.description,
                 "X-Kestra-Version": project.version
         )
