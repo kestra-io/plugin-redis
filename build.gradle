@@ -20,9 +20,11 @@ repositories {
     }
 }
 
-sourceCompatibility = 11
+sourceCompatibility = 17
+targetCompatibility = 17
+
 group "io.kestra.plugin"
-description 'Redis plugin for Kestra'
+description 'Access and manipulate Redis data within Kestra workflows.'
 
 tasks.withType(JavaCompile) {
     options.encoding = "UTF-8"
