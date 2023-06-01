@@ -1,5 +1,6 @@
 package io.kestra.plugin.redis;
 
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -52,7 +53,8 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
     private String channel;
 
     @Schema(
-        title = "The list of value to publish to the channel"
+        title = "The list of value to publish to the channel",
+        anyOf = {String.class, List.class}
     )
     @NotNull
     @PluginProperty(dynamic = true)
@@ -65,36 +67,30 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
 
-            Integer count = 0;
-            if (this.from instanceof String || this.from instanceof List) {
-                Flowable<Object> flowable;
-                Flowable<Integer> resultFlowable;
-                if (this.from instanceof String) {
-                    URI from = new URI(runContext.render((String) this.from));
-                    try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.uriToInputStream(from)))) {
-                        flowable = Flowable.create(FileSerde.reader(inputStream), BackpressureStrategy.BUFFER);
-                        resultFlowable = this.buildFlowable(flowable, runContext, factory);
-
-                        count = resultFlowable
-                            .reduce(Integer::sum)
-                            .blockingGet();
-                    }
-                } else {
-                    flowable = Flowable.fromArray(((List<Object>) this.from).toArray());
-                    resultFlowable = this.buildFlowable(flowable, runContext, factory);
-
+            Integer count;
+            if (this.from instanceof String fromStr) {
+                URI from = new URI(runContext.render(fromStr));
+                try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.uriToInputStream(from)))) {
+                    Flowable<Object> flowable = Flowable.create(FileSerde.reader(inputStream), BackpressureStrategy.BUFFER);
+                    Flowable<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                     count = resultFlowable
                         .reduce(Integer::sum)
                         .blockingGet();
-                    runContext.metric(Counter.of("records", count));
                 }
+            } else if (this.from instanceof List<?> fromList) {
+                Flowable<Object> flowable = Flowable.fromArray(fromList.toArray());
+                Flowable<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
+                count = resultFlowable
+                    .reduce(Integer::sum)
+                    .blockingGet();
             }
-
-            Output output = Output.builder().count(count).build();
-
-            factory.close();
-
-            return output;
+            else {
+                // should not occur as validation mandates String or List
+                throw new IllegalVariableEvaluationException("Invalid 'from' property type :" + from.getClass());
+            }
+            
+            runContext.metric(Counter.of("records", count));
+            return Output.builder().count(count).build();
         }
     }
 
@@ -103,8 +99,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
             .map(row -> {
                 factory.publish(
                     runContext.render(channel),
-                    // FIXME
-                    Collections.singletonList(serdeType.serialize(runContext.render(String.valueOf(row))))
+                    Collections.singletonList(serdeType.serialize(row))
                 );
 
                 return 1;
