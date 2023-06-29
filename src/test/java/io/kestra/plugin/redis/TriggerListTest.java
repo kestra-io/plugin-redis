@@ -6,9 +6,9 @@ import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.runners.FlowListeners;
 import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.runners.Worker;
 import io.kestra.core.schedulers.AbstractScheduler;
 import io.kestra.core.schedulers.DefaultScheduler;
-import io.kestra.core.schedulers.SchedulerExecutionStateInterface;
 import io.kestra.core.schedulers.SchedulerTriggerStateInterface;
 import io.kestra.core.utils.TestsUtils;
 import io.micronaut.context.ApplicationContext;
@@ -37,9 +37,6 @@ class TriggerListTest {
     private SchedulerTriggerStateInterface triggerState;
 
     @Inject
-    SchedulerExecutionStateInterface executionState;
-
-    @Inject
     private FlowListeners flowListenersService;
 
     @Inject
@@ -57,12 +54,14 @@ class TriggerListTest {
     void flow() throws Exception {
         CountDownLatch queueCount = new CountDownLatch(1);
 
-        try (AbstractScheduler scheduler = new DefaultScheduler(
-            this.applicationContext,
-            this.flowListenersService,
-            this.executionState,
-            this.triggerState
-        )) {
+        try (
+            AbstractScheduler scheduler = new DefaultScheduler(
+                this.applicationContext,
+                this.flowListenersService,
+                this.triggerState
+            );
+            Worker worker = new Worker(applicationContext, 8, null);
+        ) {
             AtomicReference<Execution> last = new AtomicReference<>();
 
             executionQueue.receive(TriggerListTest.class, execution -> {
@@ -79,6 +78,7 @@ class TriggerListTest {
                 .from(Arrays.asList("value1", "value2"))
                 .build();
 
+            worker.run();
             scheduler.run();
 
             repositoryLoader.load(Objects.requireNonNull(TriggerListTest.class.getClassLoader().getResource("flows")));
