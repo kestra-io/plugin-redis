@@ -66,6 +66,23 @@ class ListPushTest {
         assertThat(runOutput.getCount(), is(5));
     }
 
+    @Test
+    void testListPushAsString() throws Exception {
+        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+
+        URI uri = createTestFile();
+
+        ListPush task = ListPush.builder()
+            .url(REDIS_URI)
+            .key("mykeyFile")
+            .from("[\"value1\", \"value2\"]")
+            .build();
+
+        ListPush.Output runOutput = task.run(runContext);
+
+        assertThat(runOutput.getCount(), is(2));
+    }
+
     @BeforeEach
     void setUp() throws Exception {
         RunContext runContext = runContextFactory.of(ImmutableMap.of());
