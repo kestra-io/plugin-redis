@@ -8,6 +8,7 @@ import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
+import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
@@ -19,7 +20,6 @@ import javax.validation.constraints.NotNull;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URI;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -68,16 +68,29 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
         try (RedisFactory factory = this.redisFactory(runContext)) {
 
             Integer count;
-            if (this.from instanceof String fromUrl) {
-                URI from = new URI(runContext.render(fromUrl));
-                try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.uriToInputStream(from)))) {
+
+            Object from = null;
+            if (this.from instanceof String fromString) {
+                String renderedFrom = runContext.render(fromString);
+                try {
+                    from = JacksonMapper.ofJson().readValue(renderedFrom, List.class);
+                } catch (Exception e) {
+                    from = renderedFrom;
+                }
+            } else {
+                from = this.from;
+            }
+
+            if (from instanceof String fromUrl) {
+                URI fromURI = new URI(runContext.render(fromUrl));
+                try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.uriToInputStream(fromURI)))) {
                     Flowable<Object> flowable = Flowable.create(FileSerde.reader(inputStream), BackpressureStrategy.BUFFER);
                     Flowable<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                     count = resultFlowable
                         .reduce(Integer::sum)
                         .blockingGet();
                 }
-            } else if (this.from instanceof List<?> fromList) {
+            } else if (from instanceof List<?> fromList) {
                 Flowable<Object> flowable = Flowable.fromArray((fromList).toArray());
                 Flowable<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                 count = resultFlowable
