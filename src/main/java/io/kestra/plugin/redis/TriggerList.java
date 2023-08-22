@@ -11,7 +11,6 @@ import io.kestra.core.models.triggers.PollingTriggerInterface;
 import io.kestra.core.models.triggers.TriggerContext;
 import io.kestra.core.models.triggers.TriggerOutput;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -43,11 +42,12 @@ import java.util.Optional;
                 "",
                 "triggers:",
                 "  - id: watch",
-                "    type: io.kestra.plugin.redis.Trigger",
+                "    type: io.kestra.plugin.redis.TriggerList",
                 "    url: redis://localhost:6379/0",
                 "    key: mytriggerkey",
                 "    maxRecords: 2",
-            }
+            },
+            full = true
         )
     }
 )
