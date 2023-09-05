@@ -65,10 +65,10 @@ class TriggerListTest {
             AtomicReference<Execution> last = new AtomicReference<>();
 
             executionQueue.receive(TriggerListTest.class, execution -> {
-                last.set(execution);
+                last.set(execution.getLeft());
 
                 queueCount.countDown();
-                assertThat(execution.getFlowId(), is("trigger"));
+                assertThat(execution.getLeft().getFlowId(), is("trigger"));
             });
             ListPush task = ListPush.builder()
                 .id(TriggerListTest.class.getSimpleName())
