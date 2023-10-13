@@ -14,7 +14,7 @@ import org.junit.jupiter.api.TestInstance;
 import java.util.Arrays;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.*;
 
 @MicronautTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -35,12 +35,23 @@ class ListPopTest {
             .url(REDIS_URI)
             .key("mypopkey")
             .count(2)
-            .maxRecords(1)
+            .maxRecords(2)
             .build();
 
         ListPop.Output runOutput = task.run(runContext);
 
-        assertThat(runOutput.getCount(), greaterThanOrEqualTo(1));
+        assertThat(runOutput.getCount(), is(2));
+
+        // second lpop should return the thrid item
+        runOutput = task.run(runContext);
+
+        assertThat(runOutput.getCount(), is(1));
+
+        // third lpop should return nothing
+        runOutput = task.run(runContext);
+
+        assertThat(runOutput.getCount(), is(0));
+
     }
 
     @Test
@@ -52,11 +63,12 @@ class ListPopTest {
             .key("mypopkeyjson")
             .serdeType(SerdeType.JSON)
             .maxRecords(1)
+            .count(1)
             .build();
 
         ListPop.Output runOutput = task.run(runContext);
 
-        assertThat(runOutput.getCount(), greaterThanOrEqualTo(1));
+        assertThat(runOutput.getCount(), is(1));
     }
 
     @BeforeEach
@@ -65,6 +77,10 @@ class ListPopTest {
         Delete.builder()
             .url(REDIS_URI)
             .keys(Arrays.asList("mypopkey"))
+            .build().run(runContext);
+        Delete.builder()
+            .url(REDIS_URI)
+            .keys(Arrays.asList("mypopkeyjson"))
             .build().run(runContext);
         ListPush.builder()
             .url(REDIS_URI)
