@@ -18,8 +18,6 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.kestra.core.utils.Rethrow.throwRunnable;
-
 @SuperBuilder
 @ToString
 @EqualsAndHashCode
@@ -68,26 +66,18 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
                 AtomicInteger total = new AtomicInteger();
                 ZonedDateTime started = ZonedDateTime.now();
 
-                Thread thread = new Thread(throwRunnable(() -> {
-                    while (!this.ended(total, started)) {
-                        List<String> data = factory.listPop(key, count);
-                        for (String str : data) {
-                            FileSerde.write(output, this.serdeType.deserialize(str));
-                        }
+                boolean empty;
+                do {
+                    List<String> data = factory.listPop(key, count);
+                    empty = data.isEmpty();
+                    for (String str : data) {
+                        FileSerde.write(output, this.serdeType.deserialize(str));
                         total.getAndIncrement();
                     }
-                }));
+                }
+                while (!this.ended(empty, total, started));
 
                 runContext.metric(Counter.of("records", total.get(), "key", key));
-                thread.setDaemon(true);
-                thread.setName("redis-listPop");
-                thread.start();
-
-                while (!this.ended(total, started)) {
-                    //noinspection BusyWait
-                    Thread.sleep(100);
-                }
-                thread.join();
 
                 return Output.builder().uri(runContext.putTempFile(tempFile)).count(total.get()).build();
 
@@ -96,14 +86,16 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
     }
 
     @SuppressWarnings("RedundantIfStatement")
-    private boolean ended(AtomicInteger count, ZonedDateTime start) {
-        if (this.maxRecords != null && count.get() >= this.maxRecords) {
+    private boolean ended(boolean empty, AtomicInteger count, ZonedDateTime start) {
+        if (empty) {
+            return true;
+        }
 
+        if (this.maxRecords != null && count.get() >= this.maxRecords) {
             return true;
         }
 
         if (this.maxDuration != null && ZonedDateTime.now().toEpochSecond() > start.plus(this.maxDuration).toEpochSecond()) {
-
             return true;
         }
 
