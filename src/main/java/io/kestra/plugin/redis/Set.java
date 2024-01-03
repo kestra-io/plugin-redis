@@ -14,7 +14,7 @@ import lombok.extern.jackson.Jacksonized;
 
 import java.time.Duration;
 import java.time.ZonedDateTime;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 @SuperBuilder
 @ToString
