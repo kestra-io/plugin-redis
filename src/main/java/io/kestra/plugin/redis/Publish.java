@@ -9,18 +9,21 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.redis.models.SerdeType;
-import io.reactivex.BackpressureStrategy;
-import io.reactivex.Flowable;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import jakarta.validation.constraints.NotNull;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
+
+import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @SuperBuilder
 @ToString
@@ -70,18 +73,18 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
             if (this.from instanceof String fromStr) {
                 URI from = new URI(runContext.render(fromStr));
                 try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.uriToInputStream(from)))) {
-                    Flowable<Object> flowable = Flowable.create(FileSerde.reader(inputStream), BackpressureStrategy.BUFFER);
-                    Flowable<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
+                    Flux<Object> flowable = Flux.create(FileSerde.reader(inputStream), FluxSink.OverflowStrategy.BUFFER);
+                    Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                     count = resultFlowable
                         .reduce(Integer::sum)
-                        .blockingGet();
+                        .block();
                 }
             } else if (this.from instanceof List<?> fromList) {
-                Flowable<Object> flowable = Flowable.fromArray(fromList.toArray());
-                Flowable<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
+                Flux<Object> flowable = Flux.fromArray(fromList.toArray());
+                Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                 count = resultFlowable
                     .reduce(Integer::sum)
-                    .blockingGet();
+                    .block();
             }
             else {
                 // should not occur as validation mandates String or List
@@ -93,16 +96,16 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
         }
     }
 
-    private Flowable<Integer> buildFlowable(Flowable<Object> flowable, RunContext runContext, RedisFactory factory) {
+    private Flux<Integer> buildFlowable(Flux<Object> flowable, RunContext runContext, RedisFactory factory) throws Exception {
         return flowable
-            .map(row -> {
+            .map(throwFunction(row -> {
                 factory.publish(
                     runContext.render(channel),
                     Collections.singletonList(serdeType.serialize(row))
                 );
 
                 return 1;
-            });
+            }));
     }
 
     @Builder
