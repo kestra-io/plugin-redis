@@ -64,7 +64,7 @@ class TriggerListTest {
         ) {
             AtomicReference<Execution> last = new AtomicReference<>();
 
-            executionQueue.receive(TriggerListTest.class, execution -> {
+            executionQueue.receive(execution -> {
                 last.set(execution.getLeft());
 
                 queueCount.countDown();
