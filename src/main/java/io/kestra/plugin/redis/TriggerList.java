@@ -23,7 +23,7 @@ import java.util.Optional;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Wait for key of type list in Redis database"
+    title = "Wait for key of type list in Redis database."
 )
 @Plugin(
     examples = {
@@ -33,7 +33,7 @@ import java.util.Optional;
                 "namespace: io.kestra.tests",
                 "",
                 "tasks:",
-                "  - id: echo trigger file",
+                "  - id: echo",
                 "    type: io.kestra.core.tasks.log.Log",
                 "    message: \"{{ trigger.uri }} containing {{ trigger.count }} lines\" ",
                 "",

@@ -31,7 +31,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Publish one or multiple values to a channel"
+    title = "Publish one or multiple values to a channel."
 )
 @Plugin(
     examples = {

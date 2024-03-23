@@ -28,7 +28,7 @@ import jakarta.validation.constraints.NotNull;
     examples = {
         @Example(
             code = {
-                "url: amqp://guest:guest@localhost:5672/my_vhost",
+                "url: redis://:redis@localhost:6379/0",
                 "key: mykey",
                 "value: myvalue",
                 "serdeType: STRING"
