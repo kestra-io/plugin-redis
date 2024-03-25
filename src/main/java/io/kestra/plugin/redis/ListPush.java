@@ -32,7 +32,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Prepend one or multiple values to a list"
+    title = "Prepend one or multiple values to a list."
 )
 @Plugin(
     examples = {
@@ -56,7 +56,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     private String key;
 
     @Schema(
-        title = "The list of value to push at head of the list",
+        title = "The list of values to push at the head of the list.",
         anyOf = {String.class, List.class}
     )
     @NotNull
@@ -127,7 +127,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
             title = "Count",
-            description = "The number of value inserted"
+            description = "The number of values inserted."
         )
         private Integer count;
     }
