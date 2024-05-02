@@ -7,20 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 
-public interface ListPopInterface {
-
-    @Schema(
-        title = "The redis key for the list."
-    )
-    @NotNull
-    @PluginProperty(dynamic = true)
-    String getKey();
-
-    @Schema(
-        title = "Format of the data contained in Redis"
-    )
-    SerdeType getSerdeType();
-
+public interface ListPopInterface extends ListPopBaseInterface {
     @Schema(
         title = "The max number of rows to fetch before stopping.",
         description = "It's not an hard limit and is evaluated every second."
