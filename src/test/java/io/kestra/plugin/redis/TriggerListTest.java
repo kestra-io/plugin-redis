@@ -1,97 +1,39 @@
 package io.kestra.plugin.redis;
 
-import com.google.common.collect.ImmutableMap;
-import io.kestra.core.queues.QueueFactoryInterface;
-import io.kestra.core.queues.QueueInterface;
-import io.kestra.core.repositories.LocalFlowRepositoryLoader;
-import io.kestra.core.runners.FlowListeners;
-import io.kestra.core.runners.RunContextFactory;
-import io.kestra.core.runners.Worker;
-import io.kestra.core.schedulers.AbstractScheduler;
-import io.kestra.core.schedulers.DefaultScheduler;
-import io.kestra.core.schedulers.SchedulerTriggerStateInterface;
-import io.kestra.core.utils.IdUtils;
-import io.kestra.core.utils.TestsUtils;
-import io.micronaut.context.ApplicationContext;
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
-import jakarta.inject.Inject;
-import jakarta.inject.Named;
-import org.junit.jupiter.api.Test;
 import io.kestra.core.models.executions.Execution;
+import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.kestra.core.utils.Rethrow.throwRunnable;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 
-@MicronautTest
-class TriggerListTest {
-    @Inject
-    private ApplicationContext applicationContext;
-
-    @Inject
-    private SchedulerTriggerStateInterface triggerState;
-
-    @Inject
-    private FlowListeners flowListenersService;
-
-    @Inject
-    @Named(QueueFactoryInterface.EXECUTION_NAMED)
-    private QueueInterface<Execution> executionQueue;
-
-    @Inject
-    protected LocalFlowRepositoryLoader repositoryLoader;
-    @Inject
-    private RunContextFactory runContextFactory;
-
-    private static final String REDIS_URI = "redis://:redis@localhost:6379/0";
-
+class TriggerListTest extends AbstractTriggerTest {
     @Test
     void flow() throws Exception {
         CountDownLatch queueCount = new CountDownLatch(1);
+        AtomicReference<Execution> last = new AtomicReference<>();
 
-        try (
-            AbstractScheduler scheduler = new DefaultScheduler(
-                this.applicationContext,
-                this.flowListenersService,
-                this.triggerState
-            );
-            Worker worker = applicationContext.createBean(Worker.class, IdUtils.create(), 8, null)
-        ) {
-            AtomicReference<Execution> last = new AtomicReference<>();
+        executionQueue.receive(TriggerListTest.class, execution -> {
+            last.set(execution.getLeft());
 
-            executionQueue.receive(execution -> {
-                last.set(execution.getLeft());
+            queueCount.countDown();
+            assertThat(execution.getLeft().getFlowId(), is("trigger"));
+        });
 
-                queueCount.countDown();
-                assertThat(execution.getLeft().getFlowId(), is("trigger"));
-            });
-            ListPush task = ListPush.builder()
-                .id(TriggerListTest.class.getSimpleName())
-                .type(ListPush.class.getName())
-                .url(REDIS_URI)
-                .key("mytriggerkey")
-                .from(Arrays.asList("value1", "value2"))
-                .build();
-
-            worker.run();
-            scheduler.run();
-
-            repositoryLoader.load(Objects.requireNonNull(TriggerListTest.class.getClassLoader().getResource("flows")));
-
-            task.run(TestsUtils.mockRunContext(runContextFactory, task, ImmutableMap.of()));
+        this.run("trigger.yaml", throwRunnable(() -> {
+            push();
 
             queueCount.await(1, TimeUnit.MINUTES);
 
             Integer trigger = (Integer) last.get().getTrigger().getVariables().get("count");
 
             assertThat(trigger, greaterThanOrEqualTo(2));
-        }
+        }));
     }
 }
 
