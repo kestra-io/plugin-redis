@@ -83,10 +83,11 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
                 }
                 while (!this.ended(empty, total, started));
 
+                output.flush();
+
                 runContext.metric(Counter.of("records", total.get(), "key", key));
 
                 return Output.builder().uri(runContext.putTempFile(tempFile)).count(total.get()).build();
-
             }
         }
     }
