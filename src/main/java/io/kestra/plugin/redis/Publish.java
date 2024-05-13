@@ -72,7 +72,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
             Integer count;
             if (this.from instanceof String fromStr) {
                 URI from = new URI(runContext.render(fromStr));
-                try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.uriToInputStream(from)))) {
+                try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.storage().getFile(from)))) {
                     Flux<Object> flowable = Flux.create(FileSerde.reader(inputStream), FluxSink.OverflowStrategy.BUFFER);
                     Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                     count = resultFlowable

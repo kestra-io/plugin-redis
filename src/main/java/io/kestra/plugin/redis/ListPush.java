@@ -86,7 +86,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
 
             if (from instanceof String fromUrl) {
                 URI fromURI = new URI(runContext.render(fromUrl));
-                try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.uriToInputStream(fromURI)))) {
+                try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.storage().getFile(fromURI)))) {
                     Flux<Object> flowable = Flux.create(FileSerde.reader(inputStream), FluxSink.OverflowStrategy.BUFFER);
                     Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                     count = resultFlowable
