@@ -46,7 +46,8 @@ import java.util.Optional;
             },
             full = true
         )
-    }
+    },
+    beta = true
 )
 public class RealtimeTriggerList extends AbstractTrigger implements RealtimeTriggerInterface, TriggerOutput<RealtimeTriggerList.Output>, ListPopBaseInterface, RedisConnectionInterface {
     private String url;

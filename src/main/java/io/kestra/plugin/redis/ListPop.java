@@ -109,10 +109,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
                     } finally {
                         fluxSink.complete();
                     }
-                },
-                FluxSink.OverflowStrategy.BUFFER
-            )
-            .subscribeOn(Schedulers.boundedElastic());
+                });
     }
 
 
