@@ -10,10 +10,6 @@ import io.kestra.plugin.redis.models.SerdeType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
-import reactor.core.scheduler.Schedulers;
 
 import java.io.*;
 import java.net.URI;
@@ -21,8 +17,6 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static io.kestra.core.utils.Rethrow.throwConsumer;
 
 @SuperBuilder
 @ToString
@@ -90,26 +84,6 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
                 return Output.builder().uri(runContext.storage().putFile(tempFile)).count(total.get()).build();
             }
         }
-    }
-
-    public Publisher<Object> stream(RunContext runContext) throws Exception {
-        return Flux.create(
-                fluxSink -> {
-                    try (RedisFactory factory = this.redisFactory(runContext)) {
-                        String key = runContext.render(this.key);
-
-                        while (true) {
-                            factory.listPop(key, 1)
-                                .forEach(throwConsumer(s -> fluxSink.next(this.serdeType.deserialize(s))));
-
-                            Thread.sleep(100);
-                        }
-                    } catch (Throwable e) {
-                        fluxSink.error(e);
-                    } finally {
-                        fluxSink.complete();
-                    }
-                });
     }
 
 

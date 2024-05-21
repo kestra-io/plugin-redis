@@ -11,12 +11,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
 import reactor.core.publisher.Flux;
 
-import java.net.URI;
-import java.time.Duration;
-import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static io.kestra.core.utils.Rethrow.throwConsumer;
 
 @SuperBuilder
 @ToString
@@ -57,8 +57,16 @@ public class RealtimeTriggerList extends AbstractTrigger implements RealtimeTrig
     @Builder.Default
     private SerdeType serdeType = SerdeType.STRING;
 
+    @Builder.Default
+    @Getter(AccessLevel.NONE)
+    private final AtomicBoolean isActive = new AtomicBoolean(true);
+
+    @Builder.Default
+    @Getter(AccessLevel.NONE)
+    private final CountDownLatch waitForTermination = new CountDownLatch(1);
+
     @Override
-    public Publisher<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
+    public Publisher<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) {
         ListPop task = ListPop.builder()
             .url(this.url)
             .key(this.key)
@@ -66,9 +74,36 @@ public class RealtimeTriggerList extends AbstractTrigger implements RealtimeTrig
             .serdeType(this.serdeType)
             .build();
 
-        return Flux.from(task.stream(conditionContext.getRunContext()))
+        return Flux.from(publisher(task, conditionContext.getRunContext()))
             .map((record) -> TriggerService.generateRealtimeExecution(this, context, Output.of(record)));
     }
+
+    public Publisher<Object> publisher(final ListPop task,
+                                       final RunContext runContext) {
+        return Flux.create(
+            fluxSink -> {
+                try (AbstractRedisConnection.RedisFactory factory = task.redisFactory(runContext)) {
+                    String key = runContext.render(this.key);
+
+                    while (isActive.get()) {
+                        factory.listPop(key, 1)
+                            .forEach(throwConsumer(s -> fluxSink.next(this.serdeType.deserialize(s))));
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            isActive.set(false); // proactively stop polling
+                        }
+                    }
+                } catch (Throwable e) {
+                    fluxSink.error(e);
+                } finally {
+                    fluxSink.complete();
+                    this.waitForTermination.countDown();
+                }
+            });
+    }
+
 
     @Builder
     @Getter
@@ -78,5 +113,34 @@ public class RealtimeTriggerList extends AbstractTrigger implements RealtimeTrig
             title = "The value."
         )
         private Object value;
+    }
+
+    /**
+     * {@inheritDoc}
+     **/
+    @Override
+    public void kill() {
+        stop(true);
+    }
+
+    /**
+     * {@inheritDoc}
+     **/
+    @Override
+    public void stop() {
+        stop(false); // must be non-blocking
+    }
+
+    private void stop(boolean wait) {
+        if (!isActive.compareAndSet(true, false)) {
+            return;
+        }
+        if (wait) {
+            try {
+                this.waitForTermination.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 }
