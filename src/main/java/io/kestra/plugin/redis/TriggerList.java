@@ -34,7 +34,7 @@ import java.util.Optional;
                 "",
                 "tasks:",
                 "  - id: echo",
-                "    type: io.kestra.core.tasks.log.Log",
+                "    type: io.kestra.plugin.core.log.Log",
                 "    message: \"{{ trigger.uri }} containing {{ trigger.count }} lines\" ",
                 "",
                 "triggers:",

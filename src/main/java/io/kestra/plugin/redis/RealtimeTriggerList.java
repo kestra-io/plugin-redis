@@ -35,7 +35,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
                 "",
                 "tasks:",
                 "  - id: echo",
-                "    type: io.kestra.core.tasks.log.Log",
+                "    type: io.kestra.plugin.core.log.Log",
                 "    message: \"Received '{{ trigger.value }}'\" ",
                 "",
                 "triggers:",
