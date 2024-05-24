@@ -23,7 +23,7 @@ import java.util.Optional;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Wait for key of type list in Redis database."
+    title = "Consume messages periodically from a key in a Redis list and create one execution per batch."
 )
 @Plugin(
     examples = {

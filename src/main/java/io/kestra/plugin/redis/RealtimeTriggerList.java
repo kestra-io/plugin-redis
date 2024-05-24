@@ -24,7 +24,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "React to and consume key of type list from a Redis database creating one executions for each key."
+    title = "Consume a message in real-time from a key in a Redis list and create one execution per message."
 )
 @Plugin(
     examples = {
