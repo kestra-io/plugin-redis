@@ -1,4 +1,4 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.pubsub;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
@@ -8,7 +8,7 @@ import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
-import io.kestra.core.serializers.JacksonMapper;
+import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -32,38 +32,44 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Prepend one or multiple values to a list."
+    title = "Publish one or multiple values to a channel."
 )
 @Plugin(
     examples = {
         @Example(
             code = {
                 "url: redis://:redis@localhost:6379/0",
-                "key: mykey",
+                "channel: mych",
                 "from:",
                 "   - value1",
                 "   - value2"
             }
         )
-    }
+    },
+    aliases = "io.kestra.plugin.redis.Publish"
 )
-public class ListPush extends AbstractRedisConnection implements RunnableTask<ListPush.Output> {
+public class Publish extends AbstractRedisConnection implements RunnableTask<Publish.Output> {
     @Schema(
-        title = "The redis key for the list."
+        title = "The redis channel to publish."
     )
     @NotNull
     @PluginProperty(dynamic = true)
-    private String key;
+    private String channel;
 
     @Schema(
-        title = "The list of values to push at the head of the list.",
+        title = "The list of value to publish to the channel",
         anyOf = {String.class, List.class}
     )
     @NotNull
     @PluginProperty(dynamic = true)
     private Object from;
 
+    @Schema(
+        title = "Format of the data contained in Redis"
+    )
     @Builder.Default
+    @PluginProperty
+    @NotNull
     private SerdeType serdeType = SerdeType.STRING;
 
     @Override
@@ -71,30 +77,17 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
         try (RedisFactory factory = this.redisFactory(runContext)) {
 
             Integer count;
-
-            Object from = null;
-            if (this.from instanceof String fromString) {
-                String renderedFrom = runContext.render(fromString);
-                try {
-                    from = JacksonMapper.ofJson().readValue(renderedFrom, List.class);
-                } catch (Exception e) {
-                    from = renderedFrom;
-                }
-            } else {
-                from = this.from;
-            }
-
-            if (from instanceof String fromUrl) {
-                URI fromURI = new URI(runContext.render(fromUrl));
-                try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.storage().getFile(fromURI)))) {
+            if (this.from instanceof String fromStr) {
+                URI from = new URI(runContext.render(fromStr));
+                try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.storage().getFile(from)))) {
                     Flux<Object> flowable = Flux.create(FileSerde.reader(inputStream), FluxSink.OverflowStrategy.BUFFER);
                     Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                     count = resultFlowable
                         .reduce(Integer::sum)
                         .block();
                 }
-            } else if (from instanceof List<?> fromList) {
-                Flux<Object> flowable = Flux.fromArray((fromList).toArray());
+            } else if (this.from instanceof List<?> fromList) {
+                Flux<Object> flowable = Flux.fromArray(fromList.toArray());
                 Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                 count = resultFlowable
                     .reduce(Integer::sum)
@@ -104,7 +97,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
                 // should not occur as validation mandates String or List
                 throw new IllegalVariableEvaluationException("Invalid 'from' property type :" + from.getClass());
             }
-
+            
             runContext.metric(Counter.of("records", count));
             return Output.builder().count(count).build();
         }
@@ -113,8 +106,8 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     private Flux<Integer> buildFlowable(Flux<Object> flowable, RunContext runContext, RedisFactory factory) throws Exception {
         return flowable
             .map(throwFunction(row -> {
-                factory.listPush(
-                    runContext.render(key),
+                factory.publish(
+                    runContext.render(channel),
                     Collections.singletonList(serdeType.serialize(row))
                 );
 
@@ -127,7 +120,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
             title = "Count",
-            description = "The number of values inserted."
+            description = "The number of value published"
         )
         private Integer count;
     }

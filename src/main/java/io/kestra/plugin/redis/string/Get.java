@@ -1,10 +1,11 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.string;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -28,7 +29,8 @@ import jakarta.validation.constraints.NotNull;
                 "key: mykey"
             }
         )
-    }
+    },
+    aliases = "io.kestra.plugin.redis.Get"
 )
 public class Get extends AbstractRedisConnection implements RunnableTask<Get.Output> {
     @Schema(
@@ -43,6 +45,7 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
         title = "Format of the data contained in Redis"
     )
     @NotNull
+    @PluginProperty
     private SerdeType serdeType = SerdeType.STRING;
 
     @Override

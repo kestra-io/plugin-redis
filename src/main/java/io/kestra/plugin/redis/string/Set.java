@@ -1,10 +1,11 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.string;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.lettuce.core.SetArgs;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -34,7 +35,8 @@ import jakarta.validation.constraints.NotNull;
                 "serdeType: STRING"
             }
         )
-    }
+    },
+    aliases = "io.kestra.plugin.redis.Set"
 )
 public class Set extends AbstractRedisConnection implements RunnableTask<Set.Output> {
 
@@ -57,15 +59,22 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
         description = "See [redis documentation](https://redis.io/commands/set/)"
     )
     @Builder.Default
+    @PluginProperty
     private Options options = Options.builder().build();
 
     @Schema(
         title = "Define if you get the older value in response, does not work with Redis 5.X"
     )
     @Builder.Default
+    @PluginProperty
     private Boolean get = false;
 
+    @Schema(
+        title = "Format of the data contained in Redis"
+    )
     @Builder.Default
+    @PluginProperty
+    @NotNull
     private SerdeType serdeType = SerdeType.STRING;
 
     @Override
