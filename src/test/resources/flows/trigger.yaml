@@ -3,7 +3,7 @@ namespace: io.kestra.tests
 
 triggers:
   - id: watch
-    type: io.kestra.plugin.redis.TriggerList
+    type: io.kestra.plugin.redis.list.Trigger
     url: redis://:redis@localhost:6379/0
     key: mytriggerkey
     count: 2

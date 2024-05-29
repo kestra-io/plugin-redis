@@ -1,11 +1,9 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.list;
 
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
-
-import java.time.Duration;
 
 public interface ListPopBaseInterface {
     @Schema(

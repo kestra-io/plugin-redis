@@ -1,13 +1,17 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.list;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
+import io.kestra.plugin.redis.AbstractRedisConnection;
+import io.kestra.plugin.redis.RedisConnectionInterface;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.reactivestreams.Publisher;
@@ -24,7 +28,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Consume a message in real-time from a key in a Redis list and create one execution per message."
+    title = "Removes and returns an element from the head of a list in real-time  and create one execution per element."
 )
 @Plugin(
     examples = {
@@ -48,12 +52,17 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
         )
     }
 )
-public class RealtimeTriggerList extends AbstractTrigger implements RealtimeTriggerInterface, TriggerOutput<RealtimeTriggerList.Output>, ListPopBaseInterface, RedisConnectionInterface {
+public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerInterface, TriggerOutput<RealtimeTrigger.Output>, ListPopBaseInterface, RedisConnectionInterface {
     private String url;
 
     private String key;
 
+    @Schema(
+        title = "Format of the data contained in Redis"
+    )
     @Builder.Default
+    @PluginProperty
+    @NotNull
     private SerdeType serdeType = SerdeType.STRING;
 
     @Builder.Default

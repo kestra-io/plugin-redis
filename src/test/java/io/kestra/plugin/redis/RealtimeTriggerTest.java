@@ -12,13 +12,13 @@ import static io.kestra.core.utils.Rethrow.throwRunnable;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-class RealtimeTriggerListTest extends AbstractTriggerTest {
+class RealtimeTriggerTest extends AbstractTriggerTest {
     @Test
     void flow() throws Exception {
         CountDownLatch queueCount = new CountDownLatch(4);
         List<Execution> executionList = new CopyOnWriteArrayList<>();
 
-        executionQueue.receive(RealtimeTriggerListTest.class, execution -> {
+        executionQueue.receive(RealtimeTriggerTest.class, execution -> {
             executionList.add(execution.getLeft());
 
             queueCount.countDown();

@@ -1,6 +1,7 @@
 package io.kestra.plugin.redis;
 
 import com.google.common.collect.ImmutableMap;
+import io.kestra.plugin.redis.string.Set;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import org.junit.jupiter.api.Test;
 import io.kestra.core.runners.RunContext;

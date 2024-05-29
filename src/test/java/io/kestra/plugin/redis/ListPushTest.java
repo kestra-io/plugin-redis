@@ -6,6 +6,8 @@ import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.storages.StorageInterface;
 import io.kestra.core.utils.IdUtils;
+import io.kestra.plugin.redis.list.ListPush;
+import io.kestra.plugin.redis.string.Delete;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;

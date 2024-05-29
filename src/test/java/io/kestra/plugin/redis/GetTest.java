@@ -5,6 +5,8 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.redis.models.SerdeType;
+import io.kestra.plugin.redis.string.Get;
+import io.kestra.plugin.redis.string.Set;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeAll;

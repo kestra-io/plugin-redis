@@ -1,13 +1,16 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.list;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
+import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
@@ -24,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Remove elements from a list."
+    title = "Removes and returns an element from the head of a list."
 )
 @Plugin(
     examples = {
@@ -36,13 +39,19 @@ import java.util.concurrent.atomic.AtomicInteger;
                 "maxRecords: 1"
             }
         )
-    }
+    },
+    aliases = "io.kestra.plugin.redis.ListPop"
 )
 public class ListPop extends AbstractRedisConnection implements RunnableTask<ListPop.Output>, ListPopInterface {
 
     private String key;
 
+    @Schema(
+        title = "Format of the data contained in Redis"
+    )
     @Builder.Default
+    @PluginProperty
+    @NotNull
     private SerdeType serdeType = SerdeType.STRING;
 
     private Integer maxRecords;

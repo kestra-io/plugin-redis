@@ -12,13 +12,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 
-class TriggerListTest extends AbstractTriggerTest {
+class TriggerTest extends AbstractTriggerTest {
     @Test
     void flow() throws Exception {
         CountDownLatch queueCount = new CountDownLatch(1);
         AtomicReference<Execution> last = new AtomicReference<>();
 
-        executionQueue.receive(TriggerListTest.class, execution -> {
+        executionQueue.receive(TriggerTest.class, execution -> {
             last.set(execution.getLeft());
 
             queueCount.countDown();

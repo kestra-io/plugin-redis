@@ -13,6 +13,7 @@ import io.kestra.core.schedulers.DefaultScheduler;
 import io.kestra.core.schedulers.SchedulerTriggerStateInterface;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
+import io.kestra.plugin.redis.list.ListPush;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
@@ -64,7 +65,7 @@ abstract class AbstractTriggerTest {
 
     protected ListPush.Output push() throws Exception {
         ListPush task = ListPush.builder()
-            .id(TriggerListTest.class.getSimpleName())
+            .id(TriggerTest.class.getSimpleName())
             .type(ListPush.class.getName())
             .url(REDIS_URI)
             .key("mytriggerkey")
