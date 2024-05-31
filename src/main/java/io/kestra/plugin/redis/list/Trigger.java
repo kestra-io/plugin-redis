@@ -24,7 +24,8 @@ import java.util.Optional;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Removes and returns an element from the head of a list periodically and create one execution per batch."
+    title = "Removes and returns an element from the head of a list periodically and create one execution per batch.",
+    description = "If you would like to consume each message from a list in real-time and create one execution per message, you can use the [io.kestra.plugin.redis.list.RealtimeTrigger](https://kestra.io/plugins/plugin-redis/triggers/io.kestra.plugin.redis.list.realtimetrigger) instead."
 )
 @Plugin(
     examples = {
@@ -40,7 +41,7 @@ import java.util.Optional;
                 "",
                 "triggers:",
                 "  - id: watch",
-                "    type: io.kestra.plugin.redis.TriggerList",
+                "    type: io.kestra.plugin.redis.list.Trigger",
                 "    url: redis://localhost:6379/0",
                 "    key: mytriggerkey",
                 "    maxRecords: 2",
