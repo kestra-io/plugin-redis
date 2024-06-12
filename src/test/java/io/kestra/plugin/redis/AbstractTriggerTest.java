@@ -9,8 +9,7 @@ import io.kestra.core.runners.FlowListeners;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.runners.Worker;
 import io.kestra.core.schedulers.AbstractScheduler;
-import io.kestra.core.schedulers.DefaultScheduler;
-import io.kestra.core.schedulers.SchedulerTriggerStateInterface;
+import io.kestra.jdbc.runner.JdbcScheduler;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.redis.list.ListPush;
@@ -43,15 +42,12 @@ abstract class AbstractTriggerTest {
     protected RunContextFactory runContextFactory;
 
     @Inject
-    private SchedulerTriggerStateInterface triggerState;
-
-    @Inject
     @Named(QueueFactoryInterface.EXECUTION_NAMED)
     protected QueueInterface<Execution> executionQueue;
 
     protected void run(String filename, Runnable runnable) throws IOException, URISyntaxException, InterruptedException {
         try (
-            AbstractScheduler scheduler = new DefaultScheduler(this.applicationContext, this.flowListenersService, this.triggerState);
+            AbstractScheduler scheduler = new JdbcScheduler(this.applicationContext, this.flowListenersService);
             Worker worker = applicationContext.createBean(Worker.class, IdUtils.create(), 8, null);
         ) {
             worker.run();
