@@ -2,7 +2,7 @@ package io.kestra.plugin.redis;
 
 import com.google.common.collect.ImmutableMap;
 import io.kestra.plugin.redis.string.Set;
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import io.kestra.core.junit.annotations.KestraTest;
 import org.junit.jupiter.api.Test;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
@@ -13,7 +13,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
-@MicronautTest
+@KestraTest
 class SetTest {
     @Inject
     private RunContextFactory runContextFactory;

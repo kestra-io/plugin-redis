@@ -8,7 +8,7 @@ import io.kestra.plugin.redis.list.ListPop;
 import io.kestra.plugin.redis.list.ListPush;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.kestra.plugin.redis.string.Delete;
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,7 +19,7 @@ import java.util.Arrays;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
-@MicronautTest
+@KestraTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ListPopTest {
     @Inject

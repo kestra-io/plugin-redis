@@ -15,7 +15,7 @@ import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.redis.list.ListPush;
 import io.micronaut.context.ApplicationContext;
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
+import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import org.junit.jupiter.api.TestInstance;
@@ -25,7 +25,7 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Objects;
 
-@MicronautTest
+@KestraTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AbstractTriggerTest {
     protected static final String REDIS_URI = "redis://:redis@localhost:6379/0";
