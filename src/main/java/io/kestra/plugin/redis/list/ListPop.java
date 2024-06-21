@@ -65,7 +65,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
             String key = runContext.render(this.key);
-            File tempFile = runContext.tempFile(".ion").toFile();
+            File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
 
             if (this.maxDuration == null && this.maxRecords == null) {
                 throw new Exception("maxDuration or maxRecords must be set to avoid infinite loop");
