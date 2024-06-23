@@ -37,7 +37,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
             title = "Consume an element from the head of a list in real-time.",
             code = {
                 "id: list-listen",
-                "namespace: io.kestra.tests",
+                "namespace: company.team",
                 "",
                 "tasks:",
                 "  - id: echo",
