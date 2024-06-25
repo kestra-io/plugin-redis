@@ -85,7 +85,7 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
             .build();
 
         return Flux.from(publisher(task, conditionContext.getRunContext()))
-            .map((record) -> TriggerService.generateRealtimeExecution(this, context, Output.of(record)));
+            .map((record) -> TriggerService.generateRealtimeExecution(this, conditionContext, context, Output.of(record)));
     }
 
     public Publisher<Object> publisher(final ListPop task,
