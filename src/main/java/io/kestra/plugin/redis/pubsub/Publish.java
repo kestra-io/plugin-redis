@@ -16,7 +16,6 @@ import lombok.experimental.SuperBuilder;
 
 import jakarta.validation.constraints.NotNull;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.FluxSink;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -80,7 +79,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
             if (this.from instanceof String fromStr) {
                 URI from = new URI(runContext.render(fromStr));
                 try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.storage().getFile(from)))) {
-                    Flux<Object> flowable = Flux.create(FileSerde.reader(inputStream), FluxSink.OverflowStrategy.BUFFER);
+                    Flux<Object> flowable = FileSerde.readAll(inputStream);
                     Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                     count = resultFlowable
                         .reduce(Integer::sum)
