@@ -13,6 +13,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.io.*;
 import java.net.URI;
@@ -20,6 +22,8 @@ import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @SuperBuilder
 @ToString
@@ -71,7 +75,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
                 throw new Exception("maxDuration or maxRecords must be set to avoid infinite loop");
             }
 
-            try (BufferedOutputStream output = new BufferedOutputStream(new FileOutputStream(tempFile))) {
+            try (var output = new BufferedWriter(new FileWriter(tempFile), FileSerde.BUFFER_SIZE)) {
                 AtomicInteger total = new AtomicInteger();
                 ZonedDateTime started = ZonedDateTime.now();
 
@@ -79,10 +83,9 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
                 do {
                     List<String> data = factory.listPop(key, count);
                     empty = data.isEmpty();
-                    for (String str : data) {
-                        FileSerde.write(output, this.serdeType.deserialize(str));
-                        total.getAndIncrement();
-                    }
+                    var flux = Flux.fromIterable(data).map(throwFunction(str -> this.serdeType.deserialize(str)));
+                    Mono<Long> longMono = FileSerde.writeAll(output, flux);
+                    total.addAndGet(longMono.block().intValue());
                 }
                 while (!this.ended(empty, total, started));
 
