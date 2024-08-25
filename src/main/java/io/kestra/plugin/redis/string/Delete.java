@@ -25,26 +25,33 @@ import java.util.List;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "url: redis://:redis@localhost:6379/0",
-                "keys:",
-                "   - keyDelete1",
-                "   - keyDelete2"
-            }
+            full = true,
+            code = """
+                id: redis_delete
+                namespace: company.team
+
+                tasks:
+                  - id: delete
+                    type: io.kestra.plugin.redis.string.Delete
+                    url: redis://:redis@localhost:6379/0
+                    keys:
+                      - keyDelete1
+                      - keyDelete2   
+                """
         )
     },
     aliases = "io.kestra.plugin.redis.Delete"
 )
 public class Delete extends AbstractRedisConnection implements RunnableTask<Delete.Output> {
     @Schema(
-        title = "The list of redis keys you want to delete"
+        title = "The list of redis keys you want to delete."
     )
     @NotNull
     @PluginProperty(dynamic = true)
     private List<String> keys;
 
     @Schema(
-        title = "If some keys are not deleted, failed the task"
+        title = "If some keys are not deleted, failed the task."
     )
     @Builder.Default
     @PluginProperty

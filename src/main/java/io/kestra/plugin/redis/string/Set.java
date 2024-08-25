@@ -28,12 +28,19 @@ import jakarta.validation.constraints.NotNull;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "url: redis://:redis@localhost:6379/0",
-                "key: mykey",
-                "value: myvalue",
-                "serdeType: STRING"
-            }
+            full = true,
+            code = """
+                id: redis_set
+                namespace: company.team
+
+                tasks:
+                  - id: set
+                    type: io.kestra.plugin.redis.string.Set
+                    url: redis://:redis@localhost:6379/0
+                    key: mykey
+                    value: myvalue
+                    serdeType: STRING
+                """
         )
     },
     aliases = "io.kestra.plugin.redis.Set"
@@ -41,36 +48,36 @@ import jakarta.validation.constraints.NotNull;
 public class Set extends AbstractRedisConnection implements RunnableTask<Set.Output> {
 
     @Schema(
-        title = "The redis key you want to set"
+        title = "The redis key you want to set."
     )
     @NotNull
     @PluginProperty(dynamic = true)
     private String key;
 
     @Schema(
-        title = "The value you want to set"
+        title = "The value you want to set."
     )
     @NotNull
     @PluginProperty(dynamic = true)
     private String value;
 
     @Schema(
-        title = "Options available when setting a key in Redis",
-        description = "See [redis documentation](https://redis.io/commands/set/)"
+        title = "Options available when setting a key in Redis.",
+        description = "See [redis documentation](https://redis.io/commands/set/)."
     )
     @Builder.Default
     @PluginProperty
     private Options options = Options.builder().build();
 
     @Schema(
-        title = "Define if you get the older value in response, does not work with Redis 5.X"
+        title = "Define if you get the older value in response, does not work with Redis 5.X."
     )
     @Builder.Default
     @PluginProperty
     private Boolean get = false;
 
     @Schema(
-        title = "Format of the data contained in Redis"
+        title = "Format of the data contained in Redis."
     )
     @Builder.Default
     @PluginProperty

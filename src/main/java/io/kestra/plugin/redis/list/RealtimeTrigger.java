@@ -35,22 +35,22 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
     examples = {
         @Example(
             title = "Consume an element from the head of a list in real-time.",
-            code = {
-                "id: list-listen",
-                "namespace: company.team",
-                "",
-                "tasks:",
-                "  - id: echo",
-                "    type: io.kestra.plugin.core.log.Log",
-                "    message: \"Received '{{ trigger.value }}'\" ",
-                "",
-                "triggers:",
-                "  - id: watch",
-                "    type: io.kestra.plugin.redis.RealtimeTrigger",
-                "    url: redis://localhost:6379/0",
-                "    key: mytriggerkey",
-            },
-            full = true
+            full = true,
+            code = """
+                id: list_listen
+                namespace: company.team
+                
+                tasks:
+                  - id: echo
+                    type: io.kestra.plugin.core.log.Log
+                    message: "Received '{{ trigger.value }}'"
+                
+                triggers:
+                  - id: watch
+                    type: io.kestra.plugin.redis.RealtimeTrigger
+                    url: redis://localhost:6379/0
+                    key: mytriggerkey
+                """
         )
     }
 )
