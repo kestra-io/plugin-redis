@@ -37,13 +37,20 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "url: redis://:redis@localhost:6379/0",
-                "key: mykey",
-                "from:",
-                "   - value1",
-                "   - value2"
-            }
+            full = true,
+            code = """
+                id: redis_list_push
+                namespace: company.team
+
+                tasks:
+                  - id: list_push
+                    type: io.kestra.plugin.redis.list.ListPush
+                    url: redis://:redis@localhost:6379/0
+                    key: mykey
+                    from:
+                      - value1
+                      - value2
+                """
         )
     },
     aliases = "io.kestra.plugin.redis.ListPush"

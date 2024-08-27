@@ -30,23 +30,23 @@ import java.util.Optional;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "id: list-listen",
-                "namespace: company.team",
-                "",
-                "tasks:",
-                "  - id: echo",
-                "    type: io.kestra.plugin.core.log.Log",
-                "    message: \"{{ trigger.uri }} containing {{ trigger.count }} lines\" ",
-                "",
-                "triggers:",
-                "  - id: watch",
-                "    type: io.kestra.plugin.redis.list.Trigger",
-                "    url: redis://localhost:6379/0",
-                "    key: mytriggerkey",
-                "    maxRecords: 2",
-            },
-            full = true
+            full = true,
+            code = """
+                id: list_listen
+                namespace: company.team
+                
+                tasks:
+                  - id: echo
+                    type: io.kestra.plugin.core.log.Log
+                    message: "{{ trigger.uri }} containing {{ trigger.count }} lines"
+                
+                triggers:
+                  - id: watch
+                    type: io.kestra.plugin.redis.list.Trigger
+                    url: redis://localhost:6379/0
+                    key: mytriggerkey
+                    maxRecords: 2 
+                """          
         )
     },
     aliases = "io.kestra.plugin.redis.TriggerList"

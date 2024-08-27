@@ -36,12 +36,19 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "url: redis://:redis@localhost:6379/0",
-                "key: mypopkeyjson",
-                "serdeType: JSON",
-                "maxRecords: 1"
-            }
+            full = true,
+            code = """
+                id: redis_list_pop
+                namespace: company.team
+
+                tasks:
+                  - id: list_pop
+                    type: io.kestra.plugin.redis.list.ListPop
+                    url: redis://:redis@localhost:6379/0
+                    key: mypopkeyjson
+                    serdeType: JSON
+                    maxRecords: 1
+                """
         )
     },
     aliases = "io.kestra.plugin.redis.ListPop"
@@ -51,7 +58,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
     private String key;
 
     @Schema(
-        title = "Format of the data contained in Redis"
+        title = "Format of the data contained in Redis."
     )
     @Builder.Default
     @PluginProperty

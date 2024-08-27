@@ -36,13 +36,20 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "url: redis://:redis@localhost:6379/0",
-                "channel: mych",
-                "from:",
-                "   - value1",
-                "   - value2"
-            }
+            full = true,
+            code = """
+                id: redis_publish
+                namespace: company.team
+
+                tasks:
+                  - id: publish
+                    type: io.kestra.plugin.redis.pubsub.Publish
+                    url: redis://:redis@localhost:6379/0
+                    channel: mych
+                    from:
+                      - value1
+                      - value2
+                """
         )
     },
     aliases = "io.kestra.plugin.redis.Publish"
@@ -56,7 +63,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
     private String channel;
 
     @Schema(
-        title = "The list of value to publish to the channel",
+        title = "The list of value to publish to the channel.",
         anyOf = {String.class, List.class}
     )
     @NotNull
@@ -64,7 +71,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
     private Object from;
 
     @Schema(
-        title = "Format of the data contained in Redis"
+        title = "Format of the data contained in Redis."
     )
     @Builder.Default
     @PluginProperty

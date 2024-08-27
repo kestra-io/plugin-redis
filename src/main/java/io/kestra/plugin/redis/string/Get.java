@@ -24,10 +24,17 @@ import jakarta.validation.constraints.NotNull;
 @Plugin(
     examples = {
         @Example(
-            code = {
-                "url: redis://:redis@localhost:6379/0",
-                "key: mykey"
-            }
+            full = true,
+            code = """
+                id: redis_get
+                namespace: company.team
+
+                tasks:
+                  - id: get
+                    type: io.kestra.plugin.redis.string.Get    
+                    url: redis://:redis@localhost:6379/0
+                    key: mykey
+                """
         )
     },
     aliases = "io.kestra.plugin.redis.Get"
