@@ -102,16 +102,12 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
                 try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.storage().getFile(fromURI)))) {
                     Flux<Object> flowable = FileSerde.readAll(inputStream);
                     Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
-                    count = resultFlowable
-                        .reduce(Integer::sum)
-                        .block();
+                    count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
                 }
             } else if (from instanceof List<?> fromList) {
                 Flux<Object> flowable = Flux.fromArray((fromList).toArray());
                 Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
-                count = resultFlowable
-                    .reduce(Integer::sum)
-                    .block();
+                count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
             }
             else {
                 // should not occur as validation mandates String or List
