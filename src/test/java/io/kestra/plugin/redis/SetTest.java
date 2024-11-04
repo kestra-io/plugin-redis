@@ -1,6 +1,6 @@
 package io.kestra.plugin.redis;
 
-import com.google.common.collect.ImmutableMap;
+import io.kestra.core.models.property.Property;
 import io.kestra.plugin.redis.string.Set;
 import io.kestra.core.junit.annotations.KestraTest;
 import org.junit.jupiter.api.Test;
@@ -8,6 +8,8 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 
 import jakarta.inject.Inject;
+
+import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -22,19 +24,19 @@ class SetTest {
 
     @Test
     void testSetGet() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
 
         Set taskInit = Set.builder()
-            .url(REDIS_URI)
-            .key("keySetGet")
-            .value("value")
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("keySetGet"))
+            .value(Property.of("value"))
             .build();
 
         Set task = Set.builder()
-            .url(REDIS_URI)
-            .key("keySetGet")
-            .value("value")
-            .get(true)
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("keySetGet"))
+            .value(Property.of("value"))
+            .get(Property.of(true))
             .build();
 
         taskInit.run(runContext);
@@ -45,12 +47,12 @@ class SetTest {
 
     @Test
     void testSet() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
 
         Set task = Set.builder()
-            .url(REDIS_URI)
-            .key("key2")
-            .value("{\"value\":\"1\"}")
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("key2"))
+            .value(Property.of("{\"value\":\"1\"}"))
             .build();
 
         Set.Output runOutput = task.run(runContext);

@@ -5,6 +5,7 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
@@ -59,8 +60,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
         title = "The redis channel to publish."
     )
     @NotNull
-    @PluginProperty(dynamic = true)
-    private String channel;
+    private Property<String> channel;
 
     @Schema(
         title = "The list of value to publish to the channel.",
@@ -74,9 +74,8 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
         title = "Format of the data contained in Redis."
     )
     @Builder.Default
-    @PluginProperty
     @NotNull
-    private SerdeType serdeType = SerdeType.STRING;
+    private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
@@ -109,8 +108,8 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
         return flowable
             .map(throwFunction(row -> {
                 factory.publish(
-                    runContext.render(channel),
-                    Collections.singletonList(serdeType.serialize(row))
+                    runContext.render(channel).as(String.class).orElseThrow(),
+                    Collections.singletonList(runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING).serialize(row))
                 );
 
                 return 1;

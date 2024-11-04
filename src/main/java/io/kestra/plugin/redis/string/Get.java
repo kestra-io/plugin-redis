@@ -2,7 +2,7 @@ package io.kestra.plugin.redis.string;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.AbstractRedisConnection;
@@ -44,25 +44,25 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
         title = "The redis key you want to get"
     )
     @NotNull
-    @PluginProperty(dynamic = true)
-    private String key;
+    private Property<String> key;
 
-    @Builder.Default
     @Schema(
         title = "Format of the data contained in Redis"
     )
     @NotNull
-    @PluginProperty
-    private SerdeType serdeType = SerdeType.STRING;
+    @Builder.Default
+    private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
-            String key = runContext.render((this.key));
-            String data = factory.get(key);
+            final String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
+            String data = factory.get(renderedKey);
 
-            factory.close();
-            return Output.builder().data(serdeType.deserialize(data)).key(key).build();
+            return Output.builder()
+                .data(runContext.render(this.serdeType).as(SerdeType.class).orElseThrow().deserialize(data))
+                .key(renderedKey)
+                .build();
         }
     }
 

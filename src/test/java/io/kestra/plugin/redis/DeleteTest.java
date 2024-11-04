@@ -1,6 +1,6 @@
 package io.kestra.plugin.redis;
 
-import com.google.common.collect.ImmutableMap;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.plugin.redis.string.Delete;
@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.util.Arrays;
+import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -27,11 +28,11 @@ class DeleteTest {
 
     @Test
     void testDeleteList() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
 
         Delete task = Delete.builder()
-            .url(REDIS_URI)
-            .keys(Arrays.asList("keyDelete1", "keyDelete2"))
+            .url(Property.of(REDIS_URI))
+            .keys(Property.of(Arrays.asList("keyDelete1", "keyDelete2")))
             .build();
 
         Delete.Output runOutput = task.run(runContext);
@@ -41,12 +42,12 @@ class DeleteTest {
 
     @Test
     void testDeleteListFailed() {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
 
         Delete task = Delete.builder()
-            .url(REDIS_URI)
-            .keys(Arrays.asList("keyDeleted", "keyDeleted2"))
-            .failedOnMissing(true)
+            .url(Property.of(REDIS_URI))
+            .keys(Property.of(Arrays.asList("keyDeleted", "keyDeleted2")))
+            .failedOnMissing(Property.of(true))
             .build();
 
         Exception e = Assertions.assertThrows(NullPointerException.class, () -> task.run(runContext));
@@ -55,7 +56,7 @@ class DeleteTest {
 
     @BeforeAll
     void setUp() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
         createSetTask("keyDeleteOne", "value1").run(runContext);
         createSetTask("keyDelete1", "value2").run(runContext);
         createSetTask("keyDelete2", "value3").run(runContext);
@@ -64,9 +65,9 @@ class DeleteTest {
 
     static Set createSetTask(String key, String value) {
         return Set.builder()
-            .url(REDIS_URI)
-            .key(key)
-            .value(value)
+            .url(Property.of(REDIS_URI))
+            .key(Property.of(key))
+            .value(Property.of(value))
             .build();
     }
 }

@@ -1,6 +1,6 @@
 package io.kestra.plugin.redis;
 
-import com.google.common.collect.ImmutableMap;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.FileSerde;
@@ -21,6 +21,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -38,11 +39,11 @@ class ListPushTest {
 
     @Test
     void testListPushAsList() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
 
         ListPush task = ListPush.builder()
-            .url(REDIS_URI)
-            .key("mykey")
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("mykey"))
             .from(Arrays.asList("value1", "value2"))
             .build();
 
@@ -53,13 +54,13 @@ class ListPushTest {
 
     @Test
     void testListPushAsFile() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
 
         URI uri = createTestFile();
 
         ListPush task = ListPush.builder()
-            .url(REDIS_URI)
-            .key("mykeyFile")
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("mykeyFile"))
             .from(uri.toString())
             .build();
 
@@ -70,13 +71,13 @@ class ListPushTest {
 
     @Test
     void testListPushAsString() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
 
-        URI uri = createTestFile();
+        createTestFile();
 
         ListPush task = ListPush.builder()
-            .url(REDIS_URI)
-            .key("mykeyFile")
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("mykeyFile"))
             .from("[\"value1\", \"value2\"]")
             .build();
 
@@ -87,19 +88,19 @@ class ListPushTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
         Delete.builder()
-            .url(REDIS_URI)
-            .keys(List.of("mykey"))
+            .url(Property.of(REDIS_URI))
+            .keys(Property.of(List.of("mykey")))
             .build().run(runContext);
         Delete.builder()
-            .url(REDIS_URI)
-            .keys(List.of("mykeyFile"))
+            .url(Property.of(REDIS_URI))
+            .keys(Property.of(List.of("mykeyFile")))
             .build().run(runContext);
     }
 
     URI createTestFile() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
 
         File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
         OutputStream output = new FileOutputStream(tempFile);

@@ -2,8 +2,8 @@ package io.kestra.plugin.redis.string;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.AbstractRedisConnection;
@@ -36,7 +36,7 @@ import java.util.List;
                     url: redis://:redis@localhost:6379/0
                     keys:
                       - keyDelete1
-                      - keyDelete2   
+                      - keyDelete2
                 """
         )
     },
@@ -47,30 +47,27 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
         title = "The list of redis keys you want to delete."
     )
     @NotNull
-    @PluginProperty(dynamic = true)
-    private List<String> keys;
+    private Property<List<String>> keys;
 
     @Schema(
         title = "If some keys are not deleted, failed the task."
     )
     @Builder.Default
-    @PluginProperty
-    private Boolean failedOnMissing = false;
+    private Property<Boolean> failedOnMissing = Property.of(false);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
 
-            long count = factory.del(runContext.render(keys));
-            boolean isAllKeyDeleted = count == keys.size();
+            final List<String> renderedKeys = runContext.render(keys).asList(String.class);
+            long count = factory.del(renderedKeys);
+            boolean isAllKeyDeleted = count == renderedKeys.size();
 
-            if (!isAllKeyDeleted && failedOnMissing) {
-                factory.close();
+            if (!isAllKeyDeleted && runContext.render(failedOnMissing).as(Boolean.class).orElse(false)) {
                 throw new NullPointerException("Missing keys, only " + count + " key deleted");
             }
 
             runContext.metric(Counter.of("keys.deleted", count));
-            factory.close();
 
             return Output.builder()
                 .count((int) count)

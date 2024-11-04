@@ -2,6 +2,7 @@ package io.kestra.plugin.redis;
 
 import com.google.common.collect.ImmutableMap;
 import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.queues.QueueFactoryInterface;
 import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
@@ -63,8 +64,8 @@ abstract class AbstractTriggerTest {
         ListPush task = ListPush.builder()
             .id(TriggerTest.class.getSimpleName())
             .type(ListPush.class.getName())
-            .url(REDIS_URI)
-            .key("mytriggerkey")
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("mytriggerkey"))
             .from(Arrays.asList("value1", "value2"))
             .build();
 

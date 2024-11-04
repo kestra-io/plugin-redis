@@ -1,6 +1,6 @@
 package io.kestra.plugin.redis;
 
-import com.google.common.collect.ImmutableMap;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.storages.StorageInterface;
@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.util.Arrays;
+import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -32,13 +33,13 @@ class ListPopTest {
 
     @Test
     void testListPop() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
 
         ListPop task = ListPop.builder()
-            .url(REDIS_URI)
-            .key("mypopkey")
-            .count(2)
-            .maxRecords(2)
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("mypopkey"))
+            .count(Property.of(2))
+            .maxRecords(Property.of(2))
             .build();
 
         ListPop.Output runOutput = task.run(runContext);
@@ -59,14 +60,14 @@ class ListPopTest {
 
     @Test
     void testListPopJson() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
 
         ListPop task = ListPop.builder()
-            .url(REDIS_URI)
-            .key("mypopkeyjson")
-            .serdeType(SerdeType.JSON)
-            .maxRecords(1)
-            .count(1)
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("mypopkeyjson"))
+            .serdeType(Property.of(SerdeType.JSON))
+            .maxRecords(Property.of(1))
+            .count(Property.of(1))
             .build();
 
         ListPop.Output runOutput = task.run(runContext);
@@ -76,24 +77,24 @@ class ListPopTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
         Delete.builder()
-            .url(REDIS_URI)
-            .keys(Arrays.asList("mypopkey"))
+            .url(Property.of(REDIS_URI))
+            .keys(Property.of(Arrays.asList("mypopkey")))
             .build().run(runContext);
         Delete.builder()
-            .url(REDIS_URI)
-            .keys(Arrays.asList("mypopkeyjson"))
+            .url(Property.of(REDIS_URI))
+            .keys(Property.of(Arrays.asList("mypopkeyjson")))
             .build().run(runContext);
         ListPush.builder()
-            .url(REDIS_URI)
-            .key("mypopkey")
-            .from(Arrays.asList("value1", "value2", "value3"))
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("mypopkey"))
+            .from(Property.of(Arrays.asList("value1", "value2", "value3")))
             .build().run(runContext);
         ListPush.builder()
-            .url(REDIS_URI)
-            .key("mypopkeyjson")
-            .from(Arrays.asList("{\"city\":\"Paris\"}", "{\"city\":\"London\"}"))
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("mypopkeyjson"))
+            .from(Property.of(Arrays.asList("{\"city\":\"Paris\"}", "{\"city\":\"London\"}")))
             .build().run(runContext);
     }
 }
