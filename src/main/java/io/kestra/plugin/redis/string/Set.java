@@ -2,6 +2,7 @@ package io.kestra.plugin.redis.string;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -63,8 +64,8 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
         title = "Options available when setting a key in Redis.",
         description = "See [redis documentation](https://redis.io/commands/set/)."
     )
-    @Builder.Default
-    private Property<Options> options = Property.of(Options.builder().build());
+    @PluginProperty
+    private Options options;
 
     @Schema(
         title = "Define if you get the older value in response, does not work with Redis 5.X."
@@ -84,9 +85,10 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
         try (RedisFactory factory = this.redisFactory(runContext)) {
             String oldValue = factory.set(
                 runContext.render(key).as(String.class).orElseThrow(),
-                runContext.render(serdeType).as(SerdeType.class).orElseThrow().serialize(runContext.render(value)),
+                runContext.render(serdeType).as(SerdeType.class).orElseThrow()
+                    .serialize(runContext.render(value).as(String.class).orElseThrow()),
                 runContext.render(get).as(Boolean.class).orElse(false),
-                runContext.render(options).as(Options.class).orElse(Options.builder().build()).asRedisSet()
+                options.asRedisSet()
             );
 
             Output.OutputBuilder builder = Output.builder();

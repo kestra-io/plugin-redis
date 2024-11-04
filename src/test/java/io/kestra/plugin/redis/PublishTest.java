@@ -44,7 +44,7 @@ class PublishTest {
         Publish task = Publish.builder()
             .url(Property.of(REDIS_URI))
             .channel(Property.of("mych"))
-            .from(Property.of(Arrays.asList("value1", "value2")))
+            .from(Arrays.asList("value1", "value2"))
             .build();
 
         Publish.Output runOutput = task.run(runContext);
@@ -61,7 +61,7 @@ class PublishTest {
         Publish task = Publish.builder()
             .url(Property.of(REDIS_URI))
             .channel(Property.of("mychFile"))
-            .from(Property.of(uri.toString()))
+            .from(uri.toString())
             .build();
 
         Publish.Output runOutput = task.run(runContext);

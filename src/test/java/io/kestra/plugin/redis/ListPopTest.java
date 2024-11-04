@@ -89,12 +89,12 @@ class ListPopTest {
         ListPush.builder()
             .url(Property.of(REDIS_URI))
             .key(Property.of("mypopkey"))
-            .from(Property.of(Arrays.asList("value1", "value2", "value3")))
+            .from(Arrays.asList("value1", "value2", "value3"))
             .build().run(runContext);
         ListPush.builder()
             .url(Property.of(REDIS_URI))
             .key(Property.of("mypopkeyjson"))
-            .from(Property.of(Arrays.asList("{\"city\":\"Paris\"}", "{\"city\":\"London\"}")))
+            .from(Arrays.asList("{\"city\":\"Paris\"}", "{\"city\":\"London\"}"))
             .build().run(runContext);
     }
 }
