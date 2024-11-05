@@ -2,9 +2,9 @@ package io.kestra.plugin.redis.list;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.RedisConnectionInterface;
@@ -52,24 +52,23 @@ import java.util.Optional;
     aliases = "io.kestra.plugin.redis.TriggerList"
 )
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<ListPop.Output>, ListPopInterface, RedisConnectionInterface {
-    private String url;
+    private Property<String> url;
 
-    private String key;
+    private Property<String> key;
 
     @Builder.Default
-    private Integer count = 100;
+    private Property<Integer> count = Property.of(100);
 
     @Schema(
         title = "Format of the data contained in Redis"
     )
     @Builder.Default
-    @PluginProperty
     @NotNull
-    private SerdeType serdeType = SerdeType.STRING;
+    private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
 
-    private Integer maxRecords;
+    private Property<Integer> maxRecords;
 
-    private Duration maxDuration;
+    private Property<Duration> maxDuration;
 
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
@@ -77,8 +76,8 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         Logger logger = runContext.logger();
 
         ListPop task = ListPop.builder()
-            .url(runContext.render(this.url))
-            .key(runContext.render(this.key))
+            .url(this.url)
+            .key(this.key)
             .count(this.count)
             .maxRecords(this.maxRecords)
             .maxDuration(this.maxDuration)

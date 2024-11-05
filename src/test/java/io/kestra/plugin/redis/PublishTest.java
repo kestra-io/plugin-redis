@@ -1,6 +1,6 @@
 package io.kestra.plugin.redis;
 
-import com.google.common.collect.ImmutableMap;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.FileSerde;
@@ -21,6 +21,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -38,11 +39,11 @@ class PublishTest {
 
     @Test
     void testPublishAsList() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
 
         Publish task = Publish.builder()
-            .url(REDIS_URI)
-            .channel("mych")
+            .url(Property.of(REDIS_URI))
+            .channel(Property.of("mych"))
             .from(Arrays.asList("value1", "value2"))
             .build();
 
@@ -53,13 +54,13 @@ class PublishTest {
 
     @Test
     void testPublishAsFile() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
 
         URI uri = createTestFile();
 
         Publish task = Publish.builder()
-            .url(REDIS_URI)
-            .channel("mychFile")
+            .url(Property.of(REDIS_URI))
+            .channel(Property.of("mychFile"))
             .from(uri.toString())
             .build();
 
@@ -70,19 +71,19 @@ class PublishTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
         Delete.builder()
-            .url(REDIS_URI)
-            .keys(List.of("mych"))
+            .url(Property.of(REDIS_URI))
+            .keys(Property.of(List.of("mych")))
             .build().run(runContext);
         Delete.builder()
-            .url(REDIS_URI)
-            .keys(List.of("mychFile"))
+            .url(Property.of(REDIS_URI))
+            .keys(Property.of(List.of("mychFile")))
             .build().run(runContext);
     }
 
     URI createTestFile() throws Exception {
-        RunContext runContext = runContextFactory.of(ImmutableMap.of());
+        RunContext runContext = runContextFactory.of(Map.of());
 
         File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
         OutputStream output = new FileOutputStream(tempFile);

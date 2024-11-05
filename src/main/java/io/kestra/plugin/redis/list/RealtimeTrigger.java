@@ -2,9 +2,9 @@ package io.kestra.plugin.redis.list;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.AbstractRedisConnection;
@@ -55,17 +55,16 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
     }
 )
 public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerInterface, TriggerOutput<RealtimeTrigger.Output>, ListPopBaseInterface, RedisConnectionInterface {
-    private String url;
+    private Property<String> url;
 
-    private String key;
+    private Property<String> key;
 
     @Schema(
         title = "Format of the data contained in Redis"
     )
     @Builder.Default
-    @PluginProperty
     @NotNull
-    private SerdeType serdeType = SerdeType.STRING;
+    private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
 
     @Builder.Default
     @Getter(AccessLevel.NONE)
@@ -80,7 +79,7 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
         ListPop task = ListPop.builder()
             .url(this.url)
             .key(this.key)
-            .count(1)
+            .count(Property.of(1))
             .serdeType(this.serdeType)
             .build();
 
@@ -93,11 +92,14 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
         return Flux.create(
             fluxSink -> {
                 try (AbstractRedisConnection.RedisFactory factory = task.redisFactory(runContext)) {
-                    String key = runContext.render(this.key);
+                    String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
 
                     while (isActive.get()) {
-                        factory.listPop(key, 1)
-                            .forEach(throwConsumer(s -> fluxSink.next(this.serdeType.deserialize(s))));
+                        factory.listPop(renderedKey, 1)
+                            .forEach(throwConsumer(s -> fluxSink.next(runContext.render(this.serdeType)
+                                .as(SerdeType.class)
+                                .orElse(SerdeType.STRING).deserialize(s)))
+                            );
                         try {
                             Thread.sleep(100);
                         } catch (InterruptedException e) {

@@ -3,6 +3,7 @@ package io.kestra.plugin.redis.string;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.AbstractRedisConnection;
@@ -51,46 +52,43 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
         title = "The redis key you want to set."
     )
     @NotNull
-    @PluginProperty(dynamic = true)
-    private String key;
+    private Property<String> key;
 
     @Schema(
         title = "The value you want to set."
     )
     @NotNull
-    @PluginProperty(dynamic = true)
-    private String value;
+    private Property<String> value;
 
     @Schema(
         title = "Options available when setting a key in Redis.",
         description = "See [redis documentation](https://redis.io/commands/set/)."
     )
-    @Builder.Default
     @PluginProperty
+    @Builder.Default
     private Options options = Options.builder().build();
 
     @Schema(
         title = "Define if you get the older value in response, does not work with Redis 5.X."
     )
     @Builder.Default
-    @PluginProperty
-    private Boolean get = false;
+    private Property<Boolean> get = Property.of(false);
 
     @Schema(
         title = "Format of the data contained in Redis."
     )
     @Builder.Default
-    @PluginProperty
     @NotNull
-    private SerdeType serdeType = SerdeType.STRING;
+    private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
             String oldValue = factory.set(
-                runContext.render(key),
-                serdeType.serialize(runContext.render(value)),
-                get,
+                runContext.render(key).as(String.class).orElseThrow(),
+                runContext.render(serdeType).as(SerdeType.class).orElseThrow()
+                    .serialize(runContext.render(value).as(String.class).orElseThrow()),
+                runContext.render(get).as(Boolean.class).orElse(false),
                 options.asRedisSet()
             );
 
