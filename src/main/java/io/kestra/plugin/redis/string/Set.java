@@ -65,7 +65,8 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
         description = "See [redis documentation](https://redis.io/commands/set/)."
     )
     @PluginProperty
-    private Options options;
+    @Builder.Default
+    private Options options = Options.builder().build();
 
     @Schema(
         title = "Define if you get the older value in response, does not work with Redis 5.X."
