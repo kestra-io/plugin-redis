@@ -3,7 +3,6 @@ package io.kestra.plugin.redis;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
-import io.kestra.core.storages.StorageInterface;
 import io.kestra.plugin.redis.list.ListPop;
 import io.kestra.plugin.redis.list.ListPush;
 import io.kestra.plugin.redis.models.SerdeType;
@@ -25,9 +24,6 @@ import static org.hamcrest.Matchers.*;
 class ListPopTest {
     @Inject
     private RunContextFactory runContextFactory;
-
-    @Inject
-    protected StorageInterface storageInterface;
 
     private static final String REDIS_URI = "redis://:redis@localhost:6379/0";
 
