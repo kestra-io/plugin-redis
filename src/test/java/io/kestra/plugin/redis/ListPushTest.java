@@ -107,6 +107,6 @@ class ListPushTest {
         for (int i = 0; i < 5; i++) {
             FileSerde.write(output, i);
         }
-        return storageInterface.put(null, URI.create("/" + IdUtils.create() + ".ion"), new FileInputStream(tempFile));
+        return storageInterface.put(null, null, URI.create("/" + IdUtils.create() + ".ion"), new FileInputStream(tempFile));
     }
 }
