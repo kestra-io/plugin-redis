@@ -4,6 +4,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.JacksonMapper;
+import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.kestra.plugin.redis.string.Get;
 import io.kestra.plugin.redis.string.Set;
@@ -82,14 +83,55 @@ class GetTest {
 
         Get.Output runOutput = task.run(runContext);
 
-        assertThat(runOutput.getData(), is(JacksonMapper.ofJson(false).readValue("{\"data\":5}", Object.class)));
+        assertThat(((Map<String, Object>)runOutput.getData()).get("key"), is("value"));
+        assertThat(((Map<String, Object>)runOutput.getData()).get("int"), is(5));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void testSetGetJson() throws Exception {
+        String random = IdUtils.create();
+
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        Set.builder()
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("fromMap"))
+            .serdeType(Property.of(SerdeType.JSON))
+            .value(Property.of(Map.of("key", random)))
+            .build()
+            .run(runContext);
+
+        Set.builder()
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("fromString"))
+            .serdeType(Property.of(SerdeType.JSON))
+            .value(Property.of(JacksonMapper.ofJson().writeValueAsString(Map.of("key", random))))
+            .build()
+            .run(runContext);
+
+        Get.Output runOutput = Get.builder()
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("fromMap"))
+            .serdeType(Property.of(SerdeType.JSON))
+            .build()
+            .run(runContext);
+        assertThat(((Map<String, Object>)runOutput.getData()).get("key"), is(random));
+
+        runOutput = Get.builder()
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("fromString"))
+            .serdeType(Property.of(SerdeType.JSON))
+            .build()
+            .run(runContext);
+        assertThat(((Map<String, Object>)runOutput.getData()).get("key"), is(random));
     }
 
     @BeforeAll
     void setUp() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
         createSetTask("key", "value").run(runContext);
-        createSetTask("keyJson", "{\"data\":5}").run(runContext);
+        createSetTask("keyJson", "{\"int\":5, \"key\": \"value\"}").run(runContext);
     }
 
     static Set createSetTask(String key, String value) {

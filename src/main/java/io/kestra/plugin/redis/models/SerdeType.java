@@ -22,7 +22,14 @@ public enum SerdeType {
 
     public String serialize(Object message) throws IOException {
         if (this == SerdeType.JSON) {
-            return JacksonMapper.ofJson(false).writeValueAsString(message);
+            if (message instanceof String messageString) {
+                // will raise an exception if invalid json
+                JacksonMapper.toObject(messageString);
+
+                return messageString;
+            } else {
+                return JacksonMapper.ofJson(false).writeValueAsString(message);
+            }
         } else {
             return String.valueOf(message);
         }

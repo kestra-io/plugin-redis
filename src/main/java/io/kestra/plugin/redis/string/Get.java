@@ -70,7 +70,6 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
                 throw new NullPointerException("Missing keys '" + renderedKey + "'");
             }
 
-
             return Output.builder()
                 .data(runContext.render(this.serdeType).as(SerdeType.class).orElseThrow().deserialize(data))
                 .key(renderedKey)

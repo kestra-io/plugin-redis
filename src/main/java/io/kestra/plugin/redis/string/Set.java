@@ -10,13 +10,13 @@ import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.lettuce.core.SetArgs;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.jackson.Jacksonized;
 
 import java.time.Duration;
 import java.time.ZonedDateTime;
-import jakarta.validation.constraints.NotNull;
 
 @SuperBuilder
 @ToString
@@ -55,10 +55,11 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     private Property<String> key;
 
     @Schema(
-        title = "The value you want to set."
+        title = "The value you want to set.",
+        description = "Must be a string for `serdeType: STRING` or can be an object or a json string `serdeType: JSON`"
     )
     @NotNull
-    private Property<String> value;
+    private Property<Object> value;
 
     @Schema(
         title = "Options available when setting a key in Redis.",
@@ -87,7 +88,7 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
             String oldValue = factory.set(
                 runContext.render(key).as(String.class).orElseThrow(),
                 runContext.render(serdeType).as(SerdeType.class).orElseThrow()
-                    .serialize(runContext.render(value).as(String.class).orElseThrow()),
+                    .serialize(runContext.render(value).as(Object.class).orElseThrow()),
                 runContext.render(get).as(Boolean.class).orElse(false),
                 options.asRedisSet()
             );
