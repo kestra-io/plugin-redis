@@ -31,7 +31,7 @@ import jakarta.validation.constraints.NotNull;
 
                 tasks:
                   - id: get
-                    type: io.kestra.plugin.redis.string.Get    
+                    type: io.kestra.plugin.redis.string.Get
                     url: redis://:redis@localhost:6379/0
                     key: mykey
                 """
@@ -53,11 +53,23 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     @Builder.Default
     private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
 
+    @Schema(
+        title = "If some keys are not defined, failed the task."
+    )
+    @Builder.Default
+    private Property<Boolean> failedOnMissing = Property.of(false);
+
     @Override
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
             final String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
             String data = factory.get(renderedKey);
+
+
+            if (data == null && runContext.render(failedOnMissing).as(Boolean.class).orElseThrow()) {
+                throw new NullPointerException("Missing keys '" + renderedKey + "'");
+            }
+
 
             return Output.builder()
                 .data(runContext.render(this.serdeType).as(SerdeType.class).orElseThrow().deserialize(data))

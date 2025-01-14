@@ -9,6 +9,7 @@ import io.kestra.plugin.redis.string.Get;
 import io.kestra.plugin.redis.string.Set;
 import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -16,7 +17,7 @@ import org.junit.jupiter.api.TestInstance;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 
 @KestraTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -38,6 +39,35 @@ class GetTest {
         Get.Output runOutput = task.run(runContext);
 
         assertThat(runOutput.getData(), is("value"));
+    }
+
+    @Test
+    void testMissingGet() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        Get task = Get.builder()
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("missing"))
+            .build();
+
+        Get.Output runOutput = task.run(runContext);
+
+        assertThat(runOutput.getData(), is(nullValue()));
+    }
+
+    @Test
+    void testMissingGetFailed() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        Get task = Get.builder()
+            .url(Property.of(REDIS_URI))
+            .key(Property.of("missing"))
+            .failedOnMissing(Property.of(true))
+            .build();
+
+        NullPointerException e = Assertions.assertThrows(NullPointerException.class, () -> task.run(runContext));
+
+        assertThat(e.getMessage(), is("Missing keys 'missing'"));
     }
 
     @Test
