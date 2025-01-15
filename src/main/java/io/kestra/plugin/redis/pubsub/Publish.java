@@ -90,7 +90,16 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
                     count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
                 }
             } else if (this.from instanceof List<?> fromList) {
-                Flux<Object> flowable = Flux.fromArray(fromList.toArray());
+                Flux<Object> flowable = Flux.create(objectFluxSink -> {
+                    for (Object o : fromList) {
+                        try {
+                            objectFluxSink.next(runContext.render((String) o));
+                        } catch (Exception e) {
+                            objectFluxSink.error(e);
+                        }
+                    }
+                    objectFluxSink.complete();
+                });
                 Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                 count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
             }
@@ -98,7 +107,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
                 // should not occur as validation mandates String or List
                 throw new IllegalVariableEvaluationException("Invalid 'from' property type :" + from.getClass());
             }
-            
+
             runContext.metric(Counter.of("records", count));
             return Output.builder().count(count).build();
         }
