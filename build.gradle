@@ -50,8 +50,12 @@ dependencies {
     annotationProcessor group: "io.kestra", name: "processor", version: kestraVersion
     compileOnly group: "io.kestra", name: "core", version: kestraVersion
 
+
     // lettuce client
-    implementation 'io.lettuce:lettuce-core:6.5.0.RELEASE'
+    implementation ('io.lettuce:lettuce-core:6.5.0.RELEASE') {
+        // exclude libraries already provided by Kestra
+        exclude group: 'io.projectreactor'
+    }
 }
 
 
