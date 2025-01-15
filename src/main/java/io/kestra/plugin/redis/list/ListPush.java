@@ -104,7 +104,16 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
                     count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
                 }
             } else if (from instanceof List<?> fromList) {
-                Flux<Object> flowable = Flux.fromArray((fromList).toArray());
+                Flux<Object> flowable = Flux.create(objectFluxSink -> {
+                    for (Object o : fromList) {
+                        try {
+                            objectFluxSink.next(runContext.render((String) o));
+                        } catch (Exception e) {
+                            objectFluxSink.error(e);
+                        }
+                    }
+                    objectFluxSink.complete();
+                });
                 Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                 count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
             }

@@ -93,11 +93,19 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
                 do {
                     List<String> data = factory.listPop(renderedKey, runContext.render(this.count).as(Integer.class).orElse(100));
                     empty = data.isEmpty();
-                    var flux = Flux.fromIterable(data).map(throwFunction(str ->
-                        runContext.render(this.serdeType)
-                            .as(SerdeType.class).orElse(SerdeType.STRING).deserialize(str))
+
+                    var flux = Flux
+                        .fromIterable(data)
+                        .map(throwFunction(str -> runContext
+                            .render(this.serdeType)
+                            .as(SerdeType.class)
+                            .orElse(SerdeType.STRING)
+                            .deserialize(str)
+                        )
                     );
+
                     Mono<Long> longMono = FileSerde.writeAll(output, flux);
+
                     total.addAndGet(longMono.block().intValue());
                 }
                 while (!this.ended(runContext, empty, total, started));
