@@ -1,5 +1,5 @@
 id: list-json
-namespace: sanitychecks
+namespace: sanitychecks.plugin-redis
 
 inputs:
   - id: cs

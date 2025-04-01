@@ -1,5 +1,5 @@
 id: all_redis
-namespace: sanitychecks
+namespace: sanitychecks.plugin-redis
 
 tasks:
   - id: init
