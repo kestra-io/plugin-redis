@@ -33,7 +33,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Removes and returns an element from the head of a list."
+    title = "Remove and return an element from the head of a list in Redis."
 )
 @Plugin(
     examples = {
