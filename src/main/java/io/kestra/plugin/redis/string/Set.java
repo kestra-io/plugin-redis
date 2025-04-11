@@ -30,6 +30,7 @@ import java.time.ZonedDateTime;
 @Plugin(
     examples = {
         @Example(
+            title = "Set a string value.",
             full = true,
             code = """
                 id: redis_set
@@ -51,6 +52,31 @@ import java.time.ZonedDateTime;
                     key: "{{ inputs.key_name }}"
                     value: "{{ inputs.key_value }}"
                     serdeType: STRING
+                """
+        ),
+        @Example(
+            title = "Set a JSON value.",
+            full = true,
+            code = """
+                id: redis_set_json
+                namespace: company.team
+
+                tasks:
+                - id: set
+                    type: io.kestra.plugin.redis.string.Set
+                    url: "{{ secret('REDIS_URI')}}"
+                    key: "key_json_{{ execution.id }}"
+                    value: |
+                    {{ {
+                        "flow": flow.id,
+                        "namespace": flow.namespace
+                    } | toJson }}
+                    serdeType: JSON
+                - id: get
+                    type: io.kestra.plugin.redis.string.Get
+                    url: "{{ secret('REDIS_URI')}}"
+                    serdeType: JSON
+                    key: "key_json_{{ execution.id }}"
                 """
         )
     },
