@@ -24,7 +24,8 @@ import java.time.ZonedDateTime;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Set the string value of a key."
+    title = "Set the string value of a key in Redis.",
+    description = "Set a string value for a new key or update the current key value with a new one."
 )
 @Plugin(
     examples = {
@@ -34,12 +35,21 @@ import java.time.ZonedDateTime;
                 id: redis_set
                 namespace: company.team
 
+                inputs:
+                  - id: key_name
+                    type: STRING
+                    displayName: Key Name
+
+                  - id: key_value
+                    type: STRING
+                    displayName: Key Value
+
                 tasks:
                   - id: set
                     type: io.kestra.plugin.redis.string.Set
                     url: redis://:redis@localhost:6379/0
-                    key: mykey
-                    value: myvalue
+                    key: "{{ inputs.key_name }}"
+                    value: "{{ inputs.key_value }}"
                     serdeType: STRING
                 """
         )

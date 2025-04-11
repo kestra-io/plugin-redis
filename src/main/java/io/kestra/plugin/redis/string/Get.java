@@ -19,7 +19,8 @@ import jakarta.validation.constraints.NotNull;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Get a key."
+    title = "Get a key and return its value in Redis.",
+    description = "Query for a key in a Redis database and return the associated value."
 )
 @Plugin(
     examples = {
@@ -29,11 +30,16 @@ import jakarta.validation.constraints.NotNull;
                 id: redis_get
                 namespace: company.team
 
+                inputs:
+                    - id: key_name
+                      type: STRING
+                      displayName: Key name to search
+
                 tasks:
                   - id: get
                     type: io.kestra.plugin.redis.string.Get
                     url: redis://:redis@localhost:6379/0
-                    key: mykey
+                    key: "{{ inputs.key_name }}"
                 """
         )
     },
