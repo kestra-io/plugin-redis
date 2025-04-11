@@ -32,7 +32,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Publish one or multiple values to a channel."
+    title = "Publish one or multiple values to a channel in Redis."
 )
 @Plugin(
     examples = {
@@ -57,13 +57,13 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 )
 public class Publish extends AbstractRedisConnection implements RunnableTask<Publish.Output> {
     @Schema(
-        title = "The redis channel to publish."
+        title = "The Redis channel to publish"
     )
     @NotNull
     private Property<String> channel;
 
     @Schema(
-        title = "The list of value to publish to the channel.",
+        title = "The list of values to publish to the channel",
         anyOf = {String.class, List.class}
     )
     @NotNull
@@ -71,7 +71,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
     private Object from;
 
     @Schema(
-        title = "Format of the data contained in Redis."
+        title = "Format of the data contained in Redis"
     )
     @Builder.Default
     @NotNull
@@ -130,7 +130,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
             title = "Count",
-            description = "The number of value published"
+            description = "The number of values published"
         )
         private Integer count;
     }

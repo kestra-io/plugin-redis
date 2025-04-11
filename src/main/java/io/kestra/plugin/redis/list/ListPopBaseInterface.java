@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 
 public interface ListPopBaseInterface {
     @Schema(
-        title = "The redis key for the list."
+        title = "The Redis key for the list"
     )
     @NotNull
     Property<String> getKey();

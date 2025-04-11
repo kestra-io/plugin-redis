@@ -33,7 +33,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Adds a new element to the head of a list."
+    title = "Add a new element to the head of a list in Redis."
 )
 @Plugin(
     examples = {
@@ -58,7 +58,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 )
 public class ListPush extends AbstractRedisConnection implements RunnableTask<ListPush.Output> {
     @Schema(
-        title = "The redis key for the list."
+        title = "The Redis key for the list."
     )
     @NotNull
     private Property<String> key;
@@ -144,7 +144,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
             title = "Count",
-            description = "The number of values inserted."
+            description = "The number of values inserted"
         )
         private Integer count;
     }

@@ -28,7 +28,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Removes and returns an element from the head of a list in real-time and create one execution per element.",
+    title = "Remove and return an element from the head of a list in real-time in Redis and create one execution per element.",
     description = "If you would like to consume multiple elements processed within a given time frame and process them in batch, you can use the [io.kestra.plugin.redis.list.Trigger](https://kestra.io/plugins/plugin-redis/triggers/io.kestra.plugin.redis.list.trigger) instead."
 )
 @Plugin(
@@ -122,7 +122,7 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
     @AllArgsConstructor(staticName = "of")
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The value."
+            title = "The value"
         )
         private Object value;
     }
