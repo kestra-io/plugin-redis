@@ -20,7 +20,7 @@ import java.util.List;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Delete one or more keys in Redis.",
+    title = "Delete one or more Redis items by key.",
     description = "List one or more keys to delete in a Redis database."
 )
 @Plugin(
