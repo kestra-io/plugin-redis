@@ -24,7 +24,7 @@ import java.time.ZonedDateTime;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Set the string value of a key in Redis.",
+    title = "Set a string value for a given Redis key.",
     description = "Set a string value for a new key or update the current key value with a new one."
 )
 @Plugin(

@@ -19,7 +19,7 @@ import jakarta.validation.constraints.NotNull;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Get a key and return its value in Redis.",
+    title = "Fetch a Redis item by key and return its value.",
     description = "Query for a key in a Redis database and return the associated value."
 )
 @Plugin(

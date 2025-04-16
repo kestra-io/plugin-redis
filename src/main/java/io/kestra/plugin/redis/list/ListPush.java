@@ -33,7 +33,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Adds a new element to the head of a list."
+    title = "Add a new element to the head of a list in Redis."
 )
 @Plugin(
     examples = {
