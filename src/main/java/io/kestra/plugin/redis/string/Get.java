@@ -69,8 +69,8 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
             final String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
-            String data = factory.get(renderedKey);
 
+            String data = factory.getSyncCommands().get(renderedKey);
 
             if (data == null && runContext.render(failedOnMissing).as(Boolean.class).orElseThrow()) {
                 throw new NullPointerException("Missing keys '" + renderedKey + "'");

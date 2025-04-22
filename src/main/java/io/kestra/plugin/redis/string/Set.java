@@ -95,13 +95,16 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     @Override
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
-            String oldValue = factory.set(
-                runContext.render(key).as(String.class).orElseThrow(),
-                runContext.render(serdeType).as(SerdeType.class).orElseThrow()
-                    .serialize(runContext.render(value).as(Object.class).orElseThrow()),
-                runContext.render(get).as(Boolean.class).orElse(false),
-                options.asRedisSet()
-            );
+            String oldValue = null;
+            String key = runContext.render(this.key).as(String.class).orElseThrow();
+            String value = runContext.render(serdeType).as(SerdeType.class).orElseThrow()
+                .serialize(runContext.render(this.value).as(Object.class).orElseThrow());
+
+            if (runContext.render(get).as(Boolean.class).orElse(false)) {
+                oldValue = factory.getSyncCommands().setGet(key, value);
+            } else {
+                factory.getSyncCommands().set(key, value, options.asRedisSet());
+            }
 
             Output.OutputBuilder builder = Output.builder();
 
