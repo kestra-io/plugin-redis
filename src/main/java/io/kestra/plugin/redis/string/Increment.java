@@ -34,7 +34,7 @@ import lombok.experimental.SuperBuilder;
                       displayName: Key name to increment
 
                 tasks:
-                  - id: get
+                  - id: increment
                     type: io.kestra.plugin.redis.string.Increment
                     url: redis://:redis@localhost:6379/0
                     key: "{{ inputs.key_name }}"
