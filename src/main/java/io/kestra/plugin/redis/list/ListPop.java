@@ -91,7 +91,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
 
                 boolean empty;
                 do {
-                    List<String> data = factory.listPop(renderedKey, runContext.render(this.count).as(Integer.class).orElse(100));
+                    List<String> data = factory.getSyncCommands().lpop(renderedKey, runContext.render(this.count).as(Integer.class).orElse(100));
                     empty = data.isEmpty();
 
                     var flux = Flux
