@@ -13,6 +13,13 @@ import static org.hamcrest.Matchers.is;
 @KestraTest(startRunner = true)
 class RunnerTest {
     @Test
+    @ExecuteFlow("sanity-checks/increment.yaml")
+    void increment(Execution execution) {
+        assertThat(execution.getTaskRunList(), hasSize(5));
+        assertThat(execution.getState().getCurrent(), is(State.Type.SUCCESS));
+    }
+
+    @Test
     @ExecuteFlow("sanity-checks/keys-string.yaml")
     void keysString(Execution execution) {
         assertThat(execution.getTaskRunList(), hasSize(6));
