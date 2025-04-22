@@ -1,5 +1,6 @@
 package io.kestra.plugin.redis.string;
 
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -85,13 +86,16 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     @Override
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
-            String oldValue = factory.set(
-                runContext.render(key).as(String.class).orElseThrow(),
-                runContext.render(serdeType).as(SerdeType.class).orElseThrow()
-                    .serialize(runContext.render(value).as(Object.class).orElseThrow()),
-                runContext.render(get).as(Boolean.class).orElse(false),
-                options.asRedisSet()
-            );
+            String oldValue = null;
+            String key = runContext.render(this.key).as(String.class).orElseThrow();
+            String value = runContext.render(serdeType).as(SerdeType.class).orElseThrow()
+                .serialize(runContext.render(this.value).as(Object.class).orElseThrow());
+
+            if (runContext.render(get).as(Boolean.class).orElse(false)) {
+                oldValue = factory.getSyncCommands().setGet(key, value, options.asRedisSet(runContext));
+            } else {
+                factory.getSyncCommands().set(key, value, options.asRedisSet(runContext));
+            }
 
             Output.OutputBuilder builder = Output.builder();
 
@@ -120,53 +124,51 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
         @Schema(
             title = "Set the expiration duration."
         )
-        private Duration expirationDuration;
+        private Property<Duration> expirationDuration;
 
         @Schema(
             title = "Set the expiration date."
         )
-        private ZonedDateTime expirationDate;
+        private Property<ZonedDateTime> expirationDate;
 
         @Schema(
             title = "Only set the key if it does not already exist."
         )
         @Builder.Default
-        private boolean mustNotExist = false;
+        private Property<Boolean> mustNotExist = Property.of(false);
 
         @Schema(
             title = "Only set the key if it already exist."
         )
         @Builder.Default
-        private boolean mustExist = false;
+        private Property<Boolean> mustExist = Property.of(false);
 
         @Schema(
             title = "Retain the time to live associated with the key."
         )
         @Builder.Default
-        private boolean keepTtl = false;
+        private Property<Boolean> keepTtl = Property.of(false);
 
-        public SetArgs asRedisSet() {
+        public SetArgs asRedisSet(RunContext runContext) throws IllegalVariableEvaluationException {
             SetArgs setArgs = new SetArgs();
 
-            if (expirationDuration != null) {
-                setArgs.px(expirationDuration);
-            }
+            runContext.render(expirationDuration).as(Duration.class)
+                .ifPresent(setArgs::px);
 
-            if (expirationDate != null) {
-                setArgs.pxAt(expirationDate.toInstant().toEpochMilli());
-            }
+            runContext.render(expirationDate).as(ZonedDateTime.class)
+                .ifPresent(v -> setArgs.pxAt(v.toInstant().toEpochMilli()));
 
-            if (mustNotExist) {
-                setArgs.nx();
-            }
+            runContext.render(mustNotExist).as(Boolean.class)
+                .filter(b -> b)
+                .ifPresent(b -> setArgs.nx());
 
-            if (mustExist) {
-                setArgs.xx();
-            }
+            runContext.render(mustExist).as(Boolean.class)
+                .filter(b -> b)
+                .ifPresent(b -> setArgs.xx());
 
-            if (keepTtl) {
-                setArgs.keepttl();
-            }
+            runContext.render(keepTtl).as(Boolean.class)
+                .filter(b -> b)
+                .ifPresent(b -> setArgs.keepttl());
 
             return setArgs;
         }

@@ -130,9 +130,9 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     private Flux<Integer> buildFlowable(Flux<Object> flowable, RunContext runContext, RedisFactory factory) throws Exception {
         return flowable
             .map(throwFunction(row -> {
-                factory.listPush(
+                factory.getSyncCommands().lpush(
                     runContext.render(key).as(String.class).orElseThrow(),
-                    Collections.singletonList(runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING).serialize(row))
+                    Collections.singletonList(runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING).serialize(row)).toArray(new String[0])
                 );
 
                 return 1;

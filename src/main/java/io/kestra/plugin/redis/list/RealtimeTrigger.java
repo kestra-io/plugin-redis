@@ -39,12 +39,12 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
             code = """
                 id: list_listen
                 namespace: company.team
-                
+
                 tasks:
                   - id: echo
                     type: io.kestra.plugin.core.log.Log
                     message: "Received '{{ trigger.value }}'"
-                
+
                 triggers:
                   - id: watch
                     type: io.kestra.plugin.redis.RealtimeTrigger
@@ -95,7 +95,7 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
                     String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
 
                     while (isActive.get()) {
-                        factory.listPop(renderedKey, 1)
+                        factory.getSyncCommands().lpop(renderedKey, 1)
                             .forEach(throwConsumer(s -> fluxSink.next(runContext.render(this.serdeType)
                                 .as(SerdeType.class)
                                 .orElse(SerdeType.STRING).deserialize(s)))

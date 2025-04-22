@@ -6,12 +6,10 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.AbstractRedisConnection;
-import io.kestra.plugin.redis.models.SerdeType;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import jakarta.validation.constraints.NotNull;
 
 @SuperBuilder
 @ToString
@@ -19,59 +17,60 @@ import jakarta.validation.constraints.NotNull;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Get a key."
+    title = "Increment a Redis item by key and return its value.",
+    description = "Increment for a key in a Redis database and return the associated value."
 )
 @Plugin(
     examples = {
         @Example(
             full = true,
             code = """
-                id: redis_get
+                id: redis_increment
                 namespace: company.team
 
+                inputs:
+                    - id: key_name
+                      type: STRING
+                      displayName: Key name to increment
+
                 tasks:
-                  - id: get
-                    type: io.kestra.plugin.redis.string.Get
+                  - id: increment
+                    type: io.kestra.plugin.redis.string.Increment
                     url: redis://:redis@localhost:6379/0
-                    key: mykey
+                    key: "{{ inputs.key_name }}"
                 """
         )
-    },
-    aliases = "io.kestra.plugin.redis.Get"
+    }
 )
-public class Get extends AbstractRedisConnection implements RunnableTask<Get.Output> {
+public class Increment extends AbstractRedisConnection implements RunnableTask<Increment.Output> {
     @Schema(
-        title = "The redis key you want to get"
+        title = "The redis key you want to increment"
     )
     @NotNull
     private Property<String> key;
 
     @Schema(
-        title = "Format of the data contained in Redis"
+        title = "The amount to increment, default is 1"
     )
-    @NotNull
-    @Builder.Default
-    private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
-
-    @Schema(
-        title = "If some keys are not defined, failed the task."
-    )
-    @Builder.Default
-    private Property<Boolean> failedOnMissing = Property.of(false);
+    private Property<Number> amount;
 
     @Override
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
             final String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
 
-            String data = factory.getSyncCommands().get(renderedKey);
-
-            if (data == null && runContext.render(failedOnMissing).as(Boolean.class).orElseThrow()) {
-                throw new NullPointerException("Missing keys '" + renderedKey + "'");
-            }
+            Number increment = runContext.render(amount).as(Number.class)
+                .map(number -> {
+                    if (number instanceof Long) {
+                        return factory.getSyncCommands().incrby(renderedKey, number.longValue());
+                    } else {
+                        return factory.getSyncCommands().incrbyfloat(renderedKey, number.doubleValue());
+                    }
+                })
+                .orElseGet(() -> factory.getSyncCommands().incr(renderedKey));
 
             return Output.builder()
-                .data(runContext.render(this.serdeType).as(SerdeType.class).orElseThrow().deserialize(data))
+                .value(increment)
                 .key(renderedKey)
                 .build();
         }
@@ -81,9 +80,9 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The fetched data."
+            title = "The incremented value."
         )
-        private Object data;
+        private Number value;
 
         @Schema(
             title = "The fetched key."

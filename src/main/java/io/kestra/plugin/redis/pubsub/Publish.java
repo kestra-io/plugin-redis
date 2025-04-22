@@ -116,10 +116,17 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
     private Flux<Integer> buildFlowable(Flux<Object> flowable, RunContext runContext, RedisFactory factory) throws Exception {
         return flowable
             .map(throwFunction(row -> {
-                factory.publish(
-                    runContext.render(channel).as(String.class).orElseThrow(),
-                    Collections.singletonList(runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING).serialize(row))
-                );
+                String channelRendered = runContext.render(this.channel).as(String.class).orElseThrow();
+
+                List<String> values = Collections.singletonList(runContext.render(serdeType)
+                    .as(SerdeType.class)
+                    .orElse(SerdeType.STRING)
+                    .serialize(row));
+
+                long result = 0;
+                for (String value : values) {
+                    result += factory.getSyncCommands().publish(channelRendered, value);
+                }
 
                 return 1;
             }));
