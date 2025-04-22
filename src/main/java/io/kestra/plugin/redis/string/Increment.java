@@ -50,7 +50,7 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
     private Property<String> key;
 
     @Schema(
-        title = "The amount to increment"
+        title = "The amount to increment, default is 1"
     )
     private Property<Number> amount;
 
