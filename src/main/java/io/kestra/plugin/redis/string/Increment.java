@@ -31,7 +31,7 @@ import lombok.experimental.SuperBuilder;
                 inputs:
                     - id: key_name
                       type: STRING
-                      displayName: Key name to search
+                      displayName: Key name to increment
 
                 tasks:
                   - id: get
