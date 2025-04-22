@@ -25,7 +25,7 @@ import lombok.experimental.SuperBuilder;
         @Example(
             full = true,
             code = """
-                id: redis_get
+                id: redis_increment
                 namespace: company.team
 
                 inputs:
