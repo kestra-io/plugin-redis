@@ -122,7 +122,7 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
     @AllArgsConstructor(staticName = "of")
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The value."
+            title = "The value"
         )
         private Object value;
     }

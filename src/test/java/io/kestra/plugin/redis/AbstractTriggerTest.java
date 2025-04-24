@@ -54,7 +54,7 @@ abstract class AbstractTriggerTest {
             worker.run();
             scheduler.run();
 
-            repositoryLoader.load(Objects.requireNonNull(AbstractTriggerTest.class.getClassLoader().getResource("flows/" + filename)));
+            repositoryLoader.load(null, Objects.requireNonNull(AbstractTriggerTest.class.getClassLoader().getResource("flows/" + filename)));
 
             runnable.run();
         }
