@@ -1,0 +1,36 @@
+id: increment
+namespace: sanitychecks.plugin-redis
+
+inputs:
+  - id: cs
+    type: STRING
+    defaults: "redis://:redis@localhost:6379/0"
+
+tasks:
+  - id: incr1
+    type: io.kestra.plugin.redis.string.Increment
+    url: "{{ inputs.cs }}"
+    key: "incr_string_{{ execution.id }}"
+
+  - id: incr2
+    type: io.kestra.plugin.redis.string.Increment
+    url: "{{ inputs.cs }}"
+    key: "incr_string_{{ execution.id }}"
+
+  - id: incr3
+    type: io.kestra.plugin.redis.string.Increment
+    url: "{{ inputs.cs }}"
+    key: "incr_string_{{ execution.id }}"
+    amount: 2
+
+  - id: incr4
+    type: io.kestra.plugin.redis.string.Increment
+    url: "{{ inputs.cs }}"
+    key: "incr_string_{{ execution.id }}"
+    amount: 2.5
+
+  - id: assert
+    type: io.kestra.plugin.core.execution.Assert
+    errorMessage: "Invalid get data {{ outputs.incr4 }}"
+    conditions:
+      - "{{ outputs.incr4.value == 6.5 }}"

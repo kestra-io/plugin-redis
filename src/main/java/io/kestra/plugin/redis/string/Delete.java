@@ -20,7 +20,7 @@ import java.util.List;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Delete one or more keys in Redis.",
+    title = "Delete one or more Redis items by key.",
     description = "List one or more keys to delete in a Redis database."
 )
 @Plugin(
@@ -61,7 +61,7 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
         try (RedisFactory factory = this.redisFactory(runContext)) {
 
             final List<String> renderedKeys = runContext.render(keys).asList(String.class);
-            long count = factory.del(renderedKeys);
+            long count = factory.getSyncCommands().del(renderedKeys.toArray(new String[0]));
             boolean isAllKeyDeleted = count == renderedKeys.size();
 
             if (!isAllKeyDeleted && runContext.render(failedOnMissing).as(Boolean.class).orElse(false)) {
