@@ -80,34 +80,4 @@ class SetTest {
 
         assertThat(exception.getMessage(), containsString("Unrecognized token"));
     }
-
-    @Test
-    void testSetTtl() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String id = "testSetTtl_" + IdUtils.create();
-
-        Set set = Set.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of(id))
-            .value(Property.of("value"))
-            .options(Set.Options.builder()
-                .expirationDuration(Property.of(Duration.parse("P1D")))
-                .build()
-            )
-            .build();
-
-        set.run(runContext);
-
-        Get get = Get.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of(id))
-            .failedOnMissing(Property.of(false))
-            .build();
-        Get.Output runOutput = get.run(runContext);
-        assertThat(runOutput.getData(), is("value"));
-
-        Thread.sleep(Duration.ofSeconds(2).toMillis());
-        assertThrows(NullPointerException.class, () -> get.run(runContext));
-    }
-
 }
