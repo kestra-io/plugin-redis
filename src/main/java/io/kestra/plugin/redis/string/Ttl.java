@@ -17,8 +17,7 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Increment a Redis item by key and return its value.",
-    description = "Increment for a key in a Redis database and return the associated value."
+    title = "Fetch the ttl from an Redis item by key."
 )
 @Plugin(
     examples = {
@@ -34,8 +33,8 @@ import lombok.experimental.SuperBuilder;
                       displayName: Key name to increment
 
                 tasks:
-                  - id: increment
-                    type: io.kestra.plugin.redis.string.Increment
+                  - id: getTtl
+                    type: io.kestra.plugin.redis.string.Ttl
                     url: redis://:redis@localhost:6379/0
                     key: "{{ inputs.key_name }}"
                 """
