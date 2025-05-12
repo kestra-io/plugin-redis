@@ -22,7 +22,7 @@ class RunnerTest {
     @Test
     @ExecuteFlow("sanity-checks/keys-string.yaml")
     void keysString(Execution execution) {
-        assertThat(execution.getTaskRunList(), hasSize(6));
+        assertThat(execution.getTaskRunList(), hasSize(9));
         assertThat(execution.getState().getCurrent(), is(State.Type.SUCCESS));
     }
 

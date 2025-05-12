@@ -43,3 +43,23 @@ tasks:
     errorMessage: "Invalid get data {{ outputs.getAfterDelete }}"
     conditions:
       - "{{ (outputs.getAfterDelete contains 'data') == false }}"
+
+  - id: setWithTtl
+    type: io.kestra.plugin.redis.string.Set
+    url: "{{ inputs.cs }}"
+    key: "key_string_ttl_{{ execution.id }}"
+    value: "{{ flow.id }}"
+    serdeType: STRING
+    options:
+      expirationDuration: P1D
+
+  - id: getTtl
+    type: io.kestra.plugin.redis.string.Ttl
+    url: "{{ inputs.cs }}"
+    key: "key_string_ttl_{{ execution.id }}"
+
+  - id: assertTtl
+    type: io.kestra.plugin.core.execution.Assert
+    errorMessage: "Invalid get data {{ outputs.getTtl }}"
+    conditions:
+      - "{{ outputs.getTtl.ttl > 86000 }}"
