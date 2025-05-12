@@ -155,6 +155,7 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     }
 
     @Builder
+    @Getter
     @Jacksonized
     public static class Options {
         @Schema(
