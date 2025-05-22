@@ -30,8 +30,8 @@ class IncrementTest {
         String s = IdUtils.create();
 
         Increment task = Increment.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of(s))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(s))
             .build();
 
         Increment.Output runOutput = task.run(runContext);
@@ -50,9 +50,9 @@ class IncrementTest {
         String s = IdUtils.create();
 
         Increment task = Increment.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of(s))
-            .amount(Property.of(2L))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(s))
+            .amount(Property.ofValue(2L))
             .build();
 
         Increment.Output runOutput = task.run(runContext);
@@ -72,9 +72,9 @@ class IncrementTest {
         String s = IdUtils.create();
 
         Increment task = Increment.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of(s))
-            .amount(Property.of(2.5D))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(s))
+            .amount(Property.ofValue(2.5D))
             .build();
 
         Increment.Output runOutput = task.run(runContext);

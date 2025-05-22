@@ -43,8 +43,8 @@ class PublishTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Publish task = Publish.builder()
-            .url(Property.of(REDIS_URI))
-            .channel(Property.of("mych"))
+            .url(Property.ofValue(REDIS_URI))
+            .channel(Property.ofValue("mych"))
             .from(Arrays.asList("value1", "value2"))
             .build();
 
@@ -60,8 +60,8 @@ class PublishTest {
         URI uri = createTestFile();
 
         Publish task = Publish.builder()
-            .url(Property.of(REDIS_URI))
-            .channel(Property.of("mychFile"))
+            .url(Property.ofValue(REDIS_URI))
+            .channel(Property.ofValue("mychFile"))
             .from(uri.toString())
             .build();
 
@@ -74,12 +74,12 @@ class PublishTest {
     void setUp() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
         Delete.builder()
-            .url(Property.of(REDIS_URI))
-            .keys(Property.of(List.of("mych")))
+            .url(Property.ofValue(REDIS_URI))
+            .keys(Property.ofValue(List.of("mych")))
             .build().run(runContext);
         Delete.builder()
-            .url(Property.of(REDIS_URI))
-            .keys(Property.of(List.of("mychFile")))
+            .url(Property.ofValue(REDIS_URI))
+            .keys(Property.ofValue(List.of("mychFile")))
             .build().run(runContext);
     }
 

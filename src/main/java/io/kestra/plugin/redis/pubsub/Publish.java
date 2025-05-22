@@ -75,7 +75,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
     )
     @Builder.Default
     @NotNull
-    private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
+    private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
 
     @Override
     public Output run(RunContext runContext) throws Exception {

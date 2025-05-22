@@ -1,7 +1,7 @@
 services:
   redis:
-    image: redis:6.2-alpine
+    image: redis/redis-stack-server:latest
     ports:
       - 6379:6379
-    command:
-      - --requirepass "redis"
+    environment:
+      - REDIS_ARGS=--requirepass redis

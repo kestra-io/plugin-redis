@@ -64,8 +64,8 @@ abstract class AbstractTriggerTest {
         ListPush task = ListPush.builder()
             .id(TriggerTest.class.getSimpleName())
             .type(ListPush.class.getName())
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("mytriggerkey"))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("mytriggerkey"))
             .from(Arrays.asList("value1", "value2"))
             .build();
 

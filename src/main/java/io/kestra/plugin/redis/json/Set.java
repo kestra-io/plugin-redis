@@ -1,5 +1,4 @@
-package io.kestra.plugin.redis.string;
-
+package io.kestra.plugin.redis.json;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -10,6 +9,13 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.lettuce.core.SetArgs;
+import io.lettuce.core.api.sync.RedisJsonCommands;
+import io.lettuce.core.codec.StringCodec;
+import io.lettuce.core.json.*;
+import io.lettuce.core.json.arguments.JsonSetArgs;
+import io.lettuce.core.output.StatusOutput;
+import io.lettuce.core.protocol.CommandArgs;
+import io.lettuce.core.protocol.CommandType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -25,16 +31,16 @@ import java.time.ZonedDateTime;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Set a string value for a given Redis key.",
-    description = "Set a string value for a new key or update the current key value with a new one."
+    title = "Set a JSON type value for a given Redis key.",
+    description = "Set a JSON type value for a new key or update the current key value with a new one."
 )
 @Plugin(
     examples = {
         @Example(
-            title = "Set a string value.",
+            title = "Set a JSON value.",
             full = true,
             code = """
-                id: redis_set
+                id: redis_json_set
                 namespace: company.team
 
                 inputs:
@@ -48,40 +54,16 @@ import java.time.ZonedDateTime;
 
                 tasks:
                   - id: set
-                    type: io.kestra.plugin.redis.string.Set
+                    type: io.kestra.plugin.redis.json.Set
                     url: redis://:redis@localhost:6379/0
                     key: "{{ inputs.key_name }}"
-                    value: "{{ inputs.key_value }}"
-                    serdeType: STRING
-                """
-        ),
-        @Example(
-            title = "Set a JSON value.",
-            full = true,
-            code = """
-                id: redis_set_json
-                namespace: company.team
-
-                tasks:
-                - id: set
-                    type: io.kestra.plugin.redis.string.Set
-                    url: "{{ secret('REDIS_URI')}}"
-                    key: "key_json_{{ execution.id }}"
                     value: |
-                    {{ {
-                        "flow": flow.id,
-                        "namespace": flow.namespace
-                    } | toJson }}
-                    serdeType: JSON
-                - id: get
-                    type: io.kestra.plugin.redis.string.Get
-                    url: "{{ secret('REDIS_URI')}}"
-                    serdeType: JSON
-                    key: "key_json_{{ execution.id }}"
+                      {
+                        "name": "{{ inputs.key_value }}"
+                      }
                 """
         )
-    },
-    aliases = "io.kestra.plugin.redis.Set"
+    }
 )
 public class Set extends AbstractRedisConnection implements RunnableTask<Set.Output> {
 
@@ -92,8 +74,7 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     private Property<String> key;
 
     @Schema(
-        title = "The value you want to set.",
-        description = "Must be a string for `serdeType: STRING` or can be an object or a json string `serdeType: JSON`"
+        title = "The value you want to set as type JSON."
     )
     @NotNull
     private Property<Object> value;
@@ -113,25 +94,27 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     private Property<Boolean> get = Property.ofValue(false);
 
     @Schema(
-        title = "Format of the data contained in Redis."
+        title = "JSON path to extract value (default is root '$')"
     )
     @Builder.Default
-    @NotNull
-    private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
+    private Property<String> path = Property.ofValue("$");
 
     @Override
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
-            String oldValue = null;
-            String key = runContext.render(this.key).as(String.class).orElseThrow();
-            String value = runContext.render(serdeType).as(SerdeType.class).orElseThrow()
-                .serialize(runContext.render(this.value).as(Object.class).orElseThrow());
 
+            String key = runContext.render(this.key).as(String.class).orElseThrow();
+            String value = SerdeType.JSON.serialize(runContext.render(this.value).as(Object.class).orElseThrow());
+
+            String renderedPath = runContext.render(this.path).as(String.class).orElse("$");
+
+            Object oldValue = null;
             if (runContext.render(get).as(Boolean.class).orElse(false)) {
-                oldValue = factory.getSyncCommands().setGet(key, value, options.asRedisSet(runContext));
-            } else {
-                factory.getSyncCommands().set(key, value, options.asRedisSet(runContext));
+                oldValue = factory.getSyncCommands().jsonGet(key, JsonPath.of(renderedPath)).getFirst().toObject(Object.class);
             }
+
+            factory.getSyncCommands().jsonSet(key, JsonPath.of(renderedPath), new DefaultJsonParser().createJsonValue(value),
+                    options.asRedisSet(runContext));
 
             Output.OutputBuilder builder = Output.builder();
 
@@ -151,23 +134,13 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
             description = "The old value if you replaced an existing key\n" +
                 "Required Get to true"
         )
-        private String oldValue;
+        private Object oldValue;
     }
 
     @Builder
     @Getter
     @Jacksonized
     public static class Options {
-        @Schema(
-            title = "Set the expiration duration."
-        )
-        private Property<Duration> expirationDuration;
-
-        @Schema(
-            title = "Set the expiration date."
-        )
-        private Property<ZonedDateTime> expirationDate;
-
         @Schema(
             title = "Only set the key if it does not already exist."
         )
@@ -180,20 +153,9 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
         @Builder.Default
         private Property<Boolean> mustExist = Property.ofValue(false);
 
-        @Schema(
-            title = "Retain the time to live associated with the key."
-        )
-        @Builder.Default
-        private Property<Boolean> keepTtl = Property.ofValue(false);
 
-        public SetArgs asRedisSet(RunContext runContext) throws IllegalVariableEvaluationException {
-            SetArgs setArgs = new SetArgs();
-
-            runContext.render(expirationDuration).as(Duration.class)
-                .ifPresent(setArgs::px);
-
-            runContext.render(expirationDate).as(ZonedDateTime.class)
-                .ifPresent(v -> setArgs.pxAt(v.toInstant().toEpochMilli()));
+        public JsonSetArgs asRedisSet(RunContext runContext) throws IllegalVariableEvaluationException {
+            JsonSetArgs setArgs = new JsonSetArgs();
 
             runContext.render(mustNotExist).as(Boolean.class)
                 .filter(b -> b)
@@ -202,10 +164,6 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
             runContext.render(mustExist).as(Boolean.class)
                 .filter(b -> b)
                 .ifPresent(b -> setArgs.xx());
-
-            runContext.render(keepTtl).as(Boolean.class)
-                .filter(b -> b)
-                .ifPresent(b -> setArgs.keepttl());
 
             return setArgs;
         }

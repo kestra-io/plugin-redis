@@ -34,19 +34,19 @@ import java.util.Optional;
             code = """
                 id: list_listen
                 namespace: company.team
-                
+
                 tasks:
                   - id: echo
                     type: io.kestra.plugin.core.log.Log
                     message: "{{ trigger.uri }} containing {{ trigger.count }} lines"
-                
+
                 triggers:
                   - id: watch
                     type: io.kestra.plugin.redis.list.Trigger
                     url: redis://localhost:6379/0
                     key: mytriggerkey
-                    maxRecords: 2 
-                """          
+                    maxRecords: 2
+                """
         )
     },
     aliases = "io.kestra.plugin.redis.TriggerList"
@@ -57,14 +57,14 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     private Property<String> key;
 
     @Builder.Default
-    private Property<Integer> count = Property.of(100);
+    private Property<Integer> count = Property.ofValue(100);
 
     @Schema(
         title = "Format of the data contained in Redis"
     )
     @Builder.Default
     @NotNull
-    private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
+    private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
 
     private Property<Integer> maxRecords;
 

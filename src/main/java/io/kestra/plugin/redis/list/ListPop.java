@@ -64,14 +64,14 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
     )
     @Builder.Default
     @NotNull
-    private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
+    private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
 
     private Property<Integer> maxRecords;
 
     private Property<Duration> maxDuration;
 
     @Builder.Default
-    private Property<Integer> count = Property.of(100);
+    private Property<Integer> count = Property.ofValue(100);
 
     @Override
     public Output run(RunContext runContext) throws Exception {

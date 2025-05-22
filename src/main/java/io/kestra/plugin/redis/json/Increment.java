@@ -1,4 +1,4 @@
-package io.kestra.plugin.redis.string;
+package io.kestra.plugin.redis.json;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -6,12 +6,13 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.AbstractRedisConnection;
-import io.kestra.plugin.redis.models.SerdeType;
+import io.lettuce.core.json.JsonPath;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import jakarta.validation.constraints.NotNull;
+import java.util.List;
 
 @SuperBuilder
 @ToString
@@ -19,65 +20,65 @@ import jakarta.validation.constraints.NotNull;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Fetch a Redis item by key and return its value.",
-    description = "Query for a key in a Redis database and return the associated value."
+    title = "Increment a Redis item by key, JSON path and return its value.",
+    description = "Increment for a key in a Redis database and return the associated value."
 )
 @Plugin(
     examples = {
         @Example(
             full = true,
             code = """
-                id: redis_get
+                id: redis_increment
                 namespace: company.team
 
                 inputs:
                     - id: key_name
                       type: STRING
-                      displayName: Key name to search
+                      displayName: Key name to increment
 
                 tasks:
-                  - id: get
-                    type: io.kestra.plugin.redis.string.Get
+                  - id: increment
+                    type: io.kestra.plugin.redis.json.Increment
                     url: redis://:redis@localhost:6379/0
                     key: "{{ inputs.key_name }}"
+                    path: "$"
                 """
         )
-    },
-    aliases = "io.kestra.plugin.redis.Get"
+    }
 )
-public class Get extends AbstractRedisConnection implements RunnableTask<Get.Output> {
+public class Increment extends AbstractRedisConnection implements RunnableTask<Increment.Output> {
     @Schema(
-        title = "The redis key you want to get"
+        title = "The redis key you want to increment"
     )
     @NotNull
     private Property<String> key;
 
     @Schema(
-        title = "Format of the data contained in Redis"
+        title = "The amount to increment, default is 1"
     )
-    @NotNull
     @Builder.Default
-    private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
+    private Property<Number> amount = Property.ofValue(1);
 
     @Schema(
-        title = "If some keys are not defined, failed the task."
+        title = "JSON path to increment value."
     )
-    @Builder.Default
-    private Property<Boolean> failedOnMissing = Property.ofValue(false);
+    @NotNull
+    private Property<String> path;
 
     @Override
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
             final String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
+            String renderedPath = runContext.render(this.path).as(String.class).orElseThrow();
 
-            String data = factory.getSyncCommands().get(renderedKey);
+            Number increment = runContext.render(amount).as(Number.class).orElse(1);
 
-            if (data == null && runContext.render(failedOnMissing).as(Boolean.class).orElseThrow()) {
-                throw new NullPointerException("Missing keys '" + renderedKey + "'");
-            }
+            List<Number> result = factory.getSyncCommands().jsonNumincrby(renderedKey, JsonPath.of(renderedPath), increment);
+
+            runContext.logger().info("Result: {}", result);
 
             return Output.builder()
-                .data(runContext.render(this.serdeType).as(SerdeType.class).orElseThrow().deserialize(data))
+                .value(result.getFirst())
                 .key(renderedKey)
                 .build();
         }
@@ -87,9 +88,9 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The fetched data."
+            title = "The incremented value."
         )
-        private Object data;
+        private Number value;
 
         @Schema(
             title = "The fetched key."

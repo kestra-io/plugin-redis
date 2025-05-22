@@ -32,10 +32,10 @@ class ListPopTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         ListPop task = ListPop.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("mypopkey"))
-            .count(Property.of(2))
-            .maxRecords(Property.of(2))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("mypopkey"))
+            .count(Property.ofValue(2))
+            .maxRecords(Property.ofValue(2))
             .build();
 
         ListPop.Output runOutput = task.run(runContext);
@@ -59,11 +59,11 @@ class ListPopTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         ListPop task = ListPop.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("mypopkeyjson"))
-            .serdeType(Property.of(SerdeType.JSON))
-            .maxRecords(Property.of(1))
-            .count(Property.of(1))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("mypopkeyjson"))
+            .serdeType(Property.ofValue(SerdeType.JSON))
+            .maxRecords(Property.ofValue(1))
+            .count(Property.ofValue(1))
             .build();
 
         ListPop.Output runOutput = task.run(runContext);
@@ -75,21 +75,21 @@ class ListPopTest {
     void setUp() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
         Delete.builder()
-            .url(Property.of(REDIS_URI))
-            .keys(Property.of(Arrays.asList("mypopkey")))
+            .url(Property.ofValue(REDIS_URI))
+            .keys(Property.ofValue(Arrays.asList("mypopkey")))
             .build().run(runContext);
         Delete.builder()
-            .url(Property.of(REDIS_URI))
-            .keys(Property.of(Arrays.asList("mypopkeyjson")))
+            .url(Property.ofValue(REDIS_URI))
+            .keys(Property.ofValue(Arrays.asList("mypopkeyjson")))
             .build().run(runContext);
         ListPush.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("mypopkey"))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("mypopkey"))
             .from(Arrays.asList("value1", "value2", "value3"))
             .build().run(runContext);
         ListPush.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("mypopkeyjson"))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("mypopkeyjson"))
             .from(Arrays.asList("{\"city\":\"Paris\"}", "{\"city\":\"London\"}"))
             .build().run(runContext);
     }

@@ -64,7 +64,7 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
     )
     @Builder.Default
     @NotNull
-    private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
+    private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
 
     @Builder.Default
     @Getter(AccessLevel.NONE)
@@ -79,7 +79,7 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
         ListPop task = ListPop.builder()
             .url(this.url)
             .key(this.key)
-            .count(Property.of(1))
+            .count(Property.ofValue(1))
             .serdeType(this.serdeType)
             .build();
 
