@@ -55,7 +55,7 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
     private Property<Map<String, List<String>>> keys;
 
     @Schema(
-        title = "If some keys are not deleted, failed the task."
+        title = "If some keys are not deleted, fail the task."
     )
     @Builder.Default
     private Property<Boolean> failedOnMissing = Property.ofValue(false);

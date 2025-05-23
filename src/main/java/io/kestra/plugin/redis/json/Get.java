@@ -65,7 +65,7 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     private Property<String> key;
 
     @Schema(
-        title = "If some keys are not defined, failed the task."
+        title = "If some keys are not defined, fail the task."
     )
     @Builder.Default
     private Property<Boolean> failedOnMissing = Property.ofValue(false);
