@@ -22,6 +22,9 @@ class RunnerTest {
     @Test
     @ExecuteFlow("sanity-checks/keys-string.yaml")
     void keysString(Execution execution) {
+        execution.getTaskRunList().forEach(taskRun -> {
+            System.out.println(taskRun.getTaskId());
+        });
         assertThat(execution.getTaskRunList(), hasSize(9));
         assertThat(execution.getState().getCurrent(), is(State.Type.SUCCESS));
     }
@@ -44,6 +47,16 @@ class RunnerTest {
     @ExecuteFlow("sanity-checks/list-json.yaml")
     void listJson(Execution execution) {
         assertThat(execution.getTaskRunList(), hasSize(3));
+        assertThat(execution.getState().getCurrent(), is(State.Type.SUCCESS));
+    }
+
+    @Test
+    @ExecuteFlow("sanity-checks/redis-json.yaml")
+    void redisJson(Execution execution) {
+        execution.getTaskRunList().forEach(taskRun -> {
+            System.out.println(taskRun.getTaskId());
+        });
+        assertThat(execution.getTaskRunList(), hasSize(8));
         assertThat(execution.getState().getCurrent(), is(State.Type.SUCCESS));
     }
 }

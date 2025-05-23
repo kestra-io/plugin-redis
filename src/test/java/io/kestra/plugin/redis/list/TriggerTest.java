@@ -1,4 +1,4 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.list;
 
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.utils.TestsUtils;

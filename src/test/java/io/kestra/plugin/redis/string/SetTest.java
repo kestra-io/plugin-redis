@@ -1,11 +1,8 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.string;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.redis.models.SerdeType;
-import io.kestra.plugin.redis.string.Get;
-import io.kestra.plugin.redis.string.Set;
 import io.kestra.core.junit.annotations.KestraTest;
 import org.junit.jupiter.api.Test;
 import io.kestra.core.runners.RunContext;
@@ -13,7 +10,6 @@ import io.kestra.core.runners.RunContextFactory;
 
 import jakarta.inject.Inject;
 
-import java.time.Duration;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -32,16 +28,16 @@ class SetTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Set taskInit = Set.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("keySetGet"))
-            .value(Property.of("value"))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("keySetGet"))
+            .value(Property.ofValue("value"))
             .build();
 
         Set task = Set.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("keySetGet"))
-            .value(Property.of("value"))
-            .get(Property.of(true))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("keySetGet"))
+            .value(Property.ofValue("value"))
+            .get(Property.ofValue(true))
             .build();
 
         taskInit.run(runContext);
@@ -55,9 +51,9 @@ class SetTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Set task = Set.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("key2"))
-            .value(Property.of("{\"value\":\"1\"}"))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("key2"))
+            .value(Property.ofValue("{\"value\":\"1\"}"))
             .build();
 
         Set.Output runOutput = task.run(runContext);
@@ -70,10 +66,10 @@ class SetTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Set task = Set.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("key2"))
-            .value(Property.of("value"))
-            .serdeType(Property.of(SerdeType.JSON))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("key2"))
+            .value(Property.ofValue("value"))
+            .serdeType(Property.ofValue(SerdeType.JSON))
             .build();
 
         JsonParseException exception = assertThrows(JsonParseException.class, () -> task.run(runContext));

@@ -1,12 +1,10 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.string;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.redis.string.Set;
-import io.kestra.plugin.redis.string.Ttl;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -32,20 +30,20 @@ class TtlTest {
         String s = IdUtils.create();
 
         Set setTask = Set.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of(s))
-            .value(Property.of("test"))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(s))
+            .value(Property.ofValue("test"))
             .options(Set.Options
                 .builder()
-                .expirationDuration(Property.of(Duration.ofDays(1)))
+                .expirationDuration(Property.ofValue(Duration.ofDays(1)))
                 .build()
             )
             .build();
         setTask.run(runContext);
 
         Ttl ttlTask = Ttl.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of(s))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(s))
             .build();
 
         Ttl.Output ttlOutput = ttlTask.run(runContext);

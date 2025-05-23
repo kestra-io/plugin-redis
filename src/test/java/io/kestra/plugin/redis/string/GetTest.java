@@ -1,4 +1,4 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.string;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
@@ -6,8 +6,6 @@ import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.redis.models.SerdeType;
-import io.kestra.plugin.redis.string.Get;
-import io.kestra.plugin.redis.string.Set;
 import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Assertions;
@@ -33,8 +31,8 @@ class GetTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Get task = Get.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("key"))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("key"))
             .build();
 
         Get.Output runOutput = task.run(runContext);
@@ -47,8 +45,8 @@ class GetTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Get task = Get.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("missing"))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("missing"))
             .build();
 
         Get.Output runOutput = task.run(runContext);
@@ -61,9 +59,9 @@ class GetTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Get task = Get.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("missing"))
-            .failedOnMissing(Property.of(true))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("missing"))
+            .failedOnMissing(Property.ofValue(true))
             .build();
 
         NullPointerException e = Assertions.assertThrows(NullPointerException.class, () -> task.run(runContext));
@@ -76,9 +74,9 @@ class GetTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Get task = Get.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("keyJson"))
-            .serdeType(Property.of(SerdeType.JSON))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("keyJson"))
+            .serdeType(Property.ofValue(SerdeType.JSON))
             .build();
 
         Get.Output runOutput = task.run(runContext);
@@ -95,33 +93,33 @@ class GetTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Set.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("fromMap"))
-            .serdeType(Property.of(SerdeType.JSON))
-            .value(Property.of(Map.of("key", random)))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("fromMap"))
+            .serdeType(Property.ofValue(SerdeType.JSON))
+            .value(Property.ofValue(Map.of("key", random)))
             .build()
             .run(runContext);
 
         Set.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("fromString"))
-            .serdeType(Property.of(SerdeType.JSON))
-            .value(Property.of(JacksonMapper.ofJson().writeValueAsString(Map.of("key", random))))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("fromString"))
+            .serdeType(Property.ofValue(SerdeType.JSON))
+            .value(Property.ofValue(JacksonMapper.ofJson().writeValueAsString(Map.of("key", random))))
             .build()
             .run(runContext);
 
         Get.Output runOutput = Get.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("fromMap"))
-            .serdeType(Property.of(SerdeType.JSON))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("fromMap"))
+            .serdeType(Property.ofValue(SerdeType.JSON))
             .build()
             .run(runContext);
         assertThat(((Map<String, Object>)runOutput.getData()).get("key"), is(random));
 
         runOutput = Get.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("fromString"))
-            .serdeType(Property.of(SerdeType.JSON))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("fromString"))
+            .serdeType(Property.ofValue(SerdeType.JSON))
             .build()
             .run(runContext);
         assertThat(((Map<String, Object>)runOutput.getData()).get("key"), is(random));
@@ -136,9 +134,9 @@ class GetTest {
 
     static Set createSetTask(String key, String value) {
         return Set.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of(key))
-            .value(Property.of(value))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .value(Property.ofValue(value))
             .build();
     }
 }

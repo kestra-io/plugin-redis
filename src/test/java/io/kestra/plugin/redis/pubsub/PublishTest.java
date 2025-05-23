@@ -1,4 +1,4 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.pubsub;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
@@ -7,7 +7,6 @@ import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.storages.StorageInterface;
 import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.redis.pubsub.Publish;
 import io.kestra.plugin.redis.string.Delete;
 import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
@@ -43,8 +42,8 @@ class PublishTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Publish task = Publish.builder()
-            .url(Property.of(REDIS_URI))
-            .channel(Property.of("mych"))
+            .url(Property.ofValue(REDIS_URI))
+            .channel(Property.ofValue("mych"))
             .from(Arrays.asList("value1", "value2"))
             .build();
 
@@ -60,8 +59,8 @@ class PublishTest {
         URI uri = createTestFile();
 
         Publish task = Publish.builder()
-            .url(Property.of(REDIS_URI))
-            .channel(Property.of("mychFile"))
+            .url(Property.ofValue(REDIS_URI))
+            .channel(Property.ofValue("mychFile"))
             .from(uri.toString())
             .build();
 
@@ -74,12 +73,12 @@ class PublishTest {
     void setUp() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
         Delete.builder()
-            .url(Property.of(REDIS_URI))
-            .keys(Property.of(List.of("mych")))
+            .url(Property.ofValue(REDIS_URI))
+            .keys(Property.ofValue(List.of("mych")))
             .build().run(runContext);
         Delete.builder()
-            .url(Property.of(REDIS_URI))
-            .keys(Property.of(List.of("mychFile")))
+            .url(Property.ofValue(REDIS_URI))
+            .keys(Property.ofValue(List.of("mychFile")))
             .build().run(runContext);
     }
 

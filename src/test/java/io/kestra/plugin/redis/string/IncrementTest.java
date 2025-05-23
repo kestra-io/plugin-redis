@@ -1,11 +1,10 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.string;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.redis.string.Increment;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -30,8 +29,8 @@ class IncrementTest {
         String s = IdUtils.create();
 
         Increment task = Increment.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of(s))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(s))
             .build();
 
         Increment.Output runOutput = task.run(runContext);
@@ -50,9 +49,9 @@ class IncrementTest {
         String s = IdUtils.create();
 
         Increment task = Increment.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of(s))
-            .amount(Property.of(2L))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(s))
+            .amount(Property.ofValue(2L))
             .build();
 
         Increment.Output runOutput = task.run(runContext);
@@ -72,9 +71,9 @@ class IncrementTest {
         String s = IdUtils.create();
 
         Increment task = Increment.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of(s))
-            .amount(Property.of(2.5D))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(s))
+            .amount(Property.ofValue(2.5D))
             .build();
 
         Increment.Output runOutput = task.run(runContext);

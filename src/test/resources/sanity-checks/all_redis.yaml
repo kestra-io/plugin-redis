@@ -16,7 +16,7 @@ tasks:
 
   - id: parallel
     type: io.kestra.plugin.core.flow.ForEach
-    values: ["increment", "keys-json", "keys-string", "list-json", "list-string"]
+    values: ["increment", "keys-json", "keys-string", "list-json", "list-string", "redis-json"]
     concurrencyLimit: 0
     tasks:
       - id: subflow

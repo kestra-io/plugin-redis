@@ -1,4 +1,4 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.list;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
@@ -7,7 +7,6 @@ import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.storages.StorageInterface;
 import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.redis.list.ListPush;
 import io.kestra.plugin.redis.string.Delete;
 import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
@@ -43,8 +42,8 @@ class ListPushTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         ListPush task = ListPush.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("mykey"))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("mykey"))
             .from(Arrays.asList("value1", "value2"))
             .build();
 
@@ -60,8 +59,8 @@ class ListPushTest {
         URI uri = createTestFile();
 
         ListPush task = ListPush.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("mykeyFile"))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("mykeyFile"))
             .from(uri.toString())
             .build();
 
@@ -77,8 +76,8 @@ class ListPushTest {
         createTestFile();
 
         ListPush task = ListPush.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of("mykeyFile"))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("mykeyFile"))
             .from("[\"value1\", \"value2\"]")
             .build();
 
@@ -91,12 +90,12 @@ class ListPushTest {
     void setUp() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
         Delete.builder()
-            .url(Property.of(REDIS_URI))
-            .keys(Property.of(List.of("mykey")))
+            .url(Property.ofValue(REDIS_URI))
+            .keys(Property.ofValue(List.of("mykey")))
             .build().run(runContext);
         Delete.builder()
-            .url(Property.of(REDIS_URI))
-            .keys(Property.of(List.of("mykeyFile")))
+            .url(Property.ofValue(REDIS_URI))
+            .keys(Property.ofValue(List.of("mykeyFile")))
             .build().run(runContext);
     }
 
