@@ -1,0 +1,62 @@
+id: keys-json
+namespace: sanitychecks.plugin-redis
+
+inputs:
+  - id: cs
+    type: STRING
+    defaults: "redis://:redis@localhost:6379/0"
+
+tasks:
+  - id: set
+    type: io.kestra.plugin.redis.json.Set
+    url: "{{ inputs.cs }}"
+    key: "key_json_{{ execution.id }}"
+    value: |
+      {
+        "name": "{{ flow.id }}",
+        "counter": 5
+      }
+
+  - id: get
+    type: io.kestra.plugin.redis.json.Get
+    url: "{{ inputs.cs }}"
+    key: "key_json_{{ execution.id }}"
+    path: "$"
+
+  - id: assertName
+    type: io.kestra.plugin.core.execution.Assert
+    errorMessage: "Invalid JSON get: {{ outputs.get }}"
+    conditions:
+      - "{{ outputs.get.data.name == flow.id }}"
+
+  - id: increment
+    type: io.kestra.plugin.redis.json.Increment
+    url: "{{ inputs.cs }}"
+    key: "key_json_{{ execution.id }}"
+    path: "$.counter"
+    amount: 3
+
+  - id: assertIncrement
+    type: io.kestra.plugin.core.execution.Assert
+    errorMessage: "Increment failed: {{ outputs.increment }}"
+    conditions:
+      - "{{ outputs.increment.value == 8 }}"
+
+  - id: delete
+    type: io.kestra.plugin.redis.json.Delete
+    url: "{{ inputs.cs }}"
+    keys:
+      "key_json_{{ execution.id }}":
+        - "$"
+
+  - id: getAfterDelete
+    type: io.kestra.plugin.redis.json.Get
+    url: "{{ inputs.cs }}"
+    key: "key_json_{{ execution.id }}"
+    path: "$"
+
+  - id: assertAfterDelete
+    type: io.kestra.plugin.core.execution.Assert
+    errorMessage: "Key still exists after delete: {{ outputs.getAfterDelete }}"
+    conditions:
+      - "{{ (outputs.getAfterDelete contains 'data') == false }}"
