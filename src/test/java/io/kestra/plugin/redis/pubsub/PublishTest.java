@@ -1,4 +1,4 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.pubsub;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
@@ -7,7 +7,6 @@ import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.storages.StorageInterface;
 import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.redis.list.ListPush;
 import io.kestra.plugin.redis.string.Delete;
 import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
@@ -29,7 +28,7 @@ import static org.hamcrest.Matchers.is;
 
 @KestraTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class ListPushTest {
+class PublishTest {
     @Inject
     private RunContextFactory runContextFactory;
 
@@ -39,52 +38,35 @@ class ListPushTest {
     private static final String REDIS_URI = "redis://:redis@localhost:6379/0";
 
     @Test
-    void testListPushAsList() throws Exception {
+    void testPublishAsList() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
 
-        ListPush task = ListPush.builder()
+        Publish task = Publish.builder()
             .url(Property.ofValue(REDIS_URI))
-            .key(Property.ofValue("mykey"))
+            .channel(Property.ofValue("mych"))
             .from(Arrays.asList("value1", "value2"))
             .build();
 
-        ListPush.Output runOutput = task.run(runContext);
+        Publish.Output runOutput = task.run(runContext);
 
         assertThat(runOutput.getCount(), is(2));
     }
 
     @Test
-    void testListPushAsFile() throws Exception {
+    void testPublishAsFile() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
 
         URI uri = createTestFile();
 
-        ListPush task = ListPush.builder()
+        Publish task = Publish.builder()
             .url(Property.ofValue(REDIS_URI))
-            .key(Property.ofValue("mykeyFile"))
+            .channel(Property.ofValue("mychFile"))
             .from(uri.toString())
             .build();
 
-        ListPush.Output runOutput = task.run(runContext);
+        Publish.Output runOutput = task.run(runContext);
 
         assertThat(runOutput.getCount(), is(5));
-    }
-
-    @Test
-    void testListPushAsString() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-
-        createTestFile();
-
-        ListPush task = ListPush.builder()
-            .url(Property.ofValue(REDIS_URI))
-            .key(Property.ofValue("mykeyFile"))
-            .from("[\"value1\", \"value2\"]")
-            .build();
-
-        ListPush.Output runOutput = task.run(runContext);
-
-        assertThat(runOutput.getCount(), is(2));
     }
 
     @BeforeEach
@@ -92,11 +74,11 @@ class ListPushTest {
         RunContext runContext = runContextFactory.of(Map.of());
         Delete.builder()
             .url(Property.ofValue(REDIS_URI))
-            .keys(Property.ofValue(List.of("mykey")))
+            .keys(Property.ofValue(List.of("mych")))
             .build().run(runContext);
         Delete.builder()
             .url(Property.ofValue(REDIS_URI))
-            .keys(Property.ofValue(List.of("mykeyFile")))
+            .keys(Property.ofValue(List.of("mychFile")))
             .build().run(runContext);
     }
 

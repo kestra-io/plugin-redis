@@ -1,10 +1,8 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.list;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
-import io.kestra.plugin.redis.list.ListPop;
-import io.kestra.plugin.redis.list.ListPush;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.kestra.plugin.redis.string.Delete;
 import io.kestra.core.junit.annotations.KestraTest;

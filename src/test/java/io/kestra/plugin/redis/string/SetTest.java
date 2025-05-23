@@ -1,11 +1,8 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.string;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.redis.models.SerdeType;
-import io.kestra.plugin.redis.string.Get;
-import io.kestra.plugin.redis.string.Set;
 import io.kestra.core.junit.annotations.KestraTest;
 import org.junit.jupiter.api.Test;
 import io.kestra.core.runners.RunContext;
@@ -13,7 +10,6 @@ import io.kestra.core.runners.RunContextFactory;
 
 import jakarta.inject.Inject;
 
-import java.time.Duration;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;

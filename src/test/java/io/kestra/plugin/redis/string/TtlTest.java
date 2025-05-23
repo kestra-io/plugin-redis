@@ -1,12 +1,10 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.string;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
-import io.kestra.plugin.redis.string.Set;
-import io.kestra.plugin.redis.string.Ttl;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;

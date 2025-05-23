@@ -1,4 +1,4 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.list;
 
 import com.google.common.collect.ImmutableMap;
 import io.kestra.core.models.executions.Execution;
@@ -13,7 +13,6 @@ import io.kestra.core.schedulers.AbstractScheduler;
 import io.kestra.jdbc.runner.JdbcScheduler;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
-import io.kestra.plugin.redis.list.ListPush;
 import io.micronaut.context.ApplicationContext;
 import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
