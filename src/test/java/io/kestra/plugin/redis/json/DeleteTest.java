@@ -68,7 +68,7 @@ class DeleteTest {
         return Set.builder()
             .url(Property.ofValue(REDIS_URI))
             .key(Property.ofValue(key))
-            .value(Property.of(value))
+            .value(Property.ofValue(value))
             .build();
     }
 }
