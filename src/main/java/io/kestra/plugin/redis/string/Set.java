@@ -11,6 +11,7 @@ import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.lettuce.core.SetArgs;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -189,11 +190,24 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
         public SetArgs asRedisSet(RunContext runContext) throws IllegalVariableEvaluationException {
             SetArgs setArgs = new SetArgs();
 
-            runContext.render(expirationDuration).as(Duration.class)
-                .ifPresent(setArgs::px);
+            Duration renderedExpirationDuration = runContext.render(expirationDuration).as(Duration.class).orElse(null);
+            ZonedDateTime renderedExpirationDate = runContext.render(expirationDate).as(ZonedDateTime.class).orElse(null);
+            Boolean renderedKeepTtl = runContext.render(keepTtl).as(Boolean.class).orElse(false);
 
-            runContext.render(expirationDate).as(ZonedDateTime.class)
-                .ifPresent(v -> setArgs.pxAt(v.toInstant().toEpochMilli()));
+            if (renderedKeepTtl && (renderedExpirationDuration != null || renderedExpirationDate != null)) {
+                throw new IllegalArgumentException(
+                    "Invalid Redis options: you can't use 'keepTtl' with 'expirationDuration' or 'expirationDate'.\n" +
+                        "Use either keepTtl to keep existing TTL, or set a new expiration."
+                );
+            }
+
+            if (renderedExpirationDuration != null) {
+                setArgs.px(renderedExpirationDuration);
+            }
+
+            if (renderedExpirationDate != null) {
+                setArgs.pxAt(renderedExpirationDate.toInstant().toEpochMilli());
+            }
 
             runContext.render(mustNotExist).as(Boolean.class)
                 .filter(b -> b)
