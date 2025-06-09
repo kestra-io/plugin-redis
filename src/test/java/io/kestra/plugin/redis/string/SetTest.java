@@ -76,4 +76,24 @@ class SetTest {
 
         assertThat(exception.getMessage(), containsString("Unrecognized token"));
     }
+
+    @Test
+    void testSetKeepTtlWithExpirationDuration() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        Set task = Set.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("invalidKey1"))
+            .value(Property.ofValue("value"))
+            .serdeType(Property.ofValue(SerdeType.STRING))
+            .options(Set.Options.builder()
+                .keepTtl(Property.ofValue(true))
+                .expirationDuration(Property.ofValue(java.time.Duration.ofSeconds(10)))
+                .build()
+            )
+            .build();
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
+        assertThat(exception.getMessage(), containsString("you can't use 'keepTtl' with 'expirationDuration' or 'expirationDate'"));
+    }
 }
