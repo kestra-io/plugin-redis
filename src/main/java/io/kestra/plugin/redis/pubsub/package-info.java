@@ -1,4 +1,5 @@
 @PluginSubGroup(
+    title = "PubSub",
     description = "This sub-group of plugins contains tasks for using the Redis NoSQL database pub/sub commands.",
     categories = PluginSubGroup.PluginCategory.DATABASE
 )
