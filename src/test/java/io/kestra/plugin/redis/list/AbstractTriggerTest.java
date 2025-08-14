@@ -1,5 +1,7 @@
 package io.kestra.plugin.redis.list;
 
+import static io.kestra.core.tenant.TenantService.MAIN_TENANT;
+
 import com.google.common.collect.ImmutableMap;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
@@ -53,7 +55,7 @@ abstract class AbstractTriggerTest {
             worker.run();
             scheduler.run();
 
-            repositoryLoader.load(null, Objects.requireNonNull(AbstractTriggerTest.class.getClassLoader().getResource("flows/" + filename)));
+            repositoryLoader.load(MAIN_TENANT, Objects.requireNonNull(AbstractTriggerTest.class.getClassLoader().getResource("flows/" + filename)));
 
             runnable.run();
         }
