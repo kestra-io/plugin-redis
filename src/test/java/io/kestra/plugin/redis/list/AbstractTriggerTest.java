@@ -11,10 +11,11 @@ import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.runners.FlowListeners;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.runners.Worker;
-import io.kestra.core.schedulers.AbstractScheduler;
+import io.kestra.scheduler.AbstractScheduler;
 import io.kestra.jdbc.runner.JdbcScheduler;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
+import io.kestra.worker.DefaultWorker;
 import io.micronaut.context.ApplicationContext;
 import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
@@ -25,6 +26,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.UUID;
 
 @KestraTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -50,7 +52,7 @@ abstract class AbstractTriggerTest {
     protected void run(String filename, Runnable runnable) throws IOException, URISyntaxException, InterruptedException {
         try (
             AbstractScheduler scheduler = new JdbcScheduler(this.applicationContext, this.flowListenersService);
-            Worker worker = applicationContext.createBean(Worker.class, IdUtils.create(), 8, null);
+            DefaultWorker worker = applicationContext.createBean(DefaultWorker.class, UUID.randomUUID().toString(), 8, null);
         ) {
             worker.run();
             scheduler.run();
