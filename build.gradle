@@ -54,7 +54,7 @@ dependencies {
 
 
     // lettuce client
-    implementation ('io.lettuce:lettuce-core:6.8.0.RELEASE') {
+    implementation ('io.lettuce:lettuce-core:6.8.1.RELEASE') {
         // exclude libraries already provided by Kestra
         exclude group: 'io.projectreactor'
     }
