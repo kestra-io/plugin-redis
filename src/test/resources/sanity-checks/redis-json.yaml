@@ -1,4 +1,4 @@
-id: keys-json
+id: redis-json
 namespace: sanitychecks.plugin-redis
 
 inputs:
