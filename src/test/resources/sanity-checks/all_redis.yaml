@@ -14,12 +14,17 @@ tasks:
       - "{{ outputs.init.values.randomPort }}:6379"
     wait: false
 
-  - id: parallel
+  - id: call_subflows_in_loop
     type: io.kestra.plugin.core.flow.ForEach
-    values: ["increment", "keys-json", "keys-string", "list-json", "list-string", "redis-json"]
-    concurrencyLimit: 0
+    values:
+      - increment
+      - keys-json
+      - keys-string
+      - list-json
+      - list-string
+      - redis-json
     tasks:
-      - id: subflow
+      - id: call-subflow-task
         type: io.kestra.plugin.core.flow.Subflow
         namespace: "{{ flow.namespace }}"
         flowId: "{{ taskrun.value }}"
