@@ -1,6 +1,7 @@
 package io.kestra.plugin.redis.json;
 
 import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
@@ -43,6 +44,9 @@ import java.util.Map;
                          - path2
                 """
         )
+    },
+    metrics = {
+        @Metric(name = "records", description = "Number of records", type = Counter.TYPE),
     }
 )
 public class Delete extends AbstractRedisConnection implements RunnableTask<Delete.Output> {
@@ -86,7 +90,7 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
                 throw new NullPointerException("Missing keys or path, only " + totalDeleted + " deleted out of " + renderedKeys.size());
             }
 
-            runContext.metric(Counter.of("keys.deleted", totalDeleted));
+            runContext.metric(Counter.of("records", totalDeleted));
 
             return Output.builder()
                 .count((int) totalDeleted)
