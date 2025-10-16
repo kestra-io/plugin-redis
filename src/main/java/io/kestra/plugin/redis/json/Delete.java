@@ -47,7 +47,7 @@ import java.util.Map;
     },
     metrics = {
         @Metric(
-            name = "deleted.records",
+            name = "deleted.records.count",
             type = Counter.TYPE,
             unit = "records",
             description = "Number of records deleted from Redis."
@@ -95,7 +95,7 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
                 throw new NullPointerException("Missing keys or path, only " + totalDeleted + " deleted out of " + renderedKeys.size());
             }
 
-            runContext.metric(Counter.of("deleted.records", totalDeleted));
+            runContext.metric(Counter.of("deleted.records.count", totalDeleted));
 
             return Output.builder()
                 .count((int) totalDeleted)
