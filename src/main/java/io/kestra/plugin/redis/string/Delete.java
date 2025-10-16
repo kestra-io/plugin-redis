@@ -43,7 +43,12 @@ import java.util.List;
         )
     },
     metrics = {
-        @Metric(name = "records", description = "Number of records", type = Counter.TYPE),
+        @Metric(
+            name = "deleted.records",
+            type = Counter.TYPE,
+            unit = "records",
+            description = "Number of records deleted from Redis."
+        )
     },
     aliases = "io.kestra.plugin.redis.Delete"
 )
@@ -72,7 +77,7 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
                 throw new NullPointerException("Missing keys, only " + count + " key deleted");
             }
 
-            runContext.metric(Counter.of("records", count));
+            runContext.metric(Counter.of("deleted.records", count));
 
             return Output.builder()
                 .count((int) count)
