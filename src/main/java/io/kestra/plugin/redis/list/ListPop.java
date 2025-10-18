@@ -56,7 +56,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     },
     metrics = {
         @Metric(
-            name = "deleted.records.count",
+            name = "popped.records.count",
             type = Counter.TYPE,
             unit = "records",
             description = "Number of records retrieved from Redis List."
@@ -121,7 +121,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
 
                 output.flush();
 
-                runContext.metric(Counter.of("deleted.records.count", total.get(), "key", renderedKey));
+                runContext.metric(Counter.of("popped.records.count", total.get(), "key", renderedKey));
 
                 return Output.builder().uri(runContext.storage().putFile(tempFile)).count(total.get()).build();
             }
