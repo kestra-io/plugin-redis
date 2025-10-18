@@ -55,7 +55,12 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
         )
     },
     metrics = {
-        @Metric(name = "records", description = "Number of records", type = Counter.TYPE),
+        @Metric(
+            name = "published.records.count",
+            type = Counter.TYPE,
+            unit = "records",
+            description = "Number of records published to a Redis channel."
+        )
     },
     aliases = "io.kestra.plugin.redis.Publish"
 )
@@ -112,7 +117,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
                 throw new IllegalVariableEvaluationException("Invalid 'from' property type :" + from.getClass());
             }
 
-            runContext.metric(Counter.of("records", count));
+            runContext.metric(Counter.of("published.records.count", count));
             return Output.builder().count(count).build();
         }
     }
