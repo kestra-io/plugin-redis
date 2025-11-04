@@ -1,0 +1,8 @@
+group: io.kestra.plugin.redis.pubsub
+name: "pubsub"
+title: "PubSub"
+description: "This sub-group of plugins contains tasks for using the Redis NoSQL database pub/sub commands."
+body: ""
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"
