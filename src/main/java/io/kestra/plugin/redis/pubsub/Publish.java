@@ -1,27 +1,18 @@
 package io.kestra.plugin.redis.pubsub;
 
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
 import jakarta.validation.constraints.NotNull;
-import reactor.core.publisher.Flux;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 
@@ -64,7 +55,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     },
     aliases = "io.kestra.plugin.redis.Publish"
 )
-public class Publish extends AbstractRedisConnection implements RunnableTask<Publish.Output> {
+public class Publish extends AbstractRedisConnection implements RunnableTask<Publish.Output>, io.kestra.core.models.property.Data.From {
     @Schema(
         title = "The Redis channel to publish"
     )
@@ -76,7 +67,6 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
         anyOf = {String.class, List.class}
     )
     @NotNull
-    @PluginProperty(dynamic = true)
     private Object from;
 
     @Schema(
@@ -90,55 +80,28 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
 
-            Integer count;
-            if (this.from instanceof String fromStr) {
-                URI from = new URI(runContext.render(fromStr));
-                try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.storage().getFile(from)))) {
-                    Flux<Object> flowable = FileSerde.readAll(inputStream);
-                    Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
-                    count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
-                }
-            } else if (this.from instanceof List<?> fromList) {
-                Flux<Object> flowable = Flux.create(objectFluxSink -> {
-                    for (Object o : fromList) {
-                        try {
-                            objectFluxSink.next(runContext.render((String) o));
-                        } catch (Exception e) {
-                            objectFluxSink.error(e);
-                        }
-                    }
-                    objectFluxSink.complete();
-                });
-                Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
-                count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
-            }
-            else {
-                // should not occur as validation mandates String or List
-                throw new IllegalVariableEvaluationException("Invalid 'from' property type :" + from.getClass());
-            }
-
-            runContext.metric(Counter.of("published.records.count", count));
-            return Output.builder().count(count).build();
-        }
-    }
-
-    private Flux<Integer> buildFlowable(Flux<Object> flowable, RunContext runContext, RedisFactory factory) throws Exception {
-        return flowable
+            // Integer count;
+            Integer count = io.kestra.core.models.property.Data.from(from)
+            .readAs(runContext, String.class, obj -> obj.toString())
             .map(throwFunction(row -> {
                 String channelRendered = runContext.render(this.channel).as(String.class).orElseThrow();
-
+                
                 List<String> values = Collections.singletonList(runContext.render(serdeType)
                     .as(SerdeType.class)
                     .orElse(SerdeType.STRING)
                     .serialize(row));
-
+                // Did not understand why we are adding the result but at the end we are returning 1 anyway
                 long result = 0;
                 for (String value : values) {
                     result += factory.getSyncCommands().publish(channelRendered, value);
                 }
 
                 return 1;
-            }));
+            })).reduce(Integer::sum)
+            .blockOptional().orElse(0);
+            runContext.metric(Counter.of("published.records.count", count));
+            return Output.builder().count(count).build();
+        }
     }
 
     @Builder
