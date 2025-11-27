@@ -1,0 +1,8 @@
+group: io.kestra.plugin.redis.list
+name: "list"
+title: "List"
+description: "This sub-group of plugins contains tasks for using the Redis NoSQL database lists commands."
+body: ""
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"
