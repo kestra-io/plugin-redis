@@ -74,7 +74,6 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
         title = "Options for the increment operation.",
         description = "Configure settings for the key."
     )
-    @PluginProperty
     private Options options;
 
     @Override
