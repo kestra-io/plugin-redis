@@ -5,14 +5,19 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.sync.RedisCommands;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
+import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 
 @KestraTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -83,5 +88,86 @@ class IncrementTest {
         runOutput = task.run(runContext);
 
         assertThat(runOutput.getValue(), is(5D));
+    }
+
+    @Test
+    void withExpirationDuration() throws Exception {
+        var runContext = runContextFactory.of(Map.of());
+
+        var key = IdUtils.create();
+
+        var task = Increment.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .amount(Property.ofValue(1L))
+            .options(Increment.Options.builder()
+                .expirationDuration(Property.ofValue(Duration.ofSeconds(10)))
+                .build())
+            .build();
+
+        Increment.Output runOutput = task.run(runContext);
+
+        assertThat(runOutput.getValue(), is(1L));
+
+
+        var ttlTask = Ttl.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .build();
+
+        Ttl.Output ttlOutput = ttlTask.run(runContext);
+        assertThat(ttlOutput.getTtl(), is(lessThanOrEqualTo(10L)));
+
+        // we wait for expiration
+        Thread.sleep(11000);
+
+        var getTask = Get.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .build();
+
+        Get.Output getOutput = getTask.run(runContext);
+        assertThat(getOutput.getData(), is(nullValue()));
+    }
+
+
+    @Test
+    void withExpirationDate() throws Exception {
+        var runContext = runContextFactory.of(Map.of());
+
+        var key = IdUtils.create();
+
+        ZonedDateTime expirationDate = ZonedDateTime.now().plusSeconds(10);
+
+        var task = Increment.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .amount(Property.ofValue(5L))
+            .options(Increment.Options.builder()
+                .expirationDate(Property.ofValue(expirationDate))
+                .build())
+            .build();
+
+        Increment.Output runOutput = task.run(runContext);
+
+        assertThat(runOutput.getValue(), is(5L));
+
+        var ttlTask = Ttl.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .build();
+
+        Ttl.Output ttlOutput = ttlTask.run(runContext);
+        assertThat(ttlOutput.getTtl(), is(lessThanOrEqualTo(10L)));
+
+        Thread.sleep(11100);
+
+        var getTask = Get.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .build();
+
+        Get.Output getOutput = getTask.run(runContext);
+        assertThat(getOutput.getData(), is(nullValue()));
     }
 }

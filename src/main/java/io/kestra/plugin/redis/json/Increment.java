@@ -1,7 +1,9 @@
 package io.kestra.plugin.redis.json;
 
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -11,7 +13,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import lombok.extern.jackson.Jacksonized;
 
+import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 @SuperBuilder
@@ -65,6 +70,12 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
     @NotNull
     private Property<String> path;
 
+    @Schema(
+        title = "Options for the increment operation.",
+        description = "Configure settings for the key."
+    )
+    private Options options;
+
     @Override
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
@@ -72,6 +83,10 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
             String renderedPath = runContext.render(this.path).as(String.class).orElseThrow();
 
             Number increment = runContext.render(amount).as(Number.class).orElse(1);
+
+            if (options != null) {
+                options.applyExpiration(runContext, factory, renderedKey);
+            }
 
             List<Number> result = factory.getSyncCommands().jsonNumincrby(renderedKey, JsonPath.of(renderedPath), increment);
 
@@ -81,6 +96,48 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
                 .value(result.getFirst())
                 .key(renderedKey)
                 .build();
+        }
+    }
+
+    @Builder
+    @Getter
+    @Jacksonized
+    public static class Options {
+        @Schema(
+            title = "Set the expiration duration.",
+            description = "Duration after which the key will automatically expire."
+        )
+        private Property<Duration> expirationDuration;
+
+        @Schema(
+            title = "Set the expiration date.",
+            description = "Absolute timestamp at which the key will expire."
+        )
+        private Property<ZonedDateTime> expirationDate;
+
+        public void applyExpiration(RunContext runContext, RedisFactory factory, String key) throws IllegalVariableEvaluationException {
+            var rExpirationDuration = runContext.render(expirationDuration).as(Duration.class).orElse(null);
+            var rExpirationDate = runContext.render(expirationDate).as(ZonedDateTime.class).orElse(null);
+
+            if (rExpirationDuration != null && rExpirationDate != null) {
+                throw new IllegalArgumentException(
+                    "Invalid Redis options: you can't use both 'expirationDuration' and 'expirationDate'.\n" +
+                        "Use either expirationDuration for a relative TTL, or expirationDate for an absolute expiration time."
+                );
+            }
+
+            if (rExpirationDuration != null) {
+                long seconds = rExpirationDuration.getSeconds();
+                if (seconds > 0) {
+                    factory.getSyncCommands().expire(key, seconds);
+                    runContext.logger().debug("Set TTL of {} seconds on key '{}'", seconds, key);
+                }
+            }
+
+            if (rExpirationDate != null) {
+                factory.getSyncCommands().expireat(key, rExpirationDate.toEpochSecond());
+                runContext.logger().debug("Set expiration at {} for key '{}'", rExpirationDate, key);
+            }
         }
     }
 
