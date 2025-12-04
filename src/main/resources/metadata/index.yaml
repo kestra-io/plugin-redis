@@ -1,8 +1,8 @@
 group: io.kestra.plugin.redis
 name: "redis"
 title: "Redis"
-description: "Access and manipulate Redis data within Kestra workflows."
-body: ""
+description: "Tasks that work with Redis data structures and pub/sub."
+body: "Provide Redis connection details (host, port, TLS, credentials) to read/write strings and lists, store JSON, or publish/subscribe to channels, enabling cache and queue patterns in workflows."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"

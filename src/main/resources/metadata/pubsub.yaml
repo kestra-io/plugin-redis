@@ -1,8 +1,8 @@
 group: io.kestra.plugin.redis.pubsub
 name: "pubsub"
 title: "PubSub"
-description: "This sub-group of plugins contains tasks for using the Redis NoSQL database pub/sub commands."
-body: ""
+description: "Tasks that publish and subscribe to Redis channels."
+body: "Configure Redis connection, channel names, and payloads to publish messages or subscribe with triggers that start flows when messages are received."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"
