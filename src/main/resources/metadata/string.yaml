@@ -1,8 +1,8 @@
 group: io.kestra.plugin.redis.string
 name: "string"
 title: "String"
-description: "This sub-group of plugins contains tasks for using the Redis NoSQL database strings commands."
-body: ""
+description: "Tasks that read and write Redis string keys."
+body: "Provide Redis connection info and keys/values to SET/GET or increment/decrement strings, enabling simple cache or counter patterns in workflows."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"

@@ -1,8 +1,8 @@
 group: io.kestra.plugin.redis.list
 name: "list"
 title: "List"
-description: "This sub-group of plugins contains tasks for using the Redis NoSQL database lists commands."
-body: ""
+description: "Tasks that push, pop, and read Redis lists."
+body: "Provide Redis connection settings and list keys to LPUSH/RPUSH, LPOP/RPOP, range, or trim lists so workflows can use Redis as a queue or buffer."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"
