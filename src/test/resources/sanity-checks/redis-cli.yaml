@@ -1,0 +1,56 @@
+id: redis_cli
+namespace: io.kestra.tests
+
+description: |
+  Sanity check for RedisCLI task.
+  This flow tests the execution of Redis CLI commands using the RedisCLI task.
+
+tasks:
+  - id: set_and_get
+    type: io.kestra.plugin.redis.cli.RedisCLI
+    host: localhost
+    port: 6379
+    password: redis
+    commands:
+      - SET sanity_check_key 'Hello from Kestra RedisCLI'
+      - GET sanity_check_key
+
+  - id: list_operations
+    type: io.kestra.plugin.redis.cli.RedisCLI
+    host: localhost
+    port: 6379
+    password: redis
+    commands:
+      - DEL sanity_check_list
+      - LPUSH sanity_check_list item1
+      - LPUSH sanity_check_list item2
+      - LRANGE sanity_check_list 0 -1
+
+  - id: json_output
+    type: io.kestra.plugin.redis.cli.RedisCLI
+    host: localhost
+    port: 6379
+    password: redis
+    jsonOutput: true
+    commands:
+      - SET json_test_key 'test_value'
+      - GET json_test_key
+
+  - id: info_command
+    type: io.kestra.plugin.redis.cli.RedisCLI
+    host: localhost
+    port: 6379
+    password: redis
+    commands:
+      - INFO server
+      - DBSIZE
+
+  - id: cleanup
+    type: io.kestra.plugin.redis.cli.RedisCLI
+    host: localhost
+    port: 6379
+    password: redis
+    commands:
+      - DEL sanity_check_key
+      - DEL sanity_check_list
+      - DEL json_test_key

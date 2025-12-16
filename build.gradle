@@ -51,7 +51,7 @@ dependencies {
     // kestra
     annotationProcessor group: "io.kestra", name: "processor", version: kestraVersion
     compileOnly group: "io.kestra", name: "core", version: kestraVersion
-
+    compileOnly group: "io.kestra", name: "script", version: kestraVersion
 
     // lettuce client
     implementation ('io.lettuce:lettuce-core:7.0.0.RELEASE') {
@@ -100,6 +100,7 @@ dependencies {
     testImplementation group: "io.kestra", name: "storage-local", version: kestraVersion
     testImplementation group: "io.kestra", name: "scheduler"
     testImplementation group: "io.kestra", name: "worker"
+    testImplementation group: "io.kestra", name: "script", version: kestraVersion
 
     // test
     testImplementation "org.junit.jupiter:junit-jupiter-engine"
