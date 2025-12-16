@@ -1,15 +1,13 @@
 package io.kestra.plugin.redis.cli;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.*;
 import io.kestra.core.models.tasks.runners.TaskRunner;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.scripts.exec.scripts.models.DockerOptions;
 import io.kestra.plugin.scripts.exec.scripts.models.ScriptOutput;
 import io.kestra.plugin.scripts.exec.scripts.runners.CommandsWrapper;
@@ -101,7 +99,15 @@ import java.util.Map;
                 """
         )
     },
-    aliases = "io.kestra.plugin.redis.RedisCLI"
+    aliases = "io.kestra.plugin.redis.RedisCLI",
+    metrics = {
+        @Metric(
+            name = "executed.commands.count",
+            type = Counter.TYPE,
+            unit = "commands",
+            description = "Number of Redis CLI commands executed."
+        )
+    }
 )
 public class RedisCLI extends Task implements RunnableTask<RedisCLI.Output>, NamespaceFilesInterface, InputFilesInterface, OutputFilesInterface {
 
@@ -225,9 +231,7 @@ public class RedisCLI extends Task implements RunnableTask<RedisCLI.Output>, Nam
             baseCommand.append(" --user ").append(rUsername);
         }
 
-        if (rPassword != null && !rPassword.isEmpty()) {
-            baseCommand.append(" --no-auth-warning -a ").append(rPassword);
-        }
+        // Prefer REDISCLI_AUTH env var for password to avoid shell leaks
 
         if (rTls) {
             baseCommand.append(" --tls");
@@ -241,7 +245,7 @@ public class RedisCLI extends Task implements RunnableTask<RedisCLI.Output>, Nam
         List<String> shellCommands = new ArrayList<>();
         for (int i = 0; i < rCommands.size(); i++) {
             String redisCommand = rCommands.get(i);
-            logger.debug("Preparing command {}: {}", i + 1, redisCommand);
+            logger.debug("Preparing command {}", i + 1);
 
             // Each command needs to be executed and its exit code checked
             String fullCommand = baseCommand + " " + redisCommand;
@@ -251,6 +255,9 @@ public class RedisCLI extends Task implements RunnableTask<RedisCLI.Output>, Nam
         // Prepare environment variables
         Map<String, String> envVars = new HashMap<>();
         var rEnvMap = runContext.render(env).asMap(String.class, String.class);
+        if (rPassword != null && !rPassword.isEmpty()) {
+            envVars.put("REDISCLI_AUTH", rPassword);
+        }
         if (!rEnvMap.isEmpty()) {
             envVars.putAll(rEnvMap);
         }
@@ -284,11 +291,12 @@ public class RedisCLI extends Task implements RunnableTask<RedisCLI.Output>, Nam
                 .run();
 
             if (lastOutput.getExitCode() != 0) {
-                throw new RuntimeException("Redis CLI command failed with exit code: " + lastOutput.getExitCode());
+                throw new IllegalStateException("Redis CLI command failed with exit code: " + lastOutput.getExitCode());
             }
         }
 
         logger.info("Successfully executed {} Redis CLI command(s)", rCommands.size());
+        runContext.metric(Counter.of("executed.commands.count", rCommands.size()));
 
         Output.OutputBuilder outputBuilder = Output.builder()
             .exitCode(lastOutput != null ? lastOutput.getExitCode() : 0)

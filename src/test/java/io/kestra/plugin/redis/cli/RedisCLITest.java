@@ -8,9 +8,6 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assumptions;
-import org.testcontainers.DockerClientFactory;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
 import java.util.Map;
@@ -23,25 +20,16 @@ class RedisCLITest {
     @Inject
     private RunContextFactory runContextFactory;
 
-    private static final DockerImageName REDIS_IMAGE = DockerImageName.parse("redis:7-alpine");
-    private static final GenericContainer<?> REDIS = new GenericContainer<>(REDIS_IMAGE)
-        .withExposedPorts(6379)
-        .withCommand("redis-server", "--requirepass", "redis");
-
-    private static String host() { return REDIS.getHost(); }
-    private static Integer port() { return REDIS.getMappedPort(6379); }
+    // Target the Redis Stack service started by CI on the host
+    private static String host() { return "host.docker.internal"; }
+    private static Integer port() { return 6379; }
 
     @BeforeAll
-    static void ensureDockerAndStartRedis() {
+    static void ensureDockerAvailable() {
         boolean socketPresent = new java.io.File("/var/run/docker.sock").exists();
         boolean dockerHostSet = System.getenv("DOCKER_HOST") != null;
-
         Assumptions.assumeTrue(socketPresent || dockerHostSet,
             "Docker is required for RedisCLITest");
-
-        if (!REDIS.isRunning()) {
-            REDIS.start();
-        }
     }
 
     @Test
