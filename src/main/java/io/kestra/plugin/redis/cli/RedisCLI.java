@@ -35,7 +35,7 @@ import java.util.Map;
 @Schema(
     title = "Execute Redis CLI commands.",
     description = """
-        This task allows running redis-cli commands inside a Docker container with the official Redis image.
+    This task allows running Redis CLI commands inside a Docker container with the official Redis image.
         Each command is executed sequentially. If a command fails, the task will fail immediately.
         The output from each command can be returned as JSON (requires Redis 7+) for easier parsing.
         """
@@ -200,7 +200,7 @@ public class RedisCLI extends Task implements RunnableTask<RedisCLI.Output>, Nam
         var logger = runContext.logger();
 
         String rHost = runContext.render(host).as(String.class).orElseThrow();
-        Integer rPort = runContext.render(port).as(Integer.class).orElseThrow();
+        Integer rPort = runContext.render(port).as(Integer.class).orElse(6379);
         Integer rDatabase = runContext.render(database).as(Integer.class).orElse(0);
         String rUsername = runContext.render(username).as(String.class).orElse(null);
         String rPassword = runContext.render(password).as(String.class).orElse(null);
@@ -250,13 +250,13 @@ public class RedisCLI extends Task implements RunnableTask<RedisCLI.Output>, Nam
 
         // Prepare environment variables
         Map<String, String> envVars = new HashMap<>();
-        var renderedEnvMap = runContext.render(env).asMap(String.class, String.class);
-        if (!renderedEnvMap.isEmpty()) {
-            envVars.putAll(renderedEnvMap);
+        var rEnvMap = runContext.render(env).asMap(String.class, String.class);
+        if (!rEnvMap.isEmpty()) {
+            envVars.putAll(rEnvMap);
         }
 
         // Prepare output files list
-        var renderedOutputFiles = runContext.render(outputFiles).asList(String.class);
+        var rOutputFiles = runContext.render(outputFiles).asList(String.class);
 
         // Build Docker options with the container image
         DockerOptions dockerOptions = runContext.render(docker).as(DockerOptions.class).orElse(DockerOptions.builder().build());
@@ -270,7 +270,7 @@ public class RedisCLI extends Task implements RunnableTask<RedisCLI.Output>, Nam
             .withEnv(envVars)
             .withNamespaceFiles(namespaceFiles)
             .withInputFiles(inputFiles)
-            .withOutputFiles(renderedOutputFiles.isEmpty() ? null : renderedOutputFiles)
+            .withOutputFiles(rOutputFiles.isEmpty() ? null : rOutputFiles)
             .withContainerImage(rContainerImage)
             .withTaskRunner(taskRunner)
             .withDockerOptions(dockerBuilder.build())
