@@ -18,14 +18,14 @@ class GetTest {
     @Inject
     private RunContextFactory runContextFactory;
 
-    private static final String REDIS_URI = "redis://:redis@localhost:6379/0";
+    private static String REDIS_URI() { return RedisStackTestSupport.redisUri(); }
 
     @BeforeAll
     void setUp() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Set.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("jsonKey"))
             .value(Property.ofValue(Map.of("key1", "value1", "key2", 2)))
             .build()
@@ -37,7 +37,7 @@ class GetTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Get.Output output = Get.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("jsonKey"))
             .build()
             .run(runContext);
@@ -53,7 +53,7 @@ class GetTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Get.Output output = Get.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("jsonKey"))
             .path(Property.ofValue("$.key1"))
             .build()
@@ -67,7 +67,7 @@ class GetTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Get.Output output = Get.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("missingKey"))
             .build()
             .run(runContext);
@@ -80,7 +80,7 @@ class GetTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Get task = Get.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("missingKey"))
             .failedOnMissing(Property.ofValue(true))
             .build();

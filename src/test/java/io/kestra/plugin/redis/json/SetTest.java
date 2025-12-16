@@ -18,21 +18,21 @@ class SetTest {
     @Inject
     private RunContextFactory runContextFactory;
 
-    private static final String REDIS_URI = "redis://:redis@localhost:6379/0";
+    private static String REDIS_URI() { return RedisStackTestSupport.redisUri(); }
 
     @Test
     void testSetJson() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Set.Output output = Set.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("jsonKey"))
             .value(Property.ofValue(Map.of("key1", "value1", "value2", 2)))
             .build()
             .run(runContext);
 
         Get.Output get = Get.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("jsonKey"))
             .build()
             .run(runContext);
@@ -47,14 +47,14 @@ class SetTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Set.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("jsonKey"))
             .value(Property.ofValue(Map.of("key1", Map.of())))
             .build()
             .run(runContext);
 
         Set.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("jsonKey"))
             .path(Property.ofValue("$.key1"))
             .value(Property.ofValue("{\"key1\":\"value1\"}"))
@@ -62,7 +62,7 @@ class SetTest {
             .run(runContext);
 
         Get.Output get = Get.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("jsonKey"))
             .path(Property.ofValue("$.key1"))
             .build()
@@ -77,7 +77,7 @@ class SetTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Set.Output first = Set.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("mustNotExistJsonKey"))
             .value(Property.ofValue(Map.of("mustNotExistKey1", "value1")))
             .options(Set.Options.builder().mustNotExist(Property.ofValue(true)).build())
@@ -87,7 +87,7 @@ class SetTest {
         assertThat(first.getOldValue(), nullValue());
 
         Set.Output second = Set.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("mustNotExistJsonKey"))
             .value(Property.ofValue(Map.of("key2", "value2")))
             .options(Set.Options.builder().mustNotExist(Property.ofValue(true)).build())
@@ -97,7 +97,7 @@ class SetTest {
         assertThat(second.getOldValue(), nullValue());
 
         Get.Output get = Get.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("mustNotExistJsonKey"))
             .build()
             .run(runContext);

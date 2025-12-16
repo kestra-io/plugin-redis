@@ -20,21 +20,21 @@ public class IncrementTest {
     @Inject
     private RunContextFactory runContextFactory;
 
-    private static final String REDIS_URI = "redis://:redis@localhost:6379/0";
+    private static String REDIS_URI() { return RedisStackTestSupport.redisUri(); }
 
     @Test
     void testIncrementJsonValue() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Set set = Set.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("incrementKey"))
             .value(Property.ofValue(Map.of("counter", 5)))
             .build();
         set.run(runContext);
 
         Increment increment = Increment.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("incrementKey"))
             .path(Property.ofValue("$.counter"))
             .amount(Property.ofValue(3))
@@ -45,7 +45,7 @@ public class IncrementTest {
         assertThat(output.getKey(), is("incrementKey"));
 
         Get get = Get.builder()
-            .url(Property.ofValue(REDIS_URI))
+            .url(Property.ofValue(REDIS_URI()))
             .key(Property.ofValue("incrementKey"))
             .build();
         Get.Output getOutput = get.run(runContext);
