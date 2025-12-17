@@ -97,7 +97,6 @@ import java.util.Map;
                 """
         )
     },
-    aliases = "io.kestra.plugin.redis.RedisCLI",
     metrics = {
         @Metric(
             name = "executed.commands.count",
@@ -228,7 +227,6 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
             baseCommand.append(" --user ").append(rUsername);
         }
 
-        // Prefer REDISCLI_AUTH env var for password to avoid shell leaks
 
         if (rTls) {
             baseCommand.append(" --tls");
