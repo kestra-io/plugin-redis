@@ -11,23 +11,24 @@ public class RedisStackTestSupport {
     private static GenericContainer<?> redisStack;
 
     public static synchronized String redisUri() {
-        if (redisStack == null) {
-            redisStack = new GenericContainer<>(REDIS_STACK_IMAGE)
-                .withEnv("REDIS_ARGS", "--requirepass redis")
-                .withExposedPorts(6379)
-                .withCreateContainerCmdModifier(cmd -> {
-                    ExposedPort container = ExposedPort.tcp(6379);
-                    Ports.Binding host = Ports.Binding.bindPort(6380);
-                    cmd.getHostConfig().withPortBindings(new PortBinding(host, container));
-                });
-        }
+        String defaultUri = "redis://:redis@localhost:6379/0";
+        try {
+            if (redisStack == null) {
+                redisStack = new GenericContainer<>(REDIS_STACK_IMAGE)
+                    .withEnv("REDIS_ARGS", "--requirepass redis")
+                    .withExposedPorts(6379);
+            }
 
-        if (!redisStack.isRunning()) {
-            redisStack.start();
-        }
+            if (!redisStack.isRunning()) {
+                redisStack.start();
+            }
 
-        String host = redisStack.getHost();
-        Integer port = redisStack.getMappedPort(6379);
-        return "redis://:redis@" + host + ":" + port + "/0";
+            String host = redisStack.getHost();
+            Integer port = redisStack.getMappedPort(6379);
+            return "redis://:redis@" + host + ":" + port + "/0";
+        } catch (Throwable t) {
+            // Fallback to CI/local compose Redis Stack on localhost
+            return defaultUri;
+        }
     }
 }

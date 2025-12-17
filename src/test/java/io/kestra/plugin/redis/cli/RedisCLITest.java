@@ -21,7 +21,7 @@ class RedisCLITest {
     private RunContextFactory runContextFactory;
 
     // Target the Redis Stack service started by CI on the host
-    private static String host() { return "host.docker.internal"; }
+    private static String host() { return "172.17.0.1"; }
     private static Integer port() { return 6379; }
 
     @BeforeAll
@@ -46,7 +46,7 @@ class RedisCLITest {
             )))
             .build();
 
-        RedisCLI.Output output = task.run(runContext);
+        var output = task.run(runContext);
 
         assertThat(output.getExitCode(), is(0));
     }
@@ -68,7 +68,7 @@ class RedisCLITest {
             )))
             .build();
 
-        RedisCLI.Output output = task.run(runContext);
+        var output = task.run(runContext);
 
         assertThat(output.getExitCode(), is(0));
     }
@@ -88,7 +88,7 @@ class RedisCLITest {
             )))
             .build();
 
-        RedisCLI.Output output = task.run(runContext);
+        var output = task.run(runContext);
 
         assertThat(output.getExitCode(), is(0));
     }
@@ -108,7 +108,7 @@ class RedisCLITest {
             )))
             .build();
 
-        RedisCLI.Output output = task.run(runContext);
+        var output = task.run(runContext);
 
         assertThat(output.getExitCode(), is(0));
     }
@@ -126,7 +126,7 @@ class RedisCLITest {
             )))
             .build();
 
-        RedisCLI.Output output = task.run(runContext);
+        var output = task.run(runContext);
 
         assertThat(output.getExitCode(), is(0));
         assertThat(output.getStdOutLineCount(), greaterThan(0));
@@ -147,7 +147,7 @@ class RedisCLITest {
             )))
             .build();
 
-        RedisCLI.Output output = task.run(runContext);
+        var output = task.run(runContext);
 
         assertThat(output.getExitCode(), is(0));
     }

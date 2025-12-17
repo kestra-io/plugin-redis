@@ -14,12 +14,10 @@ import io.kestra.plugin.scripts.exec.scripts.runners.CommandsWrapper;
 import io.kestra.plugin.scripts.runner.docker.Docker;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -109,7 +107,7 @@ import java.util.Map;
         )
     }
 )
-public class RedisCLI extends Task implements RunnableTask<RedisCLI.Output>, NamespaceFilesInterface, InputFilesInterface, OutputFilesInterface {
+public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, NamespaceFilesInterface, InputFilesInterface, OutputFilesInterface {
 
     private static final String DEFAULT_IMAGE = "redis:7-alpine";
 
@@ -154,7 +152,6 @@ public class RedisCLI extends Task implements RunnableTask<RedisCLI.Output>, Nam
         description = "Each command is executed sequentially. If a command fails, the task fails immediately."
     )
     @NotNull
-    @NotEmpty
     private Property<List<String>> commands;
 
     @Schema(
@@ -202,7 +199,7 @@ public class RedisCLI extends Task implements RunnableTask<RedisCLI.Output>, Nam
     private Property<List<String>> outputFiles;
 
     @Override
-    public RedisCLI.Output run(RunContext runContext) throws Exception {
+    public ScriptOutput run(RunContext runContext) throws Exception {
         var logger = runContext.logger();
 
         String rHost = runContext.render(host).as(String.class).orElseThrow();
@@ -297,21 +294,7 @@ public class RedisCLI extends Task implements RunnableTask<RedisCLI.Output>, Nam
 
         logger.info("Successfully executed {} Redis CLI command(s)", rCommands.size());
         runContext.metric(Counter.of("executed.commands.count", rCommands.size()));
-
-        Output.OutputBuilder outputBuilder = Output.builder()
-            .exitCode(lastOutput != null ? lastOutput.getExitCode() : 0)
-            .stdOutLineCount(lastOutput != null ? lastOutput.getStdOutLineCount() : 0)
-            .stdErrLineCount(lastOutput != null ? lastOutput.getStdErrLineCount() : 0);
-
-        if (lastOutput != null && lastOutput.getVars() != null && !lastOutput.getVars().isEmpty()) {
-            outputBuilder.vars(lastOutput.getVars());
-        }
-
-        if (lastOutput != null && lastOutput.getOutputFiles() != null && !lastOutput.getOutputFiles().isEmpty()) {
-            outputBuilder.outputFiles(lastOutput.getOutputFiles());
-        }
-
-        return outputBuilder.build();
+        return lastOutput == null ? ScriptOutput.builder().exitCode(0).build() : lastOutput;
     }
 
     @Override
@@ -329,34 +312,5 @@ public class RedisCLI extends Task implements RunnableTask<RedisCLI.Output>, Nam
         return outputFiles;
     }
 
-    @Builder
-    @Getter
-    public static class Output implements io.kestra.core.models.tasks.Output {
-        @Schema(
-            title = "The exit code of the Redis CLI execution."
-        )
-        private final Integer exitCode;
-
-        @Schema(
-            title = "The number of lines in the standard output."
-        )
-        private final Integer stdOutLineCount;
-
-        @Schema(
-            title = "The number of lines in the standard error output."
-        )
-        private final Integer stdErrLineCount;
-
-        @Schema(
-            title = "Output variables extracted from the command output.",
-            description = "Variables can be set using the standard Kestra output format in command output."
-        )
-        private final Map<String, Object> vars;
-
-        @Schema(
-            title = "The output files created by the commands.",
-            description = "Map of file names to their URIs in Kestra's internal storage."
-        )
-        private final Map<String, URI> outputFiles;
-    }
+    
 }
