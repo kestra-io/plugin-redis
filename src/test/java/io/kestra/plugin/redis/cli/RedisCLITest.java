@@ -5,9 +5,10 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
 @KestraTest
+@EnabledOnOs(OS.LINUX)
+@ExtendWith(DockerAvailableCondition.class)
 class RedisCLITest {
     @Inject
     private RunContextFactory runContextFactory;
@@ -23,14 +26,6 @@ class RedisCLITest {
     // Target the Redis Stack service started by CI on the host
     private static String host() { return "172.17.0.1"; }
     private static Integer port() { return 6379; }
-
-    @BeforeAll
-    static void ensureDockerAvailable() {
-        boolean socketPresent = new java.io.File("/var/run/docker.sock").exists();
-        boolean dockerHostSet = System.getenv("DOCKER_HOST") != null;
-        Assumptions.assumeTrue(socketPresent || dockerHostSet,
-            "Docker is required for RedisCLITest");
-    }
 
     @Test
     void testSetAndGet() throws Exception {
