@@ -4,8 +4,9 @@ import io.kestra.core.junit.annotations.ExecuteFlow;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.flows.State;
-import io.kestra.plugin.redis.json.RedisStackTestSupport;
+import io.kestra.plugin.redis.json.RedisStackAvailableCondition;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
@@ -13,10 +14,6 @@ import static org.hamcrest.Matchers.is;
 
 @KestraTest(startRunner = true)
 class RunnerTest {
-    static {
-        // Provide Redis Stack URI to flows via configs.tests.redisStackUri
-        System.setProperty("tests.redisStackUri", RedisStackTestSupport.redisUri());
-    }
 
     @Test
     @ExecuteFlow("sanity-checks/increment.yaml")
@@ -58,6 +55,7 @@ class RunnerTest {
 
     @Test
     @ExecuteFlow("sanity-checks/redis-json.yaml")
+    @ExtendWith(RedisStackAvailableCondition.class)
     void redisJson(Execution execution) {
         execution.getTaskRunList().forEach(taskRun -> {
             System.out.println(taskRun.getTaskId());

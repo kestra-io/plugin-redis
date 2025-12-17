@@ -7,6 +7,7 @@ import io.kestra.core.runners.RunContextFactory;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
@@ -15,6 +16,7 @@ import static org.hamcrest.Matchers.is;
 
 @KestraTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@ExtendWith(RedisStackAvailableCondition.class)
 public class IncrementTest {
 
     @Inject

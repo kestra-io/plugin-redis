@@ -4,7 +4,7 @@ import org.junit.jupiter.api.extension.ConditionEvaluationResult;
 import org.junit.jupiter.api.extension.ExecutionCondition;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-import java.io.File;
+import org.testcontainers.DockerClientFactory;
 
 /**
  * Prevents Docker-dependent tests from starting (and therefore prevents Micronaut/Kestra
@@ -16,18 +16,18 @@ public final class DockerAvailableCondition implements ExecutionCondition {
 
     @Override
     public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
-        String dockerHost = System.getenv("DOCKER_HOST");
-        if (dockerHost != null && !dockerHost.isBlank()) {
-            return ENABLED;
-        }
+        try {
+            if (DockerClientFactory.instance().isDockerAvailable()) {
+                return ENABLED;
+            }
 
-        File socket = new File("/var/run/docker.sock");
-        if (socket.exists()) {
-            return ENABLED;
+            return ConditionEvaluationResult.disabled("Docker is not available");
+        } catch (Throwable t) {
+            String message = t.getMessage();
+            if (message == null || message.isBlank()) {
+                message = t.getClass().getName();
+            }
+            return ConditionEvaluationResult.disabled("Docker is not available: " + message);
         }
-
-        return ConditionEvaluationResult.disabled(
-            "Docker is not available (missing /var/run/docker.sock and DOCKER_HOST is not set)"
-        );
     }
 }

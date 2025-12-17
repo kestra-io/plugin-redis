@@ -6,6 +6,7 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
@@ -14,6 +15,7 @@ import static org.hamcrest.Matchers.*;
 
 @KestraTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@ExtendWith(RedisStackAvailableCondition.class)
 class SetTest {
     @Inject
     private RunContextFactory runContextFactory;
