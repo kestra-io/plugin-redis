@@ -71,34 +71,6 @@ test {
     // Some Kestra background components (JDBC queues / workers / schedulers) are async and can outlive the context.
     maxParallelForks = 1
     systemProperty "junit.jupiter.execution.parallel.enabled", "false"
-
-    // Run runner/scheduler/trigger tests in a separate, last test task.
-    // This keeps the default test task unchanged for most tests and limits isolation strictly to the known thread-spawning classes.
-    exclude("**/io/kestra/plugin/redis/RunnerTest.class")
-    exclude("**/io/kestra/plugin/redis/list/TriggerTest.class")
-    exclude("**/io/kestra/plugin/redis/list/RealtimeTriggerTest.class")
-}
-
-tasks.register("isolatedTest", Test) {
-    group = LifecycleBasePlugin.VERIFICATION_GROUP
-    description = "Runs Kestra runner/worker/scheduler tests in isolation to avoid Micronaut teardown races."
-
-    testClassesDirs = sourceSets.test.output.classesDirs
-    classpath = sourceSets.test.runtimeClasspath
-
-    useJUnitPlatform()
-    maxParallelForks = 1
-    systemProperty "junit.jupiter.execution.parallel.enabled", "false"
-
-    include("**/io/kestra/plugin/redis/RunnerTest.class")
-    include("**/io/kestra/plugin/redis/list/TriggerTest.class")
-    include("**/io/kestra/plugin/redis/list/RealtimeTriggerTest.class")
-
-    shouldRunAfter(tasks.named("test"))
-}
-
-tasks.named("check") {
-    dependsOn(tasks.named("isolatedTest"))
 }
 
 testlogger {
