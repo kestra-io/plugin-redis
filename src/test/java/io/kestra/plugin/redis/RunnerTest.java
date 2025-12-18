@@ -12,6 +12,7 @@ import static org.hamcrest.Matchers.is;
 
 @KestraTest(startRunner = true)
 class RunnerTest {
+
     @Test
     @ExecuteFlow("sanity-checks/increment.yaml")
     void increment(Execution execution) {
