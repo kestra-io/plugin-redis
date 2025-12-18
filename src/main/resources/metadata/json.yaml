@@ -1,0 +1,8 @@
+group: io.kestra.plugin.redis.json
+name: "json"
+title: "JSON"
+description: "Tasks that store and retrieve JSON documents in Redis."
+body: "Configure Redis connection info and JSON paths to set, get, and update JSON values using RedisJSON commands, enabling structured data storage from workflows."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"
