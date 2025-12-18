@@ -1,5 +1,5 @@
 plugins {
-    id "com.vanniktech.maven.publish" version "0.34.0"
+    id "com.vanniktech.maven.publish" version "0.35.0"
     id "io.kestra.gradle.inject-bom-versions" version "1.0.0"
     id 'java-library'
     id "idea"
@@ -51,10 +51,10 @@ dependencies {
     // kestra
     annotationProcessor group: "io.kestra", name: "processor", version: kestraVersion
     compileOnly group: "io.kestra", name: "core", version: kestraVersion
-
+    compileOnly group: "io.kestra", name: "script", version: kestraVersion
 
     // lettuce client
-    implementation ('io.lettuce:lettuce-core:7.0.0.RELEASE') {
+    implementation('io.lettuce:lettuce-core:7.2.1.RELEASE') {
         // exclude libraries already provided by Kestra
         exclude group: 'io.projectreactor'
     }
@@ -100,6 +100,7 @@ dependencies {
     testImplementation group: "io.kestra", name: "storage-local", version: kestraVersion
     testImplementation group: "io.kestra", name: "scheduler"
     testImplementation group: "io.kestra", name: "worker"
+    testImplementation group: "io.kestra", name: "script", version: kestraVersion
 
     // test
     testImplementation "org.junit.jupiter:junit-jupiter-engine"
@@ -123,11 +124,11 @@ configurations {
 }
 
 dependencies {
-    agent "org.aspectj:aspectjweaver:1.9.24"
+    agent "org.aspectj:aspectjweaver:1.9.25"
 }
 
 test {
-    jvmArgs = [ "-javaagent:${configurations.agent.singleFile}" ]
+    jvmArgs = ["-javaagent:${configurations.agent.singleFile}"]
 }
 
 /**********************************************************************************************************************\
@@ -183,11 +184,11 @@ tasks.withType(GenerateModuleMetadata).configureEach {
 jar {
     manifest {
         attributes(
-                "X-Kestra-Name": project.name,
-                "X-Kestra-Title": "Redis",
-                "X-Kestra-Group": project.group + ".redis",
-                "X-Kestra-Description": project.description,
-                "X-Kestra-Version": project.version
+            "X-Kestra-Name": project.name,
+            "X-Kestra-Title": "Redis",
+            "X-Kestra-Group": project.group + ".redis",
+            "X-Kestra-Description": project.description,
+            "X-Kestra-Version": project.version
         )
     }
 }
@@ -215,11 +216,11 @@ release {
 
     // Dynamically set properties with default values
     failOnSnapshotDependencies = (project.hasProperty('release.failOnSnapshotDependencies')
-            ? project.property('release.failOnSnapshotDependencies').toBoolean()
-            : true)
+        ? project.property('release.failOnSnapshotDependencies').toBoolean()
+        : true)
     pushReleaseVersionBranch = (project.hasProperty('release.pushReleaseVersionBranch')
-            ? project.property('release.pushReleaseVersionBranch').toString()
-            : null)
+        ? project.property('release.pushReleaseVersionBranch').toString()
+        : null)
 }
 
 /**********************************************************************************************************************\
