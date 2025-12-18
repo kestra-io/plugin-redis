@@ -54,7 +54,7 @@ dependencies {
     compileOnly group: "io.kestra", name: "script", version: kestraVersion
 
     // lettuce client
-    implementation ('io.lettuce:lettuce-core:7.0.0.RELEASE') {
+    implementation('io.lettuce:lettuce-core:7.0.0.RELEASE') {
         // exclude libraries already provided by Kestra
         exclude group: 'io.projectreactor'
     }
@@ -66,11 +66,6 @@ dependencies {
  **********************************************************************************************************************/
 test {
     useJUnitPlatform()
-
-    // Prevent Micronaut/Kestra context teardown from overlapping with other test classes.
-    // Some Kestra background components (JDBC queues / workers / schedulers) are async and can outlive the context.
-    maxParallelForks = 1
-    systemProperty "junit.jupiter.execution.parallel.enabled", "false"
 }
 
 testlogger {
@@ -111,10 +106,6 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-engine"
     testImplementation "org.hamcrest:hamcrest"
     testImplementation "org.hamcrest:hamcrest-library"
-    // Testcontainers (with BOM for consistent versions)
-    testImplementation platform("org.testcontainers:testcontainers-bom:1.19.7")
-    testImplementation "org.testcontainers:testcontainers"
-    testImplementation "org.testcontainers:junit-jupiter"
 }
 
 /**********************************************************************************************************************\
@@ -137,7 +128,7 @@ dependencies {
 }
 
 test {
-    jvmArgs = [ "-javaagent:${configurations.agent.singleFile}" ]
+    jvmArgs = ["-javaagent:${configurations.agent.singleFile}"]
 }
 
 /**********************************************************************************************************************\
@@ -193,11 +184,11 @@ tasks.withType(GenerateModuleMetadata).configureEach {
 jar {
     manifest {
         attributes(
-                "X-Kestra-Name": project.name,
-                "X-Kestra-Title": "Redis",
-                "X-Kestra-Group": project.group + ".redis",
-                "X-Kestra-Description": project.description,
-                "X-Kestra-Version": project.version
+            "X-Kestra-Name": project.name,
+            "X-Kestra-Title": "Redis",
+            "X-Kestra-Group": project.group + ".redis",
+            "X-Kestra-Description": project.description,
+            "X-Kestra-Version": project.version
         )
     }
 }
@@ -225,11 +216,11 @@ release {
 
     // Dynamically set properties with default values
     failOnSnapshotDependencies = (project.hasProperty('release.failOnSnapshotDependencies')
-            ? project.property('release.failOnSnapshotDependencies').toBoolean()
-            : true)
+        ? project.property('release.failOnSnapshotDependencies').toBoolean()
+        : true)
     pushReleaseVersionBranch = (project.hasProperty('release.pushReleaseVersionBranch')
-            ? project.property('release.pushReleaseVersionBranch').toString()
-            : null)
+        ? project.property('release.pushReleaseVersionBranch').toString()
+        : null)
 }
 
 /**********************************************************************************************************************\

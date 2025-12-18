@@ -7,7 +7,6 @@ import io.kestra.core.runners.RunContextFactory;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Map;
 
@@ -16,27 +15,26 @@ import static org.hamcrest.Matchers.is;
 
 @KestraTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@ExtendWith(RedisStackAvailableCondition.class)
 public class IncrementTest {
 
     @Inject
     private RunContextFactory runContextFactory;
 
-    private static String REDIS_URI() { return RedisStackTestSupport.redisUri(); }
+    private static final String REDIS_URI = "redis://:redis@localhost:6379/0";
 
     @Test
     void testIncrementJsonValue() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Set set = Set.builder()
-            .url(Property.ofValue(REDIS_URI()))
+            .url(Property.ofValue(REDIS_URI))
             .key(Property.ofValue("incrementKey"))
             .value(Property.ofValue(Map.of("counter", 5)))
             .build();
         set.run(runContext);
 
         Increment increment = Increment.builder()
-            .url(Property.ofValue(REDIS_URI()))
+            .url(Property.ofValue(REDIS_URI))
             .key(Property.ofValue("incrementKey"))
             .path(Property.ofValue("$.counter"))
             .amount(Property.ofValue(3))
@@ -47,7 +45,7 @@ public class IncrementTest {
         assertThat(output.getKey(), is("incrementKey"));
 
         Get get = Get.builder()
-            .url(Property.ofValue(REDIS_URI()))
+            .url(Property.ofValue(REDIS_URI))
             .key(Property.ofValue("incrementKey"))
             .build();
         Get.Output getOutput = get.run(runContext);

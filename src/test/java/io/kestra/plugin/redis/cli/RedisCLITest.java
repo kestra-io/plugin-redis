@@ -2,36 +2,40 @@ package io.kestra.plugin.redis.cli;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
+import io.kestra.core.models.tasks.RunnableTaskException;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.utils.IdUtils;
+import io.kestra.core.utils.TestsUtils;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledOnOs;
-import org.junit.jupiter.api.condition.OS;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @KestraTest
-@EnabledOnOs(OS.LINUX)
-@ExtendWith(DockerAvailableCondition.class)
 class RedisCLITest {
+
     @Inject
     private RunContextFactory runContextFactory;
 
-    // Target the Redis Stack service started by CI on the host
-    private static String host() { return "172.17.0.1"; }
-    private static Integer port() { return 6379; }
+    private static String host() {
+        return "172.17.0.1";
+    }
+
+    private static Integer port() {
+        return 6379;
+    }
 
     @Test
     void testSetAndGet() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-
         RedisCLI task = RedisCLI.builder()
+            .id(IdUtils.create())
+            .type(RedisCLI.class.getName())
             .host(Property.ofValue(host()))
             .port(Property.ofValue(port()))
             .password(Property.ofValue("redis"))
@@ -41,16 +45,19 @@ class RedisCLITest {
             )))
             .build();
 
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
         var output = task.run(runContext);
 
         assertThat(output.getExitCode(), is(0));
+        assertThat(output.getVars().get("command_2"), is("Hello from RedisCLI"));
+        assertThat(output.getStdOutLineCount(), greaterThanOrEqualTo(1));
     }
 
     @Test
     void testListOperations() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-
         RedisCLI task = RedisCLI.builder()
+            .id(IdUtils.create())
+            .type(RedisCLI.class.getName())
             .host(Property.ofValue(host()))
             .port(Property.ofValue(port()))
             .password(Property.ofValue("redis"))
@@ -63,16 +70,20 @@ class RedisCLITest {
             )))
             .build();
 
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
         var output = task.run(runContext);
 
         assertThat(output.getExitCode(), is(0));
+        assertThat(output.getVars(), hasKey("command_5"));
+        assertThat(output.getVars().get("command_5").toString(), containsString("item"));
+        assertThat(output.getStdOutLineCount(), greaterThanOrEqualTo(1));
     }
 
     @Test
     void testJsonOutput() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-
         RedisCLI task = RedisCLI.builder()
+            .id(IdUtils.create())
+            .type(RedisCLI.class.getName())
             .host(Property.ofValue(host()))
             .port(Property.ofValue(port()))
             .password(Property.ofValue("redis"))
@@ -83,16 +94,20 @@ class RedisCLITest {
             )))
             .build();
 
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
         var output = task.run(runContext);
 
         assertThat(output.getExitCode(), is(0));
+        assertThat(output.getVars(), hasKey("command_2"));
+        assertThat(output.getVars().get("command_2").toString(), containsString("test_value"));
+        assertThat(output.getStdOutLineCount(), greaterThanOrEqualTo(1));
     }
 
     @Test
     void testDatabaseSelection() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-
         RedisCLI task = RedisCLI.builder()
+            .id(IdUtils.create())
+            .type(RedisCLI.class.getName())
             .host(Property.ofValue(host()))
             .port(Property.ofValue(port()))
             .password(Property.ofValue("redis"))
@@ -103,16 +118,20 @@ class RedisCLITest {
             )))
             .build();
 
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
         var output = task.run(runContext);
 
         assertThat(output.getExitCode(), is(0));
+        assertThat(output.getVars(), hasKey("command_2"));
+        assertThat(output.getVars().get("command_2").toString(), containsString("value in db 1"));
+        assertThat(output.getStdOutLineCount(), greaterThanOrEqualTo(1));
     }
 
     @Test
     void testInfoCommand() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-
         RedisCLI task = RedisCLI.builder()
+            .id(IdUtils.create())
+            .type(RedisCLI.class.getName())
             .host(Property.ofValue(host()))
             .port(Property.ofValue(port()))
             .password(Property.ofValue("redis"))
@@ -121,17 +140,20 @@ class RedisCLITest {
             )))
             .build();
 
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
         var output = task.run(runContext);
 
         assertThat(output.getExitCode(), is(0));
-        assertThat(output.getStdOutLineCount(), greaterThan(0));
+        assertThat(output.getVars(), hasKey("command_1"));
+        assertThat(output.getVars().get("command_1").toString(), containsString("redis_version"));
+        assertThat(output.getStdOutLineCount(), greaterThanOrEqualTo(1));
     }
 
     @Test
     void testMultipleCommands() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-
         RedisCLI task = RedisCLI.builder()
+            .id(IdUtils.create())
+            .type(RedisCLI.class.getName())
             .host(Property.ofValue(host()))
             .port(Property.ofValue(port()))
             .password(Property.ofValue("redis"))
@@ -142,8 +164,38 @@ class RedisCLITest {
             )))
             .build();
 
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
         var output = task.run(runContext);
 
         assertThat(output.getExitCode(), is(0));
+        assertThat(output.getVars(), hasKey("command_2"));
+        assertThat(output.getVars().get("command_2"), is("Hello World"));
+        assertThat(output.getStdOutLineCount(), greaterThanOrEqualTo(1));
+    }
+
+    @Test
+    void testCommandFailureUnknownCommandThrowsRunnableTaskException() {
+        RedisCLI task = RedisCLI.builder()
+            .id(IdUtils.create())
+            .type(RedisCLI.class.getName())
+            .host(Property.ofValue(host()))
+            .port(Property.ofValue(port()))
+            .password(Property.ofValue("redis"))
+            .commands(Property.ofValue(List.of(
+                "PING",
+                "NO_SUCH_COMMAND"
+            )))
+            .build();
+
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+
+        RunnableTaskException ex = assertThrows(
+            RunnableTaskException.class,
+            () -> task.run(runContext)
+        );
+
+        assertThat(ex.getMessage(), containsString("Command failed with exit code 1"));
+        assertThat(ex.getCause(), notNullValue());
+        assertThat(ex.getCause().getMessage(), containsString("Command failed with exit code 1"));
     }
 }
