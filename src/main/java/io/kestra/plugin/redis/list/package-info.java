@@ -1,6 +1,9 @@
 @PluginSubGroup(
     description = "This sub-group of plugins contains tasks for using the Redis NoSQL database lists commands.",
-    categories = PluginSubGroup.PluginCategory.DATABASE
+    categories = PluginSubGroup.PluginCategory.DATABASE,
+    categories = {
+        PluginSubGroup.PluginCategory.DATA
+    }
 )
 package io.kestra.plugin.redis.list;
 
