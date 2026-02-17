@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import TopologyDetails from './components/TopologyDetails.vue'
+import TopologyDetailsPop from './components/TopologyDetailsPop.vue'
+import TopologyDetailsPush from './components/TopologyDetailsPush.vue'
 </script>
 
 <template>
@@ -11,7 +12,8 @@ import TopologyDetails from './components/TopologyDetails.vue'
       <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
     </a>
   </div>
-  <TopologyDetails :task="{id: 'hello', type: 'io.kestra.plugin.core.log.Log', message: 'Hello World! 🚀'}" />
+  <TopologyDetailsPop :task="{id: 'hello', type: 'io.kestra.plugin.core.log.Log', message: 'Hello World! 🚀'}" />
+  <TopologyDetailsPush :task="{id: 'hello', type: 'io.kestra.plugin.core.log.Log', message: 'Hello World! 🚀'}" />
 </template>
 
 <style scoped>

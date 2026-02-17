@@ -16,23 +16,30 @@ function getNameFromGradleSettings() {
 
 const KNOWN_KEYS = ["topology-details", "log-details"];
 
-export default ({ exposes }: { exposes: Record<string, Array<{ uiModule:string, path: string, additionalProperties?: Record<string, any> }>> }) => {
-    for (const key in exposes) {
-        const shortKey = key.split("/").pop();
-        if(shortKey === undefined) {
-            throw new Error(`Invalid key "${key}". It should contain at least one "/".`);
-        }
-
-        if (!KNOWN_KEYS.includes(shortKey)) {
-            throw new Error(
-                `The key "${key}" is unknown. Allowed keys are: ${KNOWN_KEYS.join(", ")}`,
-            );
-        }
-    }
-    const manifest = {}
+export default ({ exposes, plugin }: {
+    plugin: string,
+    exposes: Record<string, Array<{
+        uiModule:string,
+        path: string,
+        additionalProperties?: Record<string, any>
+    }>> }) => {
+    const manifest: Record<string, Array<{ uiModule: string, staticInfo?: Record<string, any> }>> = {}
     for (const task in exposes) {
-        manifest[task] = {}
+        const manifestTask = manifest[task] ?? [];
+        for (const module of exposes[task]) {
+            if (!KNOWN_KEYS.includes(module.uiModule)) {
+                throw new Error(
+                    `The key "${module.uiModule}" is unknown. Allowed keys are: ${KNOWN_KEYS.join(", ")}`,
+                );
+            }
+            manifestTask.push({
+                uiModule: `${plugin}.${module.uiModule}`,
+                staticInfo: module.additionalProperties,
+            });
+        }
+        manifest[task] = manifestTask;
     }
+
     // create the directory ../src/main/resources/plugin-ui/ if it doesn't exist
     if (!fs.existsSync("../src/main/resources/plugin-ui/")) {
         fs.mkdirSync("../src/main/resources/plugin-ui/", { recursive: true });
@@ -42,9 +49,13 @@ export default ({ exposes }: { exposes: Record<string, Array<{ uiModule:string, 
     return federation({
         filename: "plugin-ui.js",
         name: getNameFromGradleSettings(),
-        exposes: Object.fromEntries(
-            Object.entries(exposes).map(([key, value]) => [key, value.path])
-        ),
+        exposes: Object.entries(exposes).reduce((acc, [task, modules]) => {
+            for (const { uiModule, path } of modules) {
+                // "./list.ListPop/topology-details" for example
+                acc[`./${task}/${uiModule}`] = path;
+            }
+            return acc;
+        }, {} as Record<string, string>),
         shared: {
             vue: {
                 singleton: true,

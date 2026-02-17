@@ -6,15 +6,29 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   build: {
     outDir: "../src/main/resources/plugin-ui",
+    emptyOutDir: true,
   },
   plugins: [
     fede({
+        plugin: "io.kestra.plugin.redis",
         exposes: {
-            "io.kestra.plugin.redis.list.ListPop": [
+            "list.ListPop": [
                 {
-
                     uiModule: "topology-details",
-                    path: "./src/components/TopologyDetails.vue",
+                    path: "./src/components/TopologyDetailsPop.vue",
+                    additionalProperties: {
+                        "height": 80,
+                    }
+                },
+                {
+                    uiModule: "log-details",
+                    path: "./src/components/LogDetails.vue",
+                }
+            ],
+            "list.ListPush": [
+                {
+                    uiModule: "topology-details",
+                    path: "./src/components/TopologyDetailsPush.vue",
                     additionalProperties: {
                         "height": 80,
                     }
@@ -24,7 +38,6 @@ export default defineConfig({
                     path: "./src/components/LogDetails.vue",
                 }
             ]
-
         }
       }),
     vue()
