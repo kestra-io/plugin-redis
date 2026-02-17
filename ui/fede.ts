@@ -16,7 +16,7 @@ function getNameFromGradleSettings() {
 
 const KNOWN_KEYS = ["topology-details", "log-details"];
 
-export default ({ exposes }: { exposes: Record<string, { path: string, additionalProperties?: Record<string, any> }> }) => {
+export default ({ exposes }: { exposes: Record<string, Array<{ uiModule:string, path: string, additionalProperties?: Record<string, any> }>> }) => {
     for (const key in exposes) {
         const shortKey = key.split("/").pop();
         if(shortKey === undefined) {
@@ -29,13 +29,10 @@ export default ({ exposes }: { exposes: Record<string, { path: string, additiona
             );
         }
     }
-    const manifest =
-        Object.entries(exposes).map(([key, value]) => (
-            {
-                path: key,
-                staticInfo: value.additionalProperties
-            })
-    );
+    const manifest = {}
+    for (const task in exposes) {
+        manifest[task] = {}
+    }
     // create the directory ../src/main/resources/plugin-ui/ if it doesn't exist
     if (!fs.existsSync("../src/main/resources/plugin-ui/")) {
         fs.mkdirSync("../src/main/resources/plugin-ui/", { recursive: true });

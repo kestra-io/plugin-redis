@@ -10,16 +10,22 @@ export default defineConfig({
   plugins: [
     fede({
         exposes: {
-          "./list/ListPop/topology-details": {
-            path:"./src/components/TopologyDetails.vue",
-            additionalProperties: {
-              "height": 80,
-            }
-          },
-          "./list/ListPop/log-details": {
-            path:"./src/components/TopologyDetails.vue",
-          },
-        },
+            "io.kestra.plugin.redis.list.ListPop": [
+                {
+
+                    uiModule: "topology-details",
+                    path: "./src/components/TopologyDetails.vue",
+                    additionalProperties: {
+                        "height": 80,
+                    }
+                },
+                {
+                    uiModule: "log-details",
+                    path: "./src/components/LogDetails.vue",
+                }
+            ]
+
+        }
       }),
     vue()
   ],
