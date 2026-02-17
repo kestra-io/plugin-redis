@@ -9,6 +9,7 @@ plugins {
     id 'signing'
     id "com.github.ben-manes.versions" version "0.53.0"
     id 'net.researchgate.release' version '3.1.0'
+    id 'com.github.node-gradle.node' version '7.0.2'
 }
 
 def isBuildSnapshot = version.toString().endsWith("-SNAPSHOT")
@@ -193,6 +194,19 @@ jar {
     }
 }
 
+node {
+  download = true
+  version = '22.12.0'
+  nodeProjectDir = file("${projectDir}/ui")
+}
+
+tasks.register("uiBuild", com.github.gradle.node.npm.task.NpmTask) {
+  dependsOn tasks.npmInstall
+  args = ["run", "build"]
+}
+
+tasks.named("processResources") { dependsOn("uiBuild") }
+tasks.named("shadowJar") { dependsOn("uiBuild") }
 
 shadowJar {
     archiveClassifier.set(null)
