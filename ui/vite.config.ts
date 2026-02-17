@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite'
-import { federation } from "@module-federation/vite";
+import fede from "./fede";
 import vue from '@vitejs/plugin-vue'
 
 // https://vite.dev/config/
@@ -8,18 +8,19 @@ export default defineConfig({
     outDir: "../src/main/resources/plugin-ui",
   },
   plugins: [
-    federation({
-        filename: "plugin-ui.js",
-        name: "plugin-redis",
+    fede({
         exposes: {
-          "./topology-details": "./src/components/TopologyDetails.vue",
-        },
-        shared: {
-          vue: {
-            singleton: true,
-            requiredVersion: "^3"
+          "./topology-details": {
+            path:"./src/components/TopologyDetails.vue",
+            additionalProperties: {
+              "height": "400px",
+              "width": "600px"
+            }
           },
-        }
+          "./log-details": {
+            path:"./src/components/TopologyDetails.vue",
+          },
+        },
       }),
     vue()
   ],
