@@ -10,14 +10,13 @@ export default defineConfig({
   plugins: [
     fede({
         exposes: {
-          "./topology-details": {
+          "./list/ListPop/topology-details": {
             path:"./src/components/TopologyDetails.vue",
             additionalProperties: {
-              "height": "400px",
-              "width": "600px"
+              "height": 80,
             }
           },
-          "./log-details": {
+          "./list/ListPop/log-details": {
             path:"./src/components/TopologyDetails.vue",
           },
         },

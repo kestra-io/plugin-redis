@@ -14,29 +14,34 @@ function getNameFromGradleSettings() {
     throw new Error("Could not extract project name from settings.gradle");
 }
 
-const KNOWN_KEYS = ["./topology-details", "./log-details"];
+const KNOWN_KEYS = ["topology-details", "log-details"];
 
-export default ({ exposes }: { exposes: Record<string, { path: string, additionalProperties?: Record<string, string> }> }) => {
+export default ({ exposes }: { exposes: Record<string, { path: string, additionalProperties?: Record<string, any> }> }) => {
     for (const key in exposes) {
-        if (!KNOWN_KEYS.includes(key)) {
+        const shortKey = key.split("/").pop();
+        if(shortKey === undefined) {
+            throw new Error(`Invalid key "${key}". It should contain at least one "/".`);
+        }
+
+        if (!KNOWN_KEYS.includes(shortKey)) {
             throw new Error(
                 `The key "${key}" is unknown. Allowed keys are: ${KNOWN_KEYS.join(", ")}`,
             );
         }
     }
-    const manifest = Object.fromEntries(
-        Object.entries(exposes).map(([key, value]) => [
-            key,
+    const manifest =
+        Object.entries(exposes).map(([key, value]) => (
             {
-                ...value.additionalProperties
-            },
-        ])
+                path: key,
+                staticInfo: value.additionalProperties
+            })
     );
     // create the directory ../src/main/resources/plugin-ui/ if it doesn't exist
     if (!fs.existsSync("../src/main/resources/plugin-ui/")) {
         fs.mkdirSync("../src/main/resources/plugin-ui/", { recursive: true });
     }
     fs.writeFileSync("../src/main/resources/plugin-ui/manifest.json", JSON.stringify(manifest, null, 2));
+
     return federation({
         filename: "plugin-ui.js",
         name: getNameFromGradleSettings(),
