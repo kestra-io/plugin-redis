@@ -25,7 +25,8 @@ export default ({ exposes, plugin }: {
     }>> }) => {
     const manifest: Record<string, Array<{ uiModule: string, staticInfo?: Record<string, any> }>> = {}
     for (const task in exposes) {
-        const manifestTask = manifest[task] ?? [];
+        const completeTaskName = `${plugin}.${task}`;
+        const manifestTask = manifest[completeTaskName] ?? [];
         for (const module of exposes[task]) {
             if (!KNOWN_KEYS.includes(module.uiModule)) {
                 throw new Error(
@@ -33,11 +34,11 @@ export default ({ exposes, plugin }: {
                 );
             }
             manifestTask.push({
-                uiModule: `${plugin}.${module.uiModule}`,
+                uiModule: module.uiModule,
                 staticInfo: module.additionalProperties,
             });
         }
-        manifest[task] = manifestTask;
+        manifest[completeTaskName] = manifestTask;
     }
 
     // create the directory ../src/main/resources/plugin-ui/ if it doesn't exist
