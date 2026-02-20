@@ -23,8 +23,8 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Delete one or more Redis items by key.",
-    description = "List one or more keys to delete in a Redis database."
+    title = "Delete Redis JSON keys or paths",
+    description = "Runs `JSON.DEL` for each rendered key and JSON path (defaults to `$` when paths are empty), sums deleted elements, and can fail when nothing is removed."
 )
 @Plugin(
     examples = {
@@ -38,6 +38,7 @@ import java.util.Map;
                   - id: delete
                     type: io.kestra.plugin.redis.json.Delete
                     url: redis://:redis@localhost:6379/0
+                    failedOnMissing: true
                     keys:
                       keyDelete1:
                          - path1
@@ -56,15 +57,15 @@ import java.util.Map;
 )
 public class Delete extends AbstractRedisConnection implements RunnableTask<Delete.Output> {
     @Schema(
-        title = "Map of Redis keys and their JSON paths to delete. " +
-            "Each key can have a single JSON path or a list of JSON paths. " +
-            "Use `$` for deleting the entire key."
+        title = "Keys and JSON paths to delete",
+        description = "Map of key → paths; each path list defaults to `$` to drop the whole value."
     )
     @NotNull
     private Property<Map<String, List<String>>> keys;
 
     @Schema(
-        title = "If some keys are not deleted, fail the task."
+        title = "Fail when deletions are missing",
+        description = "Defaults to false; when true, throws if fewer items are deleted than requested."
     )
     @Builder.Default
     private Property<Boolean> failedOnMissing = Property.ofValue(false);
@@ -107,7 +108,8 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Number of key deleted"
+            title = "Deleted count",
+            description = "Total number of deleted elements across all keys/paths."
         )
         private Integer count;
     }

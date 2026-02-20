@@ -32,8 +32,8 @@ import java.util.Objects;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Fetch a Redis item by key with type `JSON` and return its value.",
-    description = "Query for a key in a Redis database and return the associated JSON value."
+    title = "Read JSON value from Redis key",
+    description = "Runs `JSON.GET` on the rendered key and path (default `$`), returns the decoded value, and can fail when the key is missing."
 )
 @Plugin(
     examples = {
@@ -59,19 +59,22 @@ import java.util.Objects;
 )
 public class Get extends AbstractRedisConnection implements RunnableTask<Get.Output> {
     @Schema(
-        title = "The redis key you want to get,"
+        title = "Redis key to read",
+        description = "Rendered before the call and passed to `JSON.GET`."
     )
     @NotNull
     private Property<String> key;
 
     @Schema(
-        title = "If some keys are not defined, fail the task."
+        title = "Fail when key is missing",
+        description = "Defaults to false; if true, throws when the lookup returns null."
     )
     @Builder.Default
     private Property<Boolean> failedOnMissing = Property.ofValue(false);
 
     @Schema(
-        title = "JSON path to extract value (default is root '$')"
+        title = "JSON path to extract",
+        description = "Defaults to `$` (root). Uses RedisJSON path syntax."
     )
     @Builder.Default
     private Property<String> path = Property.ofValue("$");

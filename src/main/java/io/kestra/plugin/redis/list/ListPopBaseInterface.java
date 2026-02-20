@@ -7,13 +7,15 @@ import jakarta.validation.constraints.NotNull;
 
 public interface ListPopBaseInterface {
     @Schema(
-        title = "The Redis key for the list"
+        title = "Redis list key",
+        description = "Rendered key passed to `LPOP`."
     )
     @NotNull
     Property<String> getKey();
 
     @Schema(
-        title = "Format of the data contained in Redis"
+        title = "Serialization format",
+        description = "Defaults to STRING; controls how list elements are decoded."
     )
     Property<SerdeType> getSerdeType();
 }

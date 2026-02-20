@@ -23,8 +23,8 @@ import java.time.ZonedDateTime;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Increment a Redis item by key and return its value.",
-    description = "Increment for a key in a Redis database and return the associated value."
+    title = "Increment a Redis string number",
+    description = "Runs `INCR`, `INCRBY`, or `INCRBYFLOAT` on the rendered key depending on the amount type, and can apply an expiration (absolute or relative, not both)."
 )
 @Plugin(
     examples = {
@@ -50,19 +50,21 @@ import java.time.ZonedDateTime;
 )
 public class Increment extends AbstractRedisConnection implements RunnableTask<Increment.Output> {
     @Schema(
-        title = "The redis key you want to increment"
+        title = "Redis key to increment",
+        description = "Rendered before the increment command."
     )
     @NotNull
     private Property<String> key;
 
     @Schema(
-        title = "The amount to increment, default is 1"
+        title = "Increment amount",
+        description = "Optional; defaults to 1. Integer uses INCR/INCRBY, decimal uses INCRBYFLOAT."
     )
     private Property<Number> amount;
 
     @Schema(
-        title = "Options for the increment operation.",
-        description = "Configure settings for the key."
+        title = "Expiration options",
+        description = "Optional TTL settings; choose either duration or absolute date."
     )
     private Options options;
 
@@ -97,14 +99,14 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
     @Jacksonized
     public static class Options {
         @Schema(
-            title = "Set the expiration duration.",
-            description = "Duration after which the key will automatically expire."
+            title = "Expiration duration",
+            description = "Relative TTL; cannot be combined with expirationDate."
         )
         private Property<Duration> expirationDuration;
 
         @Schema(
-            title = "Set the expiration date.",
-            description = "Absolute timestamp at which the key will expire."
+            title = "Expiration date",
+            description = "Absolute timestamp; cannot be combined with expirationDuration."
         )
         private Property<ZonedDateTime> expirationDate;
 
@@ -139,12 +141,12 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The incremented value."
+            title = "Incremented value"
         )
         private Number value;
 
         @Schema(
-            title = "The fetched key."
+            title = "Incremented key"
         )
         private String key;
     }

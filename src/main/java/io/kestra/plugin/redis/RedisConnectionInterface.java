@@ -9,7 +9,7 @@ public interface RedisConnectionInterface {
 
     @NotNull
     @Schema(
-        title = "The connection string."
+        title = "Redis connection string"
     )
     Property<String> getUrl();
 }

@@ -25,8 +25,8 @@ import java.time.ZonedDateTime;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Set a string value for a given Redis key.",
-    description = "Set a string value for a new key or update the current key value with a new one."
+    title = "Write a string value to Redis",
+    description = "Runs `SET` on the rendered key using the selected serde (STRING or JSON), supports NX/XX guards, TTL options, keep-ttl, and can return the previous value."
 )
 @Plugin(
     examples = {
@@ -53,6 +53,10 @@ import java.time.ZonedDateTime;
                     key: "{{ inputs.key_name }}"
                     value: "{{ inputs.key_value }}"
                     serdeType: STRING
+                    get: true
+                    options:
+                      mustExist: true
+                      keepTtl: true
                 """
         ),
         @Example(
@@ -86,34 +90,37 @@ import java.time.ZonedDateTime;
 public class Set extends AbstractRedisConnection implements RunnableTask<Set.Output> {
 
     @Schema(
-        title = "The redis key you want to set."
+        title = "Redis key to set",
+        description = "Rendered before calling `SET`."
     )
     @NotNull
     private Property<String> key;
 
     @Schema(
-        title = "The value you want to set.",
-        description = "Must be a string for `serdeType: STRING` or can be an object or a json string `serdeType: JSON`"
+        title = "Value to store",
+        description = "Rendered then serialized with the chosen serde; STRING expects plain text, JSON accepts object or JSON string."
     )
     @NotNull
     private Property<Object> value;
 
     @Schema(
-        title = "Options available when setting a key in Redis.",
-        description = "See [redis documentation](https://redis.io/commands/set/)."
+        title = "Set options",
+        description = "TTL, NX/XX, and keepTtl flags; see [Redis documentation](https://redis.io/commands/set/)."
     )
     @PluginProperty
     @Builder.Default
     private Options options = Options.builder().build();
 
     @Schema(
-        title = "Define if you get the older value in response, does not work with Redis 5.X."
+        title = "Return existing value",
+        description = "Defaults to false; when true, uses SETGET to return the prior value (not supported on Redis 5.x)."
     )
     @Builder.Default
     private Property<Boolean> get = Property.ofValue(false);
 
     @Schema(
-        title = "Format of the data contained in Redis."
+        title = "Serialization format",
+        description = "Defaults to STRING; set to JSON to serialize/deserialize structured values."
     )
     @Builder.Default
     @NotNull
@@ -147,9 +154,8 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Old value",
-            description = "The old value if you replaced an existing key\n" +
-                "Required Get to true"
+            title = "Previous value",
+            description = "Returned only when `get` is true."
         )
         private String oldValue;
     }
@@ -159,29 +165,34 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     @Jacksonized
     public static class Options {
         @Schema(
-            title = "Set the expiration duration."
+            title = "Expiration duration",
+            description = "Relative TTL; cannot be combined with expirationDate when keepTtl is true."
         )
         private Property<Duration> expirationDuration;
 
         @Schema(
-            title = "Set the expiration date."
+            title = "Expiration date",
+            description = "Absolute timestamp; cannot be combined with expirationDuration when keepTtl is true."
         )
         private Property<ZonedDateTime> expirationDate;
 
         @Schema(
-            title = "Only set the key if it does not already exist."
+            title = "Set only when key is absent",
+            description = "Applies NX behavior; do not combine with mustExist."
         )
         @Builder.Default
         private Property<Boolean> mustNotExist = Property.ofValue(false);
 
         @Schema(
-            title = "Only set the key if it already exist."
+            title = "Set only when key exists",
+            description = "Applies XX behavior; do not combine with mustNotExist."
         )
         @Builder.Default
         private Property<Boolean> mustExist = Property.ofValue(false);
 
         @Schema(
-            title = "Retain the time to live associated with the key."
+            title = "Keep existing TTL",
+            description = "Keeps current TTL instead of resetting; cannot be used with expirationDuration or expirationDate."
         )
         @Builder.Default
         private Property<Boolean> keepTtl = Property.ofValue(false);

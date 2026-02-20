@@ -33,7 +33,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Publish one or multiple values to a Redis channel."
+    title = "Publish values to a Redis channel",
+    description = "Serializes values with the selected serde (STRING by default) and publishes each to the rendered channel; accepts inline lists or a Kestra storage URI."
 )
 @Plugin(
     examples = {
@@ -51,6 +52,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     from:
                       - value1
                       - value2
+                    serdeType: JSON
                 """
         )
     },
@@ -66,13 +68,15 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 )
 public class Publish extends AbstractRedisConnection implements RunnableTask<Publish.Output> {
     @Schema(
-        title = "The Redis channel to publish"
+        title = "Redis channel",
+        description = "Rendered before publishing."
     )
     @NotNull
     private Property<String> channel;
 
     @Schema(
-        title = "The list of values to publish to the channel",
+        title = "Values to publish",
+        description = "String or list; a string may point to a storage URI to stream values.",
         anyOf = {String.class, List.class}
     )
     @NotNull
@@ -80,7 +84,8 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
     private Object from;
 
     @Schema(
-        title = "Format of the data contained in Redis"
+        title = "Serialization format",
+        description = "Defaults to STRING; controls encoding before PUBLISH."
     )
     @Builder.Default
     @NotNull

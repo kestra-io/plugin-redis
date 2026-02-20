@@ -7,19 +7,20 @@ import java.time.Duration;
 
 public interface ListPopInterface extends ListPopBaseInterface {
     @Schema(
-        title = "The max number of rows to fetch before stopping",
-        description = "It's not a hard limit and is evaluated every second."
+        title = "Maximum rows to fetch",
+        description = "Soft cap evaluated each loop; required when maxDuration is not set."
     )
     Property<Integer> getMaxRecords();
 
     @Schema(
-        title = "The max duration waiting for new rows",
-        description = "It's not a hard limit and is evaluated every second."
+        title = "Maximum duration to poll",
+        description = "Soft cap evaluated each loop; required when maxRecords is not set."
     )
     Property<Duration> getMaxDuration();
 
     @Schema(
-        title = "Number of elements that should pop at once"
+        title = "Batch size per pop",
+        description = "Defaults to 100."
     )
     Property<Integer> getCount();
 }

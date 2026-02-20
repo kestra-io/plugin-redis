@@ -17,7 +17,8 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Fetch the ttl from an Redis item by key."
+    title = "Read TTL for a Redis key",
+    description = "Runs `TTL` on the rendered key and returns remaining seconds (-1 for no expiry, -2 when missing)."
 )
 @Plugin(
     examples = {
@@ -43,15 +44,11 @@ import lombok.experimental.SuperBuilder;
 )
 public class Ttl extends AbstractRedisConnection implements RunnableTask<Ttl.Output> {
     @Schema(
-        title = "The redis key you want to increment"
+        title = "Redis key to check",
+        description = "Rendered before calling `TTL`."
     )
     @NotNull
     private Property<String> key;
-
-    @Schema(
-        title = "The amount to increment, default is 1"
-    )
-    private Property<Number> amount;
 
     @Override
     public Output run(RunContext runContext) throws Exception {
@@ -70,12 +67,13 @@ public class Ttl extends AbstractRedisConnection implements RunnableTask<Ttl.Out
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The ttl value."
+            title = "TTL value",
+            description = "Remaining time in seconds; -1 means no expiration, -2 means key missing."
         )
         private Long ttl;
 
         @Schema(
-            title = "The fetched key."
+            title = "Checked key"
         )
         private String key;
     }

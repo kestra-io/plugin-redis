@@ -31,8 +31,8 @@ import java.time.ZonedDateTime;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Set a JSON type value for a given Redis key.",
-    description = "Set a JSON type value for a new key or update the current key value with a new one."
+    title = "Write JSON value to a Redis key",
+    description = "Runs `JSON.SET` on the rendered key and path (default `$`), optionally returning the previous value and supporting NX/XX-style existence checks."
 )
 @Plugin(
     examples = {
@@ -68,33 +68,37 @@ import java.time.ZonedDateTime;
 public class Set extends AbstractRedisConnection implements RunnableTask<Set.Output> {
 
     @Schema(
-        title = "The redis key you want to set."
+        title = "Redis key to set",
+        description = "Rendered before calling `JSON.SET`."
     )
     @NotNull
     private Property<String> key;
 
     @Schema(
-        title = "The value you want to set as type JSON."
+        title = "JSON value to store",
+        description = "Rendered and serialized with the JSON serde."
     )
     @NotNull
     private Property<Object> value;
 
     @Schema(
-        title = "Options available when setting a key in Redis.",
-        description = "See [redis documentation](https://redis.io/commands/set/)."
+        title = "Set options",
+        description = "NX/XX-like guards for JSON.SET; see [Redis documentation](https://redis.io/commands/json.set/)."
     )
     @PluginProperty
     @Builder.Default
     private Options options = Options.builder().build();
 
     @Schema(
-        title = "Define if you get the older value in response, does not work with Redis 5.X."
+        title = "Return existing value",
+        description = "Defaults to false; when true, fetches the current value before overwriting (not supported on Redis 5.x)."
     )
     @Builder.Default
     private Property<Boolean> get = Property.ofValue(false);
 
     @Schema(
-        title = "JSON path to extract value (default is root '$')"
+        title = "JSON path to set",
+        description = "Defaults to `$` (root)."
     )
     @Builder.Default
     private Property<String> path = Property.ofValue("$");
@@ -130,9 +134,8 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Old value",
-            description = "The old value if you replaced an existing key\n" +
-                "Required Get to true"
+            title = "Previous value",
+            description = "Returned only when `get` is true."
         )
         private Object oldValue;
     }
@@ -142,13 +145,15 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     @Jacksonized
     public static class Options {
         @Schema(
-            title = "Only set the key if it does not already exist."
+            title = "Set only when key is absent",
+            description = "Applies NX behavior; do not combine with mustExist."
         )
         @Builder.Default
         private Property<Boolean> mustNotExist = Property.ofValue(false);
 
         @Schema(
-            title = "Only set the key if it already exist."
+            title = "Set only when key exists",
+            description = "Applies XX behavior; do not combine with mustNotExist."
         )
         @Builder.Default
         private Property<Boolean> mustExist = Property.ofValue(false);
