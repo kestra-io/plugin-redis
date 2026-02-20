@@ -30,11 +30,10 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Execute Redis CLI commands.",
+    title = "Run Redis CLI commands in a container",
     description = """
-        This task allows running Redis CLI commands inside a Docker container with the official Redis image.
-        Each command is executed sequentially. If a command fails, the task will fail immediately.
-        The output from each command can be returned as JSON (requires Redis 7+) for easier parsing.
+        Executes the provided redis-cli commands sequentially using the configured task runner (Docker by default with image redis:7-alpine), failing on the first non-zero or detected Redis error.
+        Supports TLS, username/password auth via REDISCLI_AUTH, and optional JSON output (Redis 7+).
         """
 )
 @Plugin(
@@ -111,58 +110,67 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
 
     private static final String DEFAULT_IMAGE = "redis:7-alpine";
 
-    @Schema(title = "The Redis host to connect to.")
+    @Schema(title = "Redis host")
     @NotNull
     private Property<String> host;
 
-    @Schema(title = "The Redis port to connect to.")
+    @Schema(
+        title = "Redis port",
+        description = "Defaults to 6379."
+    )
     @Builder.Default
     private Property<Integer> port = Property.ofValue(6379);
 
     @Schema(
-        title = "The Redis database number to select.",
-        description = "Default is 0."
+        title = "Database index",
+        description = "Defaults to 0."
     )
     @Builder.Default
     private Property<Integer> database = Property.ofValue(0);
 
     @Schema(
-        title = "The Redis username for authentication.",
-        description = "Required if your Redis server has ACL enabled."
+        title = "Username for ACL authentication",
+        description = "Required when the Redis server enforces ACLs."
     )
     private Property<String> username;
 
-    @Schema(title = "The Redis password for authentication.")
+    @Schema(
+        title = "Password for authentication",
+        description = "Sent via REDISCLI_AUTH env variable."
+    )
     private Property<String> password;
 
-    @Schema(title = "Enable TLS/SSL for the connection.")
+    @Schema(
+        title = "Enable TLS",
+        description = "Defaults to false."
+    )
     @Builder.Default
     private Property<Boolean> tls = Property.ofValue(false);
 
     @Schema(
-        title = "The list of Redis CLI commands to execute.",
-        description = "Each command is executed sequentially. If a command fails, the task fails immediately."
+        title = "Commands to run",
+        description = "List of redis-cli commands executed in order; task stops on first failure or error output."
     )
     @NotNull
     private Property<List<String>> commands;
 
     @Schema(
-        title = "Enable JSON output format.",
-        description = "When enabled, commands output will be formatted as JSON. Requires Redis 7.0 or later."
+        title = "Enable JSON output",
+        description = "Adds redis-cli --json; requires Redis 7+."
     )
     @Builder.Default
     private Property<Boolean> jsonOutput = Property.ofValue(false);
 
     @Schema(
-        title = "The Docker container image to use.",
-        description = "Default is 'redis:7-alpine'."
+        title = "Container image",
+        description = "Defaults to redis:7-alpine when docker image is not already set."
     )
     @Builder.Default
     protected Property<String> containerImage = Property.ofValue(DEFAULT_IMAGE);
 
     @Schema(
-        title = "The task runner to use.",
-        description = "Task runners are provided by plugins, each have their own properties."
+        title = "Task runner",
+        description = "Defaults to Docker; other runners may require additional properties."
     )
     @PluginProperty
     @Builder.Default
@@ -172,12 +180,18 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
         .entryPoint(new ArrayList<>())
         .build();
 
-    @Schema(title = "Docker options when using the Docker task runner.")
+    @Schema(
+        title = "Docker options",
+        description = "Applied when using the Docker task runner; its image overrides containerImage if set."
+    )
     @PluginProperty
     @Builder.Default
     protected Property<DockerOptions> docker = Property.ofValue(DockerOptions.builder().build());
 
-    @Schema(title = "Additional environment variables for the task.")
+    @Schema(
+        title = "Additional environment variables",
+        description = "Merged with REDISCLI_AUTH when password is provided."
+    )
     protected Property<Map<String, String>> env;
 
     private NamespaceFiles namespaceFiles;

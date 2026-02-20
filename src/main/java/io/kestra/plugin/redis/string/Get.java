@@ -19,8 +19,8 @@ import jakarta.validation.constraints.NotNull;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Fetch a Redis item by key and return its value.",
-    description = "Query for a key in a Redis database and return the associated value."
+    title = "Read a Redis string value",
+    description = "Renders the key, runs `GET`, deserializes with the selected serde (STRING by default), and can fail if the key is missing."
 )
 @Plugin(
     examples = {
@@ -47,20 +47,23 @@ import jakarta.validation.constraints.NotNull;
 )
 public class Get extends AbstractRedisConnection implements RunnableTask<Get.Output> {
     @Schema(
-        title = "The redis key you want to get"
+        title = "Redis key to read",
+        description = "Rendered before calling `GET`."
     )
     @NotNull
     private Property<String> key;
 
     @Schema(
-        title = "Format of the data contained in Redis"
+        title = "Serialization format",
+        description = "Defaults to STRING; controls how the value is deserialized."
     )
     @NotNull
     @Builder.Default
     private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
 
     @Schema(
-        title = "If some keys are not defined, failed the task."
+        title = "Fail when key is missing",
+        description = "Defaults to false; when true, throws if `GET` returns null."
     )
     @Builder.Default
     private Property<Boolean> failedOnMissing = Property.ofValue(false);
@@ -87,12 +90,12 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The fetched data."
+            title = "Fetched value"
         )
         private Object data;
 
         @Schema(
-            title = "The fetched key."
+            title = "Fetched key"
         )
         private String key;
     }

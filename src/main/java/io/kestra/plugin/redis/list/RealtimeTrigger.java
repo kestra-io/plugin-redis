@@ -28,8 +28,8 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Remove and return an element from the head of a list in real-time in Redis and create one execution per element.",
-    description = "If you would like to consume multiple elements processed within a given time frame and process them in batch, you can use the [io.kestra.plugin.redis.list.Trigger](https://kestra.io/plugins/plugin-redis/triggers/io.kestra.plugin.redis.list.trigger) instead."
+    title = "Realtime trigger from a Redis list",
+    description = "Continuously polls `LPOP` one element at a time (every ~100 ms) and starts one Execution per item. Use [Trigger](https://kestra.io/plugins/plugin-redis/triggers/io.kestra.plugin.redis.list.trigger) for batched polling."
 )
 @Plugin(
     examples = {

@@ -24,8 +24,8 @@ import java.util.Optional;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Remove and return an element from the head of a list periodically in Redis and create one execution per batch.",
-    description = "If you would like to consume each message from a list in real-time and create one execution per message, you can use the [io.kestra.plugin.redis.list.RealtimeTrigger](https://kestra.io/plugins/plugin-redis/triggers/io.kestra.plugin.redis.list.realtimetrigger) instead."
+    title = "Batch trigger from a Redis list",
+    description = "Periodically pops list items in batches using `LPOP` (default batch size 100) until `maxRecords` or `maxDuration` is reached, then starts one Execution. Use [RealtimeTrigger](https://kestra.io/plugins/plugin-redis/triggers/io.kestra.plugin.redis.list.realtimetrigger) instead for per-message executions."
 )
 @Plugin(
     examples = {
@@ -56,6 +56,10 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     private Property<String> key;
 
+    @Schema(
+        title = "Batch size per evaluation",
+        description = "Defaults to 100."
+    )
     @Builder.Default
     private Property<Integer> count = Property.ofValue(100);
 

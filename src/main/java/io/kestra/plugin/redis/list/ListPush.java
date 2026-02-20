@@ -34,7 +34,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Add a new element to the head of a list in Redis."
+    title = "Push values to a Redis list",
+    description = "LPUSH rendered values to the head of the list; accepts literal lists or a Kestra storage URI, serializing with the selected serde (STRING by default)."
 )
 @Plugin(
     examples = {
@@ -67,13 +68,15 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 )
 public class ListPush extends AbstractRedisConnection implements RunnableTask<ListPush.Output> {
     @Schema(
-        title = "The Redis key for the list."
+        title = "Redis list key",
+        description = "Rendered before pushing."
     )
     @NotNull
     private Property<String> key;
 
     @Schema(
-        title = "The list of values to push at the head of the list.",
+        title = "Values to push",
+        description = "String or list; a string may be parsed as JSON array or treated as a storage URI.",
         anyOf = {String.class, List.class}
     )
     @NotNull
@@ -81,7 +84,8 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     private Object from;
 
     @Schema(
-        title = "Format of the data contained in Redis"
+        title = "Serialization format",
+        description = "Defaults to STRING; controls how values are encoded before LPUSH."
     )
     @Builder.Default
     @NotNull
@@ -153,7 +157,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
             title = "Count",
-            description = "The number of values inserted"
+            description = "Number of values inserted."
         )
         private Integer count;
     }

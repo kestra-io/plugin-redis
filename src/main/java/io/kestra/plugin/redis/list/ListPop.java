@@ -34,7 +34,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Remove and return an element from the head of a list in Redis."
+    title = "Pop elements from a Redis list",
+    description = "Consumes list items with repeated `LPOP` calls in batches (default batch size 100) until `maxRecords` or `maxDuration` is reached, then writes the results to Kestra internal storage."
 )
 @Plugin(
     examples = {
@@ -51,6 +52,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     key: mypopkeyjson
                     serdeType: JSON
                     maxRecords: 1
+                    maxDuration: PT10S
+                    count: 50
                 """
         )
     },
@@ -69,7 +72,8 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
     private Property<String> key;
 
     @Schema(
-        title = "Format of the data contained in Redis."
+        title = "Serialization format",
+        description = "Defaults to STRING; controls how items are decoded."
     )
     @Builder.Default
     @NotNull
