@@ -6,9 +6,12 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   build: {
     outDir: "../src/main/resources/plugin-ui",
+    emptyOutDir: true,
+    modulePreload: false,
+    cssCodeSplit: false,
   },
   plugins: [
-    fede({
+    ...fede({
         plugin: "io.kestra.plugin.redis",
         exposes: {
             "list.ListPop": [
