@@ -37,11 +37,15 @@ export default ({
             name: "manifest-plugin",
             enforce: "post",
             generateBundle(_, bundle) {
+                const cssFileNames = Object.keys(bundle).filter((fileName) =>
+                    fileName.endsWith(".css"),
+                );
                 const manifest: Record<
                     string,
                     Array<{
                         uiModule: string;
                         staticInfo?: Record<string, any>;
+                        styles?: string[];
                     }>
                 > = {};
                 for (const task in exposes) {
@@ -55,6 +59,7 @@ export default ({
                         }
                         manifestTask.push({
                             uiModule: module.uiModule,
+                            styles: cssFileNames,
                             staticInfo: module.additionalProperties,
                         });
                     }
