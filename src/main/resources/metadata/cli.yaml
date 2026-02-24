@@ -1,6 +1,6 @@
 group: io.kestra.plugin.redis.cli
 name: "cli"
-title: "CLI"
+title: "Redis CLI"
 description: "Execute Redis CLI commands directly using the official Redis Docker image."
 body: "Run any redis-cli command in a Docker container. Supports authentication, TLS, database selection, and JSON output format (Redis 7+). Commands are executed sequentially and the task fails if any command fails."
 videos: []
