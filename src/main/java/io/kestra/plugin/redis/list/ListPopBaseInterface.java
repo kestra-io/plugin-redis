@@ -2,6 +2,7 @@ package io.kestra.plugin.redis.list;
 
 import io.kestra.core.models.property.Property;
 import io.kestra.plugin.redis.models.SerdeType;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 

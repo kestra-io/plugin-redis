@@ -1,12 +1,14 @@
 package io.kestra.plugin.redis.list;
 
-import io.kestra.core.models.executions.Execution;
-import io.kestra.core.utils.TestsUtils;
-import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import org.junit.jupiter.api.Test;
+
+import io.kestra.core.models.executions.Execution;
+import io.kestra.core.utils.TestsUtils;
+
+import reactor.core.publisher.Flux;
 
 import static io.kestra.core.utils.Rethrow.throwRunnable;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -17,12 +19,14 @@ class TriggerTest extends AbstractTriggerTest {
     @Test
     void flow() throws Exception {
         CountDownLatch queueCount = new CountDownLatch(1);
-        Flux<Execution> receive = TestsUtils.receive(executionQueue, execution -> {
+        Flux<Execution> receive = TestsUtils.receive(executionQueue, execution ->
+        {
             queueCount.countDown();
             assertThat(execution.getLeft().getFlowId(), is("trigger"));
         });
 
-        this.run("trigger.yaml", throwRunnable(() -> {
+        this.run("trigger.yaml", throwRunnable(() ->
+        {
             push();
 
             boolean await = queueCount.await(1, TimeUnit.MINUTES);
@@ -34,4 +38,3 @@ class TriggerTest extends AbstractTriggerTest {
         }));
     }
 }
-

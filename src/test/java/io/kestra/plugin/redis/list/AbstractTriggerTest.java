@@ -1,8 +1,16 @@
 package io.kestra.plugin.redis.list;
 
-import static io.kestra.core.tenant.TenantService.MAIN_TENANT;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.UUID;
+
+import org.junit.jupiter.api.TestInstance;
 
 import com.google.common.collect.ImmutableMap;
+
+import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.queues.QueueFactoryInterface;
@@ -10,23 +18,16 @@ import io.kestra.core.queues.QueueInterface;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.runners.FlowListeners;
 import io.kestra.core.runners.RunContextFactory;
-import io.kestra.core.runners.Worker;
-import io.kestra.scheduler.AbstractScheduler;
-import io.kestra.jdbc.runner.JdbcScheduler;
-import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
+import io.kestra.jdbc.runner.JdbcScheduler;
+import io.kestra.scheduler.AbstractScheduler;
 import io.kestra.worker.DefaultWorker;
+
 import io.micronaut.context.ApplicationContext;
-import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
-import org.junit.jupiter.api.TestInstance;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.Objects;
-import java.util.UUID;
+import static io.kestra.core.tenant.TenantService.MAIN_TENANT;
 
 @KestraTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -72,8 +73,6 @@ abstract class AbstractTriggerTest {
             .from(Arrays.asList("value1", "value2"))
             .build();
 
-
         return task.run(TestsUtils.mockRunContext(runContextFactory, task, ImmutableMap.of()));
     }
 }
-

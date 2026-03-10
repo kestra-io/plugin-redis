@@ -1,5 +1,10 @@
 package io.kestra.plugin.redis.list;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.reactivestreams.Publisher;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.conditions.ConditionContext;
@@ -10,15 +15,12 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.RedisConnectionInterface;
 import io.kestra.plugin.redis.models.SerdeType;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.kestra.core.utils.Rethrow.throwConsumer;
 
@@ -88,17 +90,23 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
     }
 
     public Publisher<Object> publisher(final ListPop task,
-                                       final RunContext runContext) {
+        final RunContext runContext) {
         return Flux.create(
-            fluxSink -> {
+            fluxSink ->
+            {
                 try (AbstractRedisConnection.RedisFactory factory = task.redisFactory(runContext)) {
                     String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
 
                     while (isActive.get()) {
                         factory.getSyncCommands().lpop(renderedKey, 1)
-                            .forEach(throwConsumer(s -> fluxSink.next(runContext.render(this.serdeType)
-                                .as(SerdeType.class)
-                                .orElse(SerdeType.STRING).deserialize(s)))
+                            .forEach(
+                                throwConsumer(
+                                    s -> fluxSink.next(
+                                        runContext.render(this.serdeType)
+                                            .as(SerdeType.class)
+                                            .orElse(SerdeType.STRING).deserialize(s)
+                                    )
+                                )
                             );
                         try {
                             Thread.sleep(100);
@@ -113,9 +121,9 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
                     fluxSink.complete();
                     this.waitForTermination.countDown();
                 }
-            });
+            }
+        );
     }
-
 
     @Builder
     @Getter

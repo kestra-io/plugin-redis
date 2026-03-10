@@ -1,5 +1,10 @@
 package io.kestra.plugin.redis.cli;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
@@ -13,16 +18,12 @@ import io.kestra.plugin.scripts.exec.scripts.models.DockerOptions;
 import io.kestra.plugin.scripts.exec.scripts.models.ScriptOutput;
 import io.kestra.plugin.scripts.exec.scripts.runners.CommandsWrapper;
 import io.kestra.plugin.scripts.runner.docker.Docker;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @SuperBuilder
 @ToString
@@ -199,7 +200,8 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     private Property<List<String>> outputFiles;
 
     private static String escapeForJson(String s) {
-        if (s == null) return "";
+        if (s == null)
+            return "";
         return s
             .replace("\\", "\\\\")
             .replace("\"", "\\\"")
@@ -293,13 +295,13 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
         return lastOutput == null
             ? ScriptOutput.builder().vars(Map.of()).exitCode(0).build()
             : ScriptOutput.builder()
-            .vars(mergedVars)
-            .exitCode(lastOutput.getExitCode())
-            .outputFiles(lastOutput.getOutputFiles())
-            .stdOutLineCount(lastOutput.getStdOutLineCount())
-            .stdErrLineCount(lastOutput.getStdErrLineCount())
-            .taskRunner(lastOutput.getTaskRunner())
-            .build();
+                .vars(mergedVars)
+                .exitCode(lastOutput.getExitCode())
+                .outputFiles(lastOutput.getOutputFiles())
+                .stdOutLineCount(lastOutput.getStdOutLineCount())
+                .stdErrLineCount(lastOutput.getStdErrLineCount())
+                .taskRunner(lastOutput.getTaskRunner())
+                .build();
     }
 
     private List<String> extractWrappedShellCommands(List<String> rCommands, StringBuilder baseCommand) {
@@ -320,10 +322,10 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
                     // 3) escape and flatten output to ONE line (no real newlines) using awk (busybox-friendly)
                     "OUT_ESC=$(printf '%s' \"$OUT\" | " +
                     "awk 'BEGIN{ORS=\"\"} {" +
-                    "gsub(/\\\\\\\\/,\"\\\\\\\\\\\\\\\\\"); " +   // \  -> \\
-                    "gsub(/\\\"/,\"\\\\\\\\\\\"\"); " +          // \" -> \"
-                    "sub(/\\r$/,\"\"); " +                       // strip CR
-                    "if (NR>1) printf \"\\\\\\\\n\"; " +         // join lines with literal \\n
+                    "gsub(/\\\\\\\\/,\"\\\\\\\\\\\\\\\\\"); " + // \  -> \\
+                    "gsub(/\\\"/,\"\\\\\\\\\\\"\"); " + // \" -> \"
+                    "sub(/\\r$/,\"\"); " + // strip CR
+                    "if (NR>1) printf \"\\\\\\\\n\"; " + // join lines with literal \\n
                     "printf \"%s\", $0" +
                     "}'); " +
 

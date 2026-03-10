@@ -1,19 +1,21 @@
 package io.kestra.plugin.redis.string;
 
+import java.util.Map;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+
+import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.redis.models.SerdeType;
-import io.kestra.core.junit.annotations.KestraTest;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 
-import java.util.Map;
+import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -81,8 +83,8 @@ class GetTest {
 
         Get.Output runOutput = task.run(runContext);
 
-        assertThat(((Map<String, Object>)runOutput.getData()).get("key"), is("value"));
-        assertThat(((Map<String, Object>)runOutput.getData()).get("int"), is(5));
+        assertThat(((Map<String, Object>) runOutput.getData()).get("key"), is("value"));
+        assertThat(((Map<String, Object>) runOutput.getData()).get("int"), is(5));
     }
 
     @SuppressWarnings("unchecked")
@@ -114,7 +116,7 @@ class GetTest {
             .serdeType(Property.ofValue(SerdeType.JSON))
             .build()
             .run(runContext);
-        assertThat(((Map<String, Object>)runOutput.getData()).get("key"), is(random));
+        assertThat(((Map<String, Object>) runOutput.getData()).get("key"), is(random));
 
         runOutput = Get.builder()
             .url(Property.ofValue(REDIS_URI))
@@ -122,7 +124,7 @@ class GetTest {
             .serdeType(Property.ofValue(SerdeType.JSON))
             .build()
             .run(runContext);
-        assertThat(((Map<String, Object>)runOutput.getData()).get("key"), is(random));
+        assertThat(((Map<String, Object>) runOutput.getData()).get("key"), is(random));
     }
 
     @BeforeAll

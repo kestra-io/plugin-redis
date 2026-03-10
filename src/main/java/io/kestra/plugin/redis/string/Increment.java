@@ -1,21 +1,21 @@
 package io.kestra.plugin.redis.string;
 
+import java.time.Duration;
+import java.time.ZonedDateTime;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.AbstractRedisConnection;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.jackson.Jacksonized;
-
-import java.time.Duration;
-import java.time.ZonedDateTime;
 
 @SuperBuilder
 @ToString
@@ -74,7 +74,8 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
             final String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
 
             Number increment = runContext.render(amount).as(Number.class)
-                .map(number -> {
+                .map(number ->
+                {
                     if (number instanceof Long) {
                         return factory.getSyncCommands().incrby(renderedKey, number.longValue());
                     } else {

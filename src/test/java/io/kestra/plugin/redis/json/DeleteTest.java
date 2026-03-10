@@ -1,17 +1,19 @@
 package io.kestra.plugin.redis.json;
 
-import io.kestra.core.junit.annotations.KestraTest;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.runners.RunContext;
-import io.kestra.core.runners.RunContextFactory;
-import jakarta.inject.Inject;
+import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
-import java.util.List;
-import java.util.Map;
+import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.runners.RunContextFactory;
+
+import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -39,10 +41,14 @@ class DeleteTest {
 
         Delete task = Delete.builder()
             .url(Property.ofValue(REDIS_URI))
-            .keys(Property.ofValue(Map.of(
-                "keyDelete1", List.of("$"),
-                "keyDelete2", List.of("$.field")
-            )))
+            .keys(
+                Property.ofValue(
+                    Map.of(
+                        "keyDelete1", List.of("$"),
+                        "keyDelete2", List.of("$.field")
+                    )
+                )
+            )
             .build();
 
         Delete.Output output = task.run(runContext);
@@ -56,10 +62,14 @@ class DeleteTest {
 
         Delete task = Delete.builder()
             .url(Property.ofValue(REDIS_URI))
-            .keys(Property.ofValue(Map.of(
-                "keyDeleted", List.of("$.field"),
-                "nonExistingKey", List.of("$")
-            )))
+            .keys(
+                Property.ofValue(
+                    Map.of(
+                        "keyDeleted", List.of("$.field"),
+                        "nonExistingKey", List.of("$")
+                    )
+                )
+            )
             .failedOnMissing(Property.ofValue(true))
             .build();
 

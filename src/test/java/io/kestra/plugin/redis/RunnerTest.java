@@ -1,10 +1,11 @@
 package io.kestra.plugin.redis;
 
+import org.junit.jupiter.api.Test;
+
 import io.kestra.core.junit.annotations.ExecuteFlow;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.flows.State;
-import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
@@ -23,7 +24,8 @@ class RunnerTest {
     @Test
     @ExecuteFlow("sanity-checks/keys-string.yaml")
     void keysString(Execution execution) {
-        execution.getTaskRunList().forEach(taskRun -> {
+        execution.getTaskRunList().forEach(taskRun ->
+        {
             System.out.println(taskRun.getTaskId());
         });
         assertThat(execution.getTaskRunList(), hasSize(9));
@@ -54,7 +56,8 @@ class RunnerTest {
     @Test
     @ExecuteFlow("sanity-checks/redis-json.yaml")
     void redisJson(Execution execution) {
-        execution.getTaskRunList().forEach(taskRun -> {
+        execution.getTaskRunList().forEach(taskRun ->
+        {
             System.out.println(taskRun.getTaskId());
         });
         assertThat(execution.getTaskRunList(), hasSize(8));

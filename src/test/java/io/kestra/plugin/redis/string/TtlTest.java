@@ -1,16 +1,18 @@
 package io.kestra.plugin.redis.string;
 
+import java.time.Duration;
+import java.util.Map;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 
-import java.time.Duration;
-import java.util.Map;
+import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
@@ -33,10 +35,11 @@ class TtlTest {
             .url(Property.ofValue(REDIS_URI))
             .key(Property.ofValue(s))
             .value(Property.ofValue("test"))
-            .options(Set.Options
-                .builder()
-                .expirationDuration(Property.ofValue(Duration.ofDays(1)))
-                .build()
+            .options(
+                Set.Options
+                    .builder()
+                    .expirationDuration(Property.ofValue(Duration.ofDays(1)))
+                    .build()
             )
             .build();
         setTask.run(runContext);

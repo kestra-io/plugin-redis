@@ -1,5 +1,13 @@
 package io.kestra.plugin.redis.list;
 
+import java.io.*;
+import java.net.URI;
+import java.time.Duration;
+import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
@@ -11,20 +19,13 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.io.*;
-import java.net.URI;
-import java.time.Duration;
-import java.time.ZonedDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -93,8 +94,10 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
 
             File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
 
-            if (runContext.render(this.maxDuration).as(Duration.class).isEmpty() &&
-                runContext.render(this.maxRecords).as(Integer.class).isEmpty()) {
+            if (
+                runContext.render(this.maxDuration).as(Duration.class).isEmpty() &&
+                    runContext.render(this.maxRecords).as(Integer.class).isEmpty()
+            ) {
                 throw new IllegalArgumentException("maxDuration or maxRecords must be set to avoid infinite loop");
             }
 
@@ -109,19 +112,20 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
 
                     var flux = Flux
                         .fromIterable(data)
-                        .map(throwFunction(str -> runContext
-                            .render(this.serdeType)
-                            .as(SerdeType.class)
-                            .orElse(SerdeType.STRING)
-                            .deserialize(str)
-                        )
-                    );
+                        .map(
+                            throwFunction(
+                                str -> runContext
+                                    .render(this.serdeType)
+                                    .as(SerdeType.class)
+                                    .orElse(SerdeType.STRING)
+                                    .deserialize(str)
+                            )
+                        );
 
                     Mono<Long> longMono = FileSerde.writeAll(output, flux);
 
                     total.addAndGet(longMono.block().intValue());
-                }
-                while (!this.ended(runContext, empty, total, started));
+                } while (!this.ended(runContext, empty, total, started));
 
                 output.flush();
 
@@ -131,7 +135,6 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
             }
         }
     }
-
 
     @SuppressWarnings("RedundantIfStatement")
     private boolean ended(RunContext runContext, boolean empty, AtomicInteger count, ZonedDateTime start) throws IllegalVariableEvaluationException {

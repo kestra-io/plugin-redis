@@ -1,16 +1,18 @@
 package io.kestra.plugin.redis.string;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import io.kestra.core.models.property.Property;
-import io.kestra.plugin.redis.models.SerdeType;
-import io.kestra.core.junit.annotations.KestraTest;
+import java.util.Map;
+
 import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.core.JsonParseException;
+
+import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
+import io.kestra.plugin.redis.models.SerdeType;
 
 import jakarta.inject.Inject;
-
-import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -86,10 +88,11 @@ class SetTest {
             .key(Property.ofValue("invalidKey1"))
             .value(Property.ofValue("value"))
             .serdeType(Property.ofValue(SerdeType.STRING))
-            .options(Set.Options.builder()
-                .keepTtl(Property.ofValue(true))
-                .expirationDuration(Property.ofValue(java.time.Duration.ofSeconds(10)))
-                .build()
+            .options(
+                Set.Options.builder()
+                    .keepTtl(Property.ofValue(true))
+                    .expirationDuration(Property.ofValue(java.time.Duration.ofSeconds(10)))
+                    .build()
             )
             .build();
 

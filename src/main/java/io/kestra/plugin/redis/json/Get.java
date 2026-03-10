@@ -1,30 +1,19 @@
 package io.kestra.plugin.redis.json;
 
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import java.util.List;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.redis.AbstractRedisConnection;
-import io.kestra.plugin.redis.models.SerdeType;
-import io.lettuce.core.json.DefaultJsonParser;
-import io.lettuce.core.json.JsonObject;
+
 import io.lettuce.core.json.JsonPath;
-import io.lettuce.core.json.JsonValue;
-import io.lettuce.core.json.arguments.JsonGetArgs;
-import io.lettuce.core.json.arguments.JsonSetArgs;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import jakarta.validation.constraints.NotNull;
-import lombok.extern.jackson.Jacksonized;
-
-import java.util.List;
-import java.util.Objects;
 
 @SuperBuilder
 @ToString
@@ -78,7 +67,6 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     )
     @Builder.Default
     private Property<String> path = Property.ofValue("$");
-
 
     @Override
     public Output run(RunContext runContext) throws Exception {

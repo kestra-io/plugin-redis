@@ -1,5 +1,11 @@
 package io.kestra.plugin.redis.list;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.util.Collections;
+import java.util.List;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
@@ -13,18 +19,12 @@ import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import jakarta.validation.constraints.NotNull;
 import reactor.core.publisher.Flux;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.URI;
-import java.util.Collections;
-import java.util.List;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -77,7 +77,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     @Schema(
         title = "Values to push",
         description = "String or list; a string may be parsed as JSON array or treated as a storage URI.",
-        anyOf = {String.class, List.class}
+        anyOf = { String.class, List.class }
     )
     @NotNull
     @PluginProperty(dynamic = true)
@@ -117,7 +117,8 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
                     count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
                 }
             } else if (from instanceof List<?> fromList) {
-                Flux<Object> flowable = Flux.create(objectFluxSink -> {
+                Flux<Object> flowable = Flux.create(objectFluxSink ->
+                {
                     for (Object o : fromList) {
                         try {
                             objectFluxSink.next(runContext.render((String) o));
@@ -129,8 +130,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
                 });
                 Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                 count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
-            }
-            else {
+            } else {
                 // should not occur as validation mandates String or List
                 throw new IllegalVariableEvaluationException("Invalid 'from' property type :" + from.getClass());
             }
@@ -142,7 +142,8 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
 
     private Flux<Integer> buildFlowable(Flux<Object> flowable, RunContext runContext, RedisFactory factory) throws Exception {
         return flowable
-            .map(throwFunction(row -> {
+            .map(throwFunction(row ->
+            {
                 factory.getSyncCommands().lpush(
                     runContext.render(key).as(String.class).orElseThrow(),
                     Collections.singletonList(runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING).serialize(row)).toArray(new String[0])

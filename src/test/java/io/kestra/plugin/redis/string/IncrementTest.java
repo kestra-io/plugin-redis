@@ -1,20 +1,19 @@
 package io.kestra.plugin.redis.string;
 
+import java.time.Duration;
+import java.time.ZonedDateTime;
+import java.util.Map;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.sync.RedisCommands;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 
-import java.time.Duration;
-import java.time.ZonedDateTime;
-import java.util.Map;
+import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -68,7 +67,6 @@ class IncrementTest {
         assertThat(runOutput.getValue(), is(4L));
     }
 
-
     @Test
     void doubleValue() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
@@ -100,15 +98,16 @@ class IncrementTest {
             .url(Property.ofValue(REDIS_URI))
             .key(Property.ofValue(key))
             .amount(Property.ofValue(1L))
-            .options(Increment.Options.builder()
-                .expirationDuration(Property.ofValue(Duration.ofSeconds(10)))
-                .build())
+            .options(
+                Increment.Options.builder()
+                    .expirationDuration(Property.ofValue(Duration.ofSeconds(10)))
+                    .build()
+            )
             .build();
 
         Increment.Output runOutput = task.run(runContext);
 
         assertThat(runOutput.getValue(), is(1L));
-
 
         var ttlTask = Ttl.builder()
             .url(Property.ofValue(REDIS_URI))
@@ -130,7 +129,6 @@ class IncrementTest {
         assertThat(getOutput.getData(), is(nullValue()));
     }
 
-
     @Test
     void withExpirationDate() throws Exception {
         var runContext = runContextFactory.of(Map.of());
@@ -143,9 +141,11 @@ class IncrementTest {
             .url(Property.ofValue(REDIS_URI))
             .key(Property.ofValue(key))
             .amount(Property.ofValue(5L))
-            .options(Increment.Options.builder()
-                .expirationDate(Property.ofValue(expirationDate))
-                .build())
+            .options(
+                Increment.Options.builder()
+                    .expirationDate(Property.ofValue(expirationDate))
+                    .build()
+            )
             .build();
 
         Increment.Output runOutput = task.run(runContext);
