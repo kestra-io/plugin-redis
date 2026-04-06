@@ -60,6 +60,7 @@ import lombok.extern.jackson.Jacksonized;
 )
 public class Set extends AbstractRedisConnection implements RunnableTask<Set.Output> {
 
+    @PluginProperty(group = "main")
     @Schema(
         title = "Redis key to set",
         description = "Rendered before calling `JSON.SET`."
@@ -67,6 +68,7 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     @NotNull
     private Property<String> key;
 
+    @PluginProperty(group = "main")
     @Schema(
         title = "JSON value to store",
         description = "Rendered and serialized with the JSON serde."
@@ -74,14 +76,15 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     @NotNull
     private Property<Object> value;
 
+    @PluginProperty(group = "advanced")
     @Schema(
         title = "Set options",
         description = "NX/XX-like guards for JSON.SET; see [Redis documentation](https://redis.io/commands/json.set/)."
     )
-    @PluginProperty
     @Builder.Default
     private Options options = Options.builder().build();
 
+    @PluginProperty(group = "advanced")
     @Schema(
         title = "Return existing value",
         description = "Defaults to false; when true, fetches the current value before overwriting (not supported on Redis 5.x)."
@@ -89,6 +92,7 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     @Builder.Default
     private Property<Boolean> get = Property.ofValue(false);
 
+    @PluginProperty(group = "source")
     @Schema(
         title = "JSON path to set",
         description = "Defaults to `$` (root)."

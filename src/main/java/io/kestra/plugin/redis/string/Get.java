@@ -2,6 +2,7 @@ package io.kestra.plugin.redis.string;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -46,6 +47,7 @@ import lombok.experimental.SuperBuilder;
     aliases = "io.kestra.plugin.redis.Get"
 )
 public class Get extends AbstractRedisConnection implements RunnableTask<Get.Output> {
+    @PluginProperty(group = "main")
     @Schema(
         title = "Redis key to read",
         description = "Rendered before calling `GET`."
@@ -53,6 +55,7 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     @NotNull
     private Property<String> key;
 
+    @PluginProperty(group = "main")
     @Schema(
         title = "Serialization format",
         description = "Defaults to STRING; controls how the value is deserialized."
@@ -61,6 +64,7 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     @Builder.Default
     private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
 
+    @PluginProperty(group = "reliability")
     @Schema(
         title = "Fail when key is missing",
         description = "Defaults to false; when true, throws if `GET` returns null."
