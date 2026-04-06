@@ -16,6 +16,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 class RealtimeTriggerTest extends AbstractTriggerTest {
+    @Override
+    protected String getKey() {
+        return "mytriggerkey_realtime";
+    }
+
 
     @Test
     void flow() throws Exception {

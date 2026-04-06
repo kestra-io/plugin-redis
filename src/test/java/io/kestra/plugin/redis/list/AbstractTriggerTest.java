@@ -64,12 +64,16 @@ abstract class AbstractTriggerTest {
         }
     }
 
+    protected String getKey() {
+        return "mytriggerkey";
+    }
+
     protected ListPush.Output push() throws Exception {
         ListPush task = ListPush.builder()
             .id(TriggerTest.class.getSimpleName())
             .type(ListPush.class.getName())
             .url(Property.ofValue(REDIS_URI))
-            .key(Property.ofValue("mytriggerkey"))
+            .key(Property.ofValue(getKey()))
             .from(Arrays.asList("value1", "value2"))
             .build();
 

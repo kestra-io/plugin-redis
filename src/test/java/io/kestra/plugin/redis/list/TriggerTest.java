@@ -16,6 +16,11 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 
 class TriggerTest extends AbstractTriggerTest {
+    @Override
+    protected String getKey() {
+        return "mytriggerkey_trigger";
+    }
+
     @Test
     void flow() throws Exception {
         CountDownLatch queueCount = new CountDownLatch(1);
