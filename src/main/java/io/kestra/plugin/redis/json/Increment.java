@@ -7,6 +7,7 @@ import java.util.List;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -52,6 +53,7 @@ import lombok.extern.jackson.Jacksonized;
     }
 )
 public class Increment extends AbstractRedisConnection implements RunnableTask<Increment.Output> {
+    @PluginProperty(group = "main")
     @Schema(
         title = "Redis key to increment",
         description = "Rendered before calling `JSON.NUMINCRBY`."
@@ -59,6 +61,7 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
     @NotNull
     private Property<String> key;
 
+    @PluginProperty(group = "advanced")
     @Schema(
         title = "Increment amount",
         description = "Defaults to 1."
@@ -66,6 +69,7 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
     @Builder.Default
     private Property<Number> amount = Property.ofValue(1);
 
+    @PluginProperty(group = "main")
     @Schema(
         title = "JSON path to increment",
         description = "Required; uses RedisJSON path syntax."
@@ -73,6 +77,7 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
     @NotNull
     private Property<String> path;
 
+    @PluginProperty(group = "advanced")
     @Schema(
         title = "Expiration options",
         description = "Optional TTL settings; choose either duration or absolute date."

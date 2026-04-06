@@ -67,6 +67,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     aliases = "io.kestra.plugin.redis.Publish"
 )
 public class Publish extends AbstractRedisConnection implements RunnableTask<Publish.Output> {
+    @PluginProperty(group = "main")
     @Schema(
         title = "Redis channel",
         description = "Rendered before publishing."
@@ -74,15 +75,16 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
     @NotNull
     private Property<String> channel;
 
+    @PluginProperty(dynamic = true, group = "main")
     @Schema(
         title = "Values to publish",
         description = "String or list; a string may point to a storage URI to stream values.",
         anyOf = { String.class, List.class }
     )
     @NotNull
-    @PluginProperty(dynamic = true)
     private Object from;
 
+    @PluginProperty(group = "main")
     @Schema(
         title = "Serialization format",
         description = "Defaults to STRING; controls encoding before PUBLISH."

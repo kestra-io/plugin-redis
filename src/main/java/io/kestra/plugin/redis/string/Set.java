@@ -90,6 +90,7 @@ import lombok.extern.jackson.Jacksonized;
 )
 public class Set extends AbstractRedisConnection implements RunnableTask<Set.Output> {
 
+    @PluginProperty(group = "main")
     @Schema(
         title = "Redis key to set",
         description = "Rendered before calling `SET`."
@@ -97,6 +98,7 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     @NotNull
     private Property<String> key;
 
+    @PluginProperty(group = "main")
     @Schema(
         title = "Value to store",
         description = "Rendered then serialized with the chosen serde; STRING expects plain text, JSON accepts object or JSON string."
@@ -104,14 +106,15 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     @NotNull
     private Property<Object> value;
 
+    @PluginProperty(group = "advanced")
     @Schema(
         title = "Set options",
         description = "TTL, NX/XX, and keepTtl flags; see [Redis documentation](https://redis.io/commands/set/)."
     )
-    @PluginProperty
     @Builder.Default
     private Options options = Options.builder().build();
 
+    @PluginProperty(group = "advanced")
     @Schema(
         title = "Return existing value",
         description = "Defaults to false; when true, uses SETGET to return the prior value (not supported on Redis 5.x)."
@@ -119,6 +122,7 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     @Builder.Default
     private Property<Boolean> get = Property.ofValue(false);
 
+    @PluginProperty(group = "main")
     @Schema(
         title = "Serialization format",
         description = "Defaults to STRING; set to JSON to serialize/deserialize structured values."

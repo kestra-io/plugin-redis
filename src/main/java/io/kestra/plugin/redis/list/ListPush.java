@@ -67,6 +67,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     aliases = "io.kestra.plugin.redis.ListPush"
 )
 public class ListPush extends AbstractRedisConnection implements RunnableTask<ListPush.Output> {
+    @PluginProperty(group = "main")
     @Schema(
         title = "Redis list key",
         description = "Rendered before pushing."
@@ -74,15 +75,16 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     @NotNull
     private Property<String> key;
 
+    @PluginProperty(dynamic = true, group = "main")
     @Schema(
         title = "Values to push",
         description = "String or list; a string may be parsed as JSON array or treated as a storage URI.",
         anyOf = { String.class, List.class }
     )
     @NotNull
-    @PluginProperty(dynamic = true)
     private Object from;
 
+    @PluginProperty(group = "main")
     @Schema(
         title = "Serialization format",
         description = "Defaults to STRING; controls how values are encoded before LPUSH."

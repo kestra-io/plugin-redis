@@ -6,6 +6,7 @@ import java.util.Map;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
@@ -57,6 +58,7 @@ import lombok.experimental.SuperBuilder;
     }
 )
 public class Delete extends AbstractRedisConnection implements RunnableTask<Delete.Output> {
+    @PluginProperty(group = "main")
     @Schema(
         title = "Keys and JSON paths to delete",
         description = "Map of key → paths; each path list defaults to `$` to drop the whole value."
@@ -64,6 +66,7 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
     @NotNull
     private Property<Map<String, List<String>>> keys;
 
+    @PluginProperty(group = "reliability")
     @Schema(
         title = "Fail when deletions are missing",
         description = "Defaults to false; when true, throws if fewer items are deleted than requested."

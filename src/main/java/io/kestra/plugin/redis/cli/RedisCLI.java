@@ -111,10 +111,12 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
 
     private static final String DEFAULT_IMAGE = "redis:7-alpine";
 
+    @PluginProperty(group = "main")
     @Schema(title = "Redis host")
     @NotNull
     private Property<String> host;
 
+    @PluginProperty(group = "connection")
     @Schema(
         title = "Redis port",
         description = "Defaults to 6379."
@@ -122,6 +124,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @Builder.Default
     private Property<Integer> port = Property.ofValue(6379);
 
+    @PluginProperty(group = "connection")
     @Schema(
         title = "Database index",
         description = "Defaults to 0."
@@ -129,18 +132,21 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @Builder.Default
     private Property<Integer> database = Property.ofValue(0);
 
+    @PluginProperty(group = "connection")
     @Schema(
         title = "Username for ACL authentication",
         description = "Required when the Redis server enforces ACLs."
     )
     private Property<String> username;
 
+    @PluginProperty(group = "connection")
     @Schema(
         title = "Password for authentication",
         description = "Sent via REDISCLI_AUTH env variable."
     )
     private Property<String> password;
 
+    @PluginProperty(group = "advanced")
     @Schema(
         title = "Enable TLS",
         description = "Defaults to false."
@@ -148,6 +154,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @Builder.Default
     private Property<Boolean> tls = Property.ofValue(false);
 
+    @PluginProperty(group = "main")
     @Schema(
         title = "Commands to run",
         description = "List of redis-cli commands executed in order; task stops on first failure or error output."
@@ -155,6 +162,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @NotNull
     private Property<List<String>> commands;
 
+    @PluginProperty(group = "destination")
     @Schema(
         title = "Enable JSON output",
         description = "Adds redis-cli --json; requires Redis 7+."
@@ -162,6 +170,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @Builder.Default
     private Property<Boolean> jsonOutput = Property.ofValue(false);
 
+    @PluginProperty(group = "execution")
     @Schema(
         title = "Container image",
         description = "Defaults to redis:7-alpine when docker image is not already set."
@@ -169,11 +178,11 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @Builder.Default
     protected Property<String> containerImage = Property.ofValue(DEFAULT_IMAGE);
 
+    @PluginProperty(group = "execution")
     @Schema(
         title = "Task runner",
         description = "Defaults to Docker; other runners may require additional properties."
     )
-    @PluginProperty
     @Builder.Default
     @Valid
     protected TaskRunner<?> taskRunner = Docker.builder()
@@ -181,22 +190,26 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
         .entryPoint(new ArrayList<>())
         .build();
 
+    @PluginProperty(group = "execution")
     @Schema(
         title = "Docker options",
         description = "Applied when using the Docker task runner; its image overrides containerImage if set."
     )
-    @PluginProperty
     @Builder.Default
     protected Property<DockerOptions> docker = Property.ofValue(DockerOptions.builder().build());
 
+    @PluginProperty(group = "execution")
     @Schema(
         title = "Additional environment variables",
         description = "Merged with REDISCLI_AUTH when password is provided."
     )
     protected Property<Map<String, String>> env;
 
+    @PluginProperty(group = "source")
     private NamespaceFiles namespaceFiles;
+    @PluginProperty(group = "source")
     private Object inputFiles;
+    @PluginProperty(group = "destination")
     private Property<List<String>> outputFiles;
 
     private static String escapeForJson(String s) {

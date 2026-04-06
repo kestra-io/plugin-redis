@@ -4,6 +4,7 @@ import java.util.List;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -47,6 +48,7 @@ import lombok.experimental.SuperBuilder;
     }
 )
 public class Get extends AbstractRedisConnection implements RunnableTask<Get.Output> {
+    @PluginProperty(group = "main")
     @Schema(
         title = "Redis key to read",
         description = "Rendered before the call and passed to `JSON.GET`."
@@ -54,6 +56,7 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     @NotNull
     private Property<String> key;
 
+    @PluginProperty(group = "reliability")
     @Schema(
         title = "Fail when key is missing",
         description = "Defaults to false; if true, throws when the lookup returns null."
@@ -61,6 +64,7 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     @Builder.Default
     private Property<Boolean> failedOnMissing = Property.ofValue(false);
 
+    @PluginProperty(group = "source")
     @Schema(
         title = "JSON path to extract",
         description = "Defaults to `$` (root). Uses RedisJSON path syntax."

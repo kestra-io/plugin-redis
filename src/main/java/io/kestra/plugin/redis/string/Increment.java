@@ -6,6 +6,7 @@ import java.time.ZonedDateTime;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -49,6 +50,7 @@ import lombok.extern.jackson.Jacksonized;
     }
 )
 public class Increment extends AbstractRedisConnection implements RunnableTask<Increment.Output> {
+    @PluginProperty(group = "main")
     @Schema(
         title = "Redis key to increment",
         description = "Rendered before the increment command."
@@ -56,12 +58,14 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
     @NotNull
     private Property<String> key;
 
+    @PluginProperty(group = "advanced")
     @Schema(
         title = "Increment amount",
         description = "Optional; defaults to 1. Integer uses INCR/INCRBY, decimal uses INCRBYFLOAT."
     )
     private Property<Number> amount;
 
+    @PluginProperty(group = "advanced")
     @Schema(
         title = "Expiration options",
         description = "Optional TTL settings; choose either duration or absolute date."
