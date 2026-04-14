@@ -1,16 +1,13 @@
 package io.kestra.plugin.redis.list;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.kestra.core.junit.annotations.EvaluateTrigger;
 import io.kestra.core.models.executions.Execution;
-import io.kestra.core.utils.TestsUtils;
 
-import reactor.core.publisher.Flux;
-
-import static io.kestra.core.utils.Rethrow.throwRunnable;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
@@ -21,25 +18,18 @@ class TriggerTest extends AbstractTriggerTest {
         return "mytriggerkey_trigger";
     }
 
+    @BeforeEach
+    void setUp() throws Exception {
+        push();
+    }
+
     @Test
-    void flow() throws Exception {
-        CountDownLatch queueCount = new CountDownLatch(1);
-        Flux<Execution> receive = TestsUtils.receive(executionQueue, execution ->
-        {
-            queueCount.countDown();
-            assertThat(execution.getLeft().getFlowId(), is("trigger"));
-        });
+    @EvaluateTrigger(flow = "flows/trigger.yaml", triggerId = "watch")
+    void run(Optional<Execution> optionalExecution) {
+        assertThat(optionalExecution.isPresent(), is(true));
+        Execution execution = optionalExecution.get();
 
-        this.run("trigger.yaml", throwRunnable(() ->
-        {
-            push();
-
-            boolean await = queueCount.await(1, TimeUnit.MINUTES);
-            assertThat(await, is(true));
-
-            Integer trigger = (Integer) receive.blockLast().getTrigger().getVariables().get("count");
-
-            assertThat(trigger, greaterThanOrEqualTo(2));
-        }));
+        Integer count = (Integer) execution.getTrigger().getVariables().get("count");
+        assertThat(count, greaterThanOrEqualTo(2));
     }
 }
