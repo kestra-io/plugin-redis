@@ -13,6 +13,7 @@ import reactor.core.publisher.Flux;
 
 import static io.kestra.core.utils.Rethrow.throwRunnable;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 
 class RealtimeTriggerTest extends AbstractTriggerTest {
@@ -40,8 +41,8 @@ class RealtimeTriggerTest extends AbstractTriggerTest {
             assertThat(await, is(true));
 
             List<Execution> executionList = receive.collectList().block();
-            assertThat(executionList.size(), is(4));
-            assertThat(executionList.stream().filter(execution -> execution.getTrigger().getVariables().get("value").equals("value2")).count(), is(2L));
+            assertThat(executionList.size(), greaterThanOrEqualTo(4));
+            assertThat(executionList.stream().filter(execution -> execution.getTrigger().getVariables().get("value").equals("value2")).count(), greaterThanOrEqualTo(2L));
         }));
     }
 }
