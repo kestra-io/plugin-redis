@@ -132,14 +132,14 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @Builder.Default
     private Property<Integer> database = Property.ofValue(0);
 
-    @PluginProperty(group = "connection")
+    @PluginProperty(group = "connection", secret = true)
     @Schema(
         title = "Username for ACL authentication",
         description = "Required when the Redis server enforces ACLs."
     )
     private Property<String> username;
 
-    @PluginProperty(group = "connection")
+    @PluginProperty(group = "connection", secret = true)
     @Schema(
         title = "Password for authentication",
         description = "Sent via REDISCLI_AUTH env variable."
