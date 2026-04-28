@@ -212,16 +212,6 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @PluginProperty(group = "destination")
     private Property<List<String>> outputFiles;
 
-    private static String escapeForJson(String s) {
-        if (s == null)
-            return "";
-        return s
-            .replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-            .replace("\r", "\\r")
-            .replace("\n", "\\n");
-    }
-
     @Override
     public ScriptOutput run(RunContext runContext) throws Exception {
         var logger = runContext.logger();
