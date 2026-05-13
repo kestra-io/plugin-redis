@@ -14,6 +14,9 @@ public enum SerdeType {
     JSON;
 
     public Object deserialize(String payload) throws IOException {
+        if (payload == null) {
+            return null;
+        }
         if (this == SerdeType.JSON) {
             return JacksonMapper.ofJson(false).readValue(payload, Object.class);
         } else {
