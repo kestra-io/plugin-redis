@@ -1,4 +1,5 @@
 @PluginSubGroup(
+    title = "Redis String",
     description = "This sub-group of plugins contains tasks for using the Redis NoSQL database strings commands.",
     categories = {
         PluginSubGroup.PluginCategory.DATA

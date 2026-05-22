@@ -1,4 +1,5 @@
 @PluginSubGroup(
+    title = "Redis List",
     description = "This sub-group of plugins contains tasks for using the Redis NoSQL database lists commands.",
     categories = {
         PluginSubGroup.PluginCategory.DATA

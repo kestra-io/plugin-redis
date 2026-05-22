@@ -1,4 +1,5 @@
 @PluginSubGroup(
+    title = "Redis CLI",
     description = "This sub-group of plugins contains tasks for running Redis CLI commands.",
     categories = PluginSubGroup.PluginCategory.DATA
 )
