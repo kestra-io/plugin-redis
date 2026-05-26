@@ -101,7 +101,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
                 throw new IllegalArgumentException("maxDuration or maxRecords must be set to avoid infinite loop");
             }
 
-            try (var output = new BufferedWriter(new FileWriter(tempFile), FileSerde.BUFFER_SIZE)) {
+            try (var output = new BufferedOutputStream(new FileOutputStream(tempFile), FileSerde.BUFFER_SIZE)) {
                 AtomicInteger total = new AtomicInteger();
                 ZonedDateTime started = ZonedDateTime.now();
 

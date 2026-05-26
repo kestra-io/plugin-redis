@@ -1,7 +1,6 @@
 package io.kestra.plugin.redis.pubsub;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.BufferedInputStream;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
@@ -100,7 +99,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
             Integer count;
             if (this.from instanceof String fromStr) {
                 URI from = new URI(runContext.render(fromStr));
-                try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.storage().getFile(from)))) {
+                try (var inputStream = new BufferedInputStream(runContext.storage().getFile(from), FileSerde.BUFFER_SIZE)) {
                     Flux<Object> flowable = FileSerde.readAll(inputStream);
                     Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                     count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
