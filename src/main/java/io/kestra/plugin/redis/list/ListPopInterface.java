@@ -1,25 +1,31 @@
 package io.kestra.plugin.redis.list;
 
-import io.kestra.core.models.property.Property;
-import io.swagger.v3.oas.annotations.media.Schema;
-
 import java.time.Duration;
 
+import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
 public interface ListPopInterface extends ListPopBaseInterface {
+    @PluginProperty(group = "advanced")
     @Schema(
-        title = "The max number of rows to fetch before stopping.",
-        description = "It's not an hard limit and is evaluated every second."
+        title = "Maximum rows to fetch",
+        description = "Soft cap evaluated each loop; required when maxDuration is not set."
     )
     Property<Integer> getMaxRecords();
 
+    @PluginProperty(group = "execution")
     @Schema(
-        title = "The max duration waiting for new rows.",
-        description = "It's not an hard limit and is evaluated every second."
+        title = "Maximum duration to poll",
+        description = "Soft cap evaluated each loop; required when maxRecords is not set."
     )
     Property<Duration> getMaxDuration();
 
+    @PluginProperty(group = "advanced")
     @Schema(
-        title = "Number of elements that should be pop at once"
+        title = "Batch size per pop",
+        description = "Defaults to 100."
     )
     Property<Integer> getCount();
 }

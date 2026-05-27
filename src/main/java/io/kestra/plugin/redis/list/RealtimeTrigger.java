@@ -1,5 +1,10 @@
 package io.kestra.plugin.redis.list;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.reactivestreams.Publisher;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.conditions.ConditionContext;
@@ -10,15 +15,12 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.RedisConnectionInterface;
 import io.kestra.plugin.redis.models.SerdeType;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.kestra.core.utils.Rethrow.throwConsumer;
 
@@ -28,8 +30,8 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Remove and return an element from the head of a list in real-time in Redis and create one execution per element.",
-    description = "If you would like to consume multiple elements processed within a given time frame and process them in batch, you can use the [io.kestra.plugin.redis.list.Trigger](https://kestra.io/plugins/plugin-redis/triggers/io.kestra.plugin.redis.list.trigger) instead."
+    title = "Realtime trigger from a Redis list",
+    description = "Continuously polls `LPOP` one element at a time (every ~100 ms) and starts one Execution per item. Use [Trigger](https://kestra.io/plugins/plugin-redis/triggers/io.kestra.plugin.redis.list.trigger) for batched polling."
 )
 @Plugin(
     examples = {
@@ -39,12 +41,12 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
             code = """
                 id: list_listen
                 namespace: company.team
-                
+
                 tasks:
                   - id: echo
                     type: io.kestra.plugin.core.log.Log
                     message: "Received '{{ trigger.value }}'"
-                
+
                 triggers:
                   - id: watch
                     type: io.kestra.plugin.redis.RealtimeTrigger
@@ -64,7 +66,7 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
     )
     @Builder.Default
     @NotNull
-    private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
+    private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
 
     @Builder.Default
     @Getter(AccessLevel.NONE)
@@ -79,7 +81,7 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
         ListPop task = ListPop.builder()
             .url(this.url)
             .key(this.key)
-            .count(Property.of(1))
+            .count(Property.ofValue(1))
             .serdeType(this.serdeType)
             .build();
 
@@ -88,17 +90,23 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
     }
 
     public Publisher<Object> publisher(final ListPop task,
-                                       final RunContext runContext) {
+        final RunContext runContext) {
         return Flux.create(
-            fluxSink -> {
+            fluxSink ->
+            {
                 try (AbstractRedisConnection.RedisFactory factory = task.redisFactory(runContext)) {
                     String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
 
                     while (isActive.get()) {
-                        factory.listPop(renderedKey, 1)
-                            .forEach(throwConsumer(s -> fluxSink.next(runContext.render(this.serdeType)
-                                .as(SerdeType.class)
-                                .orElse(SerdeType.STRING).deserialize(s)))
+                        factory.getSyncCommands().lpop(renderedKey, 1)
+                            .forEach(
+                                throwConsumer(
+                                    s -> fluxSink.next(
+                                        runContext.render(this.serdeType)
+                                            .as(SerdeType.class)
+                                            .orElse(SerdeType.STRING).deserialize(s)
+                                    )
+                                )
                             );
                         try {
                             Thread.sleep(100);
@@ -113,16 +121,16 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
                     fluxSink.complete();
                     this.waitForTermination.countDown();
                 }
-            });
+            }
+        );
     }
-
 
     @Builder
     @Getter
     @AllArgsConstructor(staticName = "of")
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The value."
+            title = "The value"
         )
         private Object value;
     }

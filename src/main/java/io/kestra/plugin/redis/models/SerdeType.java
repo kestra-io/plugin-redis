@@ -1,9 +1,10 @@
 package io.kestra.plugin.redis.models;
 
-import io.kestra.core.serializers.JacksonMapper;
-import io.swagger.v3.oas.annotations.media.Schema;
-
 import java.io.IOException;
+
+import io.kestra.core.serializers.JacksonMapper;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(
     title = "Serializer / Deserializer use for the value"
@@ -13,6 +14,9 @@ public enum SerdeType {
     JSON;
 
     public Object deserialize(String payload) throws IOException {
+        if (payload == null) {
+            return null;
+        }
         if (this == SerdeType.JSON) {
             return JacksonMapper.ofJson(false).readValue(payload, Object.class);
         } else {

@@ -1,7 +1,13 @@
 package io.kestra.plugin.redis.pubsub;
 
+import java.io.BufferedInputStream;
+import java.net.URI;
+import java.util.Collections;
+import java.util.List;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
@@ -11,18 +17,12 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import jakarta.validation.constraints.NotNull;
 import reactor.core.publisher.Flux;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.URI;
-import java.util.Collections;
-import java.util.List;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -32,7 +32,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Publish one or multiple values to a Redis channel."
+    title = "Publish values to a Redis channel",
+    description = "Serializes values with the selected serde (STRING by default) and publishes each to the rendered channel; accepts inline lists or a Kestra storage URI."
 )
 @Plugin(
     examples = {
@@ -50,32 +51,46 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     from:
                       - value1
                       - value2
+                    serdeType: JSON
                 """
+        )
+    },
+    metrics = {
+        @Metric(
+            name = "published.records.count",
+            type = Counter.TYPE,
+            unit = "records",
+            description = "Number of records published to a Redis channel."
         )
     },
     aliases = "io.kestra.plugin.redis.Publish"
 )
 public class Publish extends AbstractRedisConnection implements RunnableTask<Publish.Output> {
+    @PluginProperty(group = "main")
     @Schema(
-        title = "The redis channel to publish."
+        title = "Redis channel",
+        description = "Rendered before publishing."
     )
     @NotNull
     private Property<String> channel;
 
+    @PluginProperty(dynamic = true, group = "main")
     @Schema(
-        title = "The list of value to publish to the channel.",
-        anyOf = {String.class, List.class}
+        title = "Values to publish",
+        description = "String or list; a string may point to a storage URI to stream values.",
+        anyOf = { String.class, List.class }
     )
     @NotNull
-    @PluginProperty(dynamic = true)
     private Object from;
 
+    @PluginProperty(group = "main")
     @Schema(
-        title = "Format of the data contained in Redis."
+        title = "Serialization format",
+        description = "Defaults to STRING; controls encoding before PUBLISH."
     )
     @Builder.Default
     @NotNull
-    private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
+    private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
@@ -84,13 +99,14 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
             Integer count;
             if (this.from instanceof String fromStr) {
                 URI from = new URI(runContext.render(fromStr));
-                try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.storage().getFile(from)))) {
+                try (var inputStream = new BufferedInputStream(runContext.storage().getFile(from), FileSerde.BUFFER_SIZE)) {
                     Flux<Object> flowable = FileSerde.readAll(inputStream);
                     Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                     count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
                 }
             } else if (this.from instanceof List<?> fromList) {
-                Flux<Object> flowable = Flux.create(objectFluxSink -> {
+                Flux<Object> flowable = Flux.create(objectFluxSink ->
+                {
                     for (Object o : fromList) {
                         try {
                             objectFluxSink.next(runContext.render((String) o));
@@ -102,24 +118,33 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
                 });
                 Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                 count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
-            }
-            else {
+            } else {
                 // should not occur as validation mandates String or List
                 throw new IllegalVariableEvaluationException("Invalid 'from' property type :" + from.getClass());
             }
 
-            runContext.metric(Counter.of("records", count));
+            runContext.metric(Counter.of("published.records.count", count));
             return Output.builder().count(count).build();
         }
     }
 
     private Flux<Integer> buildFlowable(Flux<Object> flowable, RunContext runContext, RedisFactory factory) throws Exception {
         return flowable
-            .map(throwFunction(row -> {
-                factory.publish(
-                    runContext.render(channel).as(String.class).orElseThrow(),
-                    Collections.singletonList(runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING).serialize(row))
+            .map(throwFunction(row ->
+            {
+                String channelRendered = runContext.render(this.channel).as(String.class).orElseThrow();
+
+                List<String> values = Collections.singletonList(
+                    runContext.render(serdeType)
+                        .as(SerdeType.class)
+                        .orElse(SerdeType.STRING)
+                        .serialize(row)
                 );
+
+                long result = 0;
+                for (String value : values) {
+                    result += factory.getSyncCommands().publish(channelRendered, value);
+                }
 
                 return 1;
             }));
@@ -130,7 +155,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
             title = "Count",
-            description = "The number of value published"
+            description = "The number of values published"
         )
         private Integer count;
     }

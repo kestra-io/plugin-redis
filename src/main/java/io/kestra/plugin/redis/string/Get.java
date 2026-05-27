@@ -2,16 +2,17 @@ package io.kestra.plugin.redis.string;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import jakarta.validation.constraints.NotNull;
 
 @SuperBuilder
 @ToString
@@ -19,8 +20,8 @@ import jakarta.validation.constraints.NotNull;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Fetch a Redis item by key and return its value.",
-    description = "Query for a key in a Redis database and return the associated value."
+    title = "Read a Redis string value",
+    description = "Renders the key, runs `GET`, deserializes with the selected serde (STRING by default), and can fail if the key is missing."
 )
 @Plugin(
     examples = {
@@ -46,31 +47,37 @@ import jakarta.validation.constraints.NotNull;
     aliases = "io.kestra.plugin.redis.Get"
 )
 public class Get extends AbstractRedisConnection implements RunnableTask<Get.Output> {
+    @PluginProperty(group = "main")
     @Schema(
-        title = "The redis key you want to get"
+        title = "Redis key to read",
+        description = "Rendered before calling `GET`."
     )
     @NotNull
     private Property<String> key;
 
+    @PluginProperty(group = "main")
     @Schema(
-        title = "Format of the data contained in Redis"
+        title = "Serialization format",
+        description = "Defaults to STRING; controls how the value is deserialized."
     )
     @NotNull
     @Builder.Default
-    private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
+    private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
 
+    @PluginProperty(group = "reliability")
     @Schema(
-        title = "If some keys are not defined, failed the task."
+        title = "Fail when key is missing",
+        description = "Defaults to false; when true, throws if `GET` returns null."
     )
     @Builder.Default
-    private Property<Boolean> failedOnMissing = Property.of(false);
+    private Property<Boolean> failedOnMissing = Property.ofValue(false);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
             final String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
-            String data = factory.get(renderedKey);
 
+            String data = factory.getSyncCommands().get(renderedKey);
 
             if (data == null && runContext.render(failedOnMissing).as(Boolean.class).orElseThrow()) {
                 throw new NullPointerException("Missing keys '" + renderedKey + "'");
@@ -87,12 +94,12 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The fetched data."
+            title = "Fetched value"
         )
         private Object data;
 
         @Schema(
-            title = "The fetched key."
+            title = "Fetched key"
         )
         private String key;
     }

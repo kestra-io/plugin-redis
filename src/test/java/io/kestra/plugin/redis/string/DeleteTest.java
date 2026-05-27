@@ -1,19 +1,19 @@
-package io.kestra.plugin.redis;
+package io.kestra.plugin.redis.string;
 
-import io.kestra.core.models.property.Property;
-import io.kestra.core.runners.RunContext;
-import io.kestra.core.runners.RunContextFactory;
-import io.kestra.plugin.redis.string.Delete;
-import io.kestra.plugin.redis.string.Set;
-import io.kestra.core.junit.annotations.KestraTest;
-import jakarta.inject.Inject;
+import java.util.Arrays;
+import java.util.Map;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
-import java.util.Arrays;
-import java.util.Map;
+import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.runners.RunContextFactory;
+
+import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -31,8 +31,8 @@ class DeleteTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Delete task = Delete.builder()
-            .url(Property.of(REDIS_URI))
-            .keys(Property.of(Arrays.asList("keyDelete1", "keyDelete2")))
+            .url(Property.ofValue(REDIS_URI))
+            .keys(Property.ofValue(Arrays.asList("keyDelete1", "keyDelete2")))
             .build();
 
         Delete.Output runOutput = task.run(runContext);
@@ -45,9 +45,9 @@ class DeleteTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Delete task = Delete.builder()
-            .url(Property.of(REDIS_URI))
-            .keys(Property.of(Arrays.asList("keyDeleted", "keyDeleted2")))
-            .failedOnMissing(Property.of(true))
+            .url(Property.ofValue(REDIS_URI))
+            .keys(Property.ofValue(Arrays.asList("keyDeleted", "keyDeleted2")))
+            .failedOnMissing(Property.ofValue(true))
             .build();
 
         Exception e = Assertions.assertThrows(NullPointerException.class, () -> task.run(runContext));
@@ -65,9 +65,9 @@ class DeleteTest {
 
     static Set createSetTask(String key, String value) {
         return Set.builder()
-            .url(Property.of(REDIS_URI))
-            .key(Property.of(key))
-            .value(Property.of(value))
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .value(Property.ofValue(value))
             .build();
     }
 }

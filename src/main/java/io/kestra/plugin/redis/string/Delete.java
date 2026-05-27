@@ -1,18 +1,21 @@
 package io.kestra.plugin.redis.string;
 
+import java.util.List;
+
 import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.AbstractRedisConnection;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import jakarta.validation.constraints.NotNull;
-import java.util.List;
 
 @SuperBuilder
 @ToString
@@ -20,8 +23,8 @@ import java.util.List;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Delete one or more Redis items by key.",
-    description = "List one or more keys to delete in a Redis database."
+    title = "Delete Redis string keys",
+    description = "Runs `DEL` on the rendered key list, counts deletions, and can fail when not all keys are removed."
 )
 @Plugin(
     examples = {
@@ -41,34 +44,46 @@ import java.util.List;
                 """
         )
     },
+    metrics = {
+        @Metric(
+            name = "deleted.records.count",
+            type = Counter.TYPE,
+            unit = "records",
+            description = "Number of records deleted from Redis."
+        )
+    },
     aliases = "io.kestra.plugin.redis.Delete"
 )
 public class Delete extends AbstractRedisConnection implements RunnableTask<Delete.Output> {
+    @PluginProperty(group = "main")
     @Schema(
-        title = "The list of redis keys you want to delete."
+        title = "Keys to delete",
+        description = "Rendered list passed to `DEL`."
     )
     @NotNull
     private Property<List<String>> keys;
 
+    @PluginProperty(group = "reliability")
     @Schema(
-        title = "If some keys are not deleted, failed the task."
+        title = "Fail when deletions are missing",
+        description = "Defaults to false; when true, throws if fewer keys are deleted than requested."
     )
     @Builder.Default
-    private Property<Boolean> failedOnMissing = Property.of(false);
+    private Property<Boolean> failedOnMissing = Property.ofValue(false);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
 
             final List<String> renderedKeys = runContext.render(keys).asList(String.class);
-            long count = factory.del(renderedKeys);
+            long count = factory.getSyncCommands().del(renderedKeys.toArray(new String[0]));
             boolean isAllKeyDeleted = count == renderedKeys.size();
 
             if (!isAllKeyDeleted && runContext.render(failedOnMissing).as(Boolean.class).orElse(false)) {
                 throw new NullPointerException("Missing keys, only " + count + " key deleted");
             }
 
-            runContext.metric(Counter.of("keys.deleted", count));
+            runContext.metric(Counter.of("deleted.records.count", count));
 
             return Output.builder()
                 .count((int) count)
@@ -80,7 +95,8 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Number of key deleted"
+            title = "Deleted count",
+            description = "Total deleted keys."
         )
         private Integer count;
     }

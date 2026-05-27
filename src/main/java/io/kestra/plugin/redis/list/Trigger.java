@@ -1,5 +1,10 @@
 package io.kestra.plugin.redis.list;
 
+import java.time.Duration;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.conditions.ConditionContext;
@@ -9,14 +14,11 @@ import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.redis.RedisConnectionInterface;
 import io.kestra.plugin.redis.models.SerdeType;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.slf4j.Logger;
-
-import java.time.Duration;
-import java.util.Optional;
 
 @SuperBuilder
 @ToString
@@ -24,8 +26,8 @@ import java.util.Optional;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Remove and return an element from the head of a list periodically in Redis and create one execution per batch.",
-    description = "If you would like to consume each message from a list in real-time and create one execution per message, you can use the [io.kestra.plugin.redis.list.RealtimeTrigger](https://kestra.io/plugins/plugin-redis/triggers/io.kestra.plugin.redis.list.realtimetrigger) instead."
+    title = "Batch trigger from a Redis list",
+    description = "Periodically pops list items in batches using `LPOP` (default batch size 100) until `maxRecords` or `maxDuration` is reached, then starts one Execution. Use [RealtimeTrigger](https://kestra.io/plugins/plugin-redis/triggers/io.kestra.plugin.redis.list.realtimetrigger) instead for per-message executions."
 )
 @Plugin(
     examples = {
@@ -34,19 +36,19 @@ import java.util.Optional;
             code = """
                 id: list_listen
                 namespace: company.team
-                
+
                 tasks:
                   - id: echo
                     type: io.kestra.plugin.core.log.Log
                     message: "{{ trigger.uri }} containing {{ trigger.count }} lines"
-                
+
                 triggers:
                   - id: watch
                     type: io.kestra.plugin.redis.list.Trigger
                     url: redis://localhost:6379/0
                     key: mytriggerkey
-                    maxRecords: 2 
-                """          
+                    maxRecords: 2
+                """
         )
     },
     aliases = "io.kestra.plugin.redis.TriggerList"
@@ -56,15 +58,19 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     private Property<String> key;
 
+    @Schema(
+        title = "Batch size per evaluation",
+        description = "Defaults to 100."
+    )
     @Builder.Default
-    private Property<Integer> count = Property.of(100);
+    private Property<Integer> count = Property.ofValue(100);
 
     @Schema(
         title = "Format of the data contained in Redis"
     )
     @Builder.Default
     @NotNull
-    private Property<SerdeType> serdeType = Property.of(SerdeType.STRING);
+    private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
 
     private Property<Integer> maxRecords;
 
