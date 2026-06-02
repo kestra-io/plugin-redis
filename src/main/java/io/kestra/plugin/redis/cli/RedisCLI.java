@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
@@ -276,35 +277,36 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
             .withDockerOptions(dockerBuilder.build())
             .withInterpreter(Property.ofValue(List.of("/bin/sh", "-c")));
 
-        ScriptOutput lastOutput = null;
+        // Run all redis commands in a single container to avoid pulling the image once per command.
+        // Each snippet runs in its own subshell `( ... )` so its trailing `exit $RC` only terminates the subshell,
+        // and `&&` between subshells gives fail-fast semantics matching the previous loop.
+        String combined = wrappedShellCommands.stream()
+            .map(cmd -> "( " + cmd + " )")
+            .collect(Collectors.joining(" && "));
+
+        ScriptOutput output = commandsWrapper
+            .withCommands(Property.ofValue(List.of(combined)))
+            .run();
+
+        if (output.getExitCode() != 0) {
+            throw new IllegalStateException("Redis CLI command failed with exit code: " + output.getExitCode());
+        }
+
         Map<String, Object> mergedVars = new HashMap<>();
-
-        for (String wrappedShellCommand : wrappedShellCommands) {
-            lastOutput = commandsWrapper
-                .withCommands(Property.ofValue(List.of(wrappedShellCommand)))
-                .run();
-
-            if (lastOutput.getExitCode() != 0) {
-                throw new IllegalStateException("Redis CLI command failed with exit code: " + lastOutput.getExitCode());
-            }
-
-            if (lastOutput.getVars() != null && !lastOutput.getVars().isEmpty()) {
-                mergedVars.putAll(lastOutput.getVars());
-            }
+        if (output.getVars() != null) {
+            mergedVars.putAll(output.getVars());
         }
 
         runContext.metric(Counter.of("executed.commands.count", rCommands.size()));
 
-        return lastOutput == null
-            ? ScriptOutput.builder().vars(Map.of()).exitCode(0).build()
-            : ScriptOutput.builder()
-                .vars(mergedVars)
-                .exitCode(lastOutput.getExitCode())
-                .outputFiles(lastOutput.getOutputFiles())
-                .stdOutLineCount(lastOutput.getStdOutLineCount())
-                .stdErrLineCount(lastOutput.getStdErrLineCount())
-                .taskRunner(lastOutput.getTaskRunner())
-                .build();
+        return ScriptOutput.builder()
+            .vars(mergedVars)
+            .exitCode(output.getExitCode())
+            .outputFiles(output.getOutputFiles())
+            .stdOutLineCount(output.getStdOutLineCount())
+            .stdErrLineCount(output.getStdErrLineCount())
+            .taskRunner(output.getTaskRunner())
+            .build();
     }
 
     private List<String> extractWrappedShellCommands(List<String> rCommands, StringBuilder baseCommand) {
