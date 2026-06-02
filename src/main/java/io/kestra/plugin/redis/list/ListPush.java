@@ -1,7 +1,6 @@
 package io.kestra.plugin.redis.list;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.BufferedInputStream;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
@@ -113,7 +112,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
 
             if (from instanceof String fromUrl) {
                 URI fromURI = new URI(runContext.render(fromUrl));
-                try (BufferedReader inputStream = new BufferedReader(new InputStreamReader(runContext.storage().getFile(fromURI)))) {
+                try (var inputStream = new BufferedInputStream(runContext.storage().getFile(fromURI), FileSerde.BUFFER_SIZE)) {
                     Flux<Object> flowable = FileSerde.readAll(inputStream);
                     Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                     count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);

@@ -1,10 +1,13 @@
 package io.kestra.plugin.redis.list;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -105,10 +108,25 @@ class ListPushTest {
         RunContext runContext = runContextFactory.of(Map.of());
 
         File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
-        OutputStream output = new FileOutputStream(tempFile);
-        for (int i = 0; i < 5; i++) {
-            FileSerde.write(output, i);
+        try (OutputStream output = new FileOutputStream(tempFile)) {
+            for (int i = 0; i < 5; i++) {
+                FileSerde.write(output, i);
+            }
+            output.flush();
         }
-        return storageInterface.put(TenantService.MAIN_TENANT, null, URI.create("/" + IdUtils.create() + ".ion"), new FileInputStream(tempFile));
+
+        URI uri = storageInterface.put(TenantService.MAIN_TENANT, null, URI.create("/" + IdUtils.create() + ".ion"), new FileInputStream(tempFile));
+
+        // Read back ION from storage and assert count and content
+        try (InputStream is = new BufferedInputStream(storageInterface.get(TenantService.MAIN_TENANT, null, uri), FileSerde.BUFFER_SIZE)) {
+            List<Object> result = new ArrayList<>();
+            FileSerde.read(is, result::add);
+            assertThat(result.size(), is(5));
+            for (int i = 0; i < 5; i++) {
+                assertThat(result.get(i), is(i));
+            }
+        }
+
+        return uri;
     }
 }

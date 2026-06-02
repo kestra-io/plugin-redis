@@ -57,7 +57,7 @@ class GetTest {
     }
 
     @Test
-    void testMissingGetFailed() throws Exception {
+    void testMissingGetFailed() {
         RunContext runContext = runContextFactory.of(Map.of());
 
         Get task = Get.builder()
@@ -69,6 +69,24 @@ class GetTest {
         NullPointerException e = Assertions.assertThrows(NullPointerException.class, () -> task.run(runContext));
 
         assertThat(e.getMessage(), is("Missing keys 'missing'"));
+    }
+
+    @Test
+    void testGetJsonOnNonExistentKeyDoesNotFail_WhenFailedOnMissingIsFalse() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+        String nonExistentKey = IdUtils.create();
+
+        Get task = Get.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(nonExistentKey))
+            .serdeType(Property.ofValue(SerdeType.JSON))
+            .failedOnMissing(Property.ofValue(false))
+            .build();
+
+        Get.Output runOutput = task.run(runContext);
+
+        assertThat(runOutput.getData(), is(nullValue()));
+        assertThat(runOutput.getKey(), is(nonExistentKey));
     }
 
     @Test
