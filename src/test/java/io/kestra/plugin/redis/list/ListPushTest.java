@@ -126,6 +126,33 @@ class ListPushTest {
         }
     }
 
+    @Test
+    void testListPushWithCustomBatchSize() throws Exception {
+        // 250 rows with batchSize 100 means 3 batches (100, 100, 50); result is still the input reversed.
+        RunContext runContext = runContextFactory.of(Map.of());
+        int rows = 250;
+        URI uri = createTestFile(rows);
+
+        ListPush task = ListPush.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("batchKey"))
+            .from(uri.toString())
+            .batchSize(Property.ofValue(100))
+            .build();
+
+        ListPush.Output runOutput = task.run(runContext);
+
+        assertThat(runOutput.getCount(), is(rows));
+
+        try (RedisClient client = RedisClient.create(REDIS_URI);
+             StatefulRedisConnection<String, String> connection = client.connect()) {
+            RedisCommands<String, String> cmd = connection.sync();
+            assertThat(cmd.llen("batchKey"), is((long) rows));
+            assertThat(cmd.lindex("batchKey", 0), is(String.valueOf(rows - 1)));
+            assertThat(cmd.lindex("batchKey", rows - 1), is("0"));
+        }
+    }
+
     @BeforeEach
     void setUp() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());

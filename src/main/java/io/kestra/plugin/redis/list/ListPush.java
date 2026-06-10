@@ -65,7 +65,7 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     aliases = "io.kestra.plugin.redis.ListPush"
 )
 public class ListPush extends AbstractRedisConnection implements RunnableTask<ListPush.Output> {
-    private static final int BATCH_SIZE = 500;
+    private static final int DEFAULT_BATCH_SIZE = 500;
 
     @PluginProperty(group = "main")
     @Schema(
@@ -92,6 +92,15 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     @Builder.Default
     @NotNull
     private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
+
+    @PluginProperty(group = "execution")
+    @Schema(
+        title = "Batch size",
+        description = "Number of values sent per variadic LPUSH command. Defaults to 500. Lower it for large values, raise it to cut round-trips further on high-latency links."
+    )
+    @Builder.Default
+    @NotNull
+    private Property<Integer> batchSize = Property.ofValue(DEFAULT_BATCH_SIZE);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
@@ -145,11 +154,12 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     private Flux<Integer> buildFlowable(Flux<Object> flowable, RunContext runContext, RedisFactory factory) throws Exception {
         String renderedKey = runContext.render(key).as(String.class).orElseThrow();
         SerdeType renderedSerde = runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING);
+        int renderedBatchSize = runContext.render(batchSize).as(Integer.class).orElse(DEFAULT_BATCH_SIZE);
 
         return flowable
             .map(throwFunction(renderedSerde::serialize))
             // LPUSH is variadic, so one call per batch preserves the row order while cutting round-trips.
-            .buffer(BATCH_SIZE)
+            .buffer(renderedBatchSize)
             .map(values ->
             {
                 factory.getSyncCommands().lpush(renderedKey, values.toArray(new String[0]));
