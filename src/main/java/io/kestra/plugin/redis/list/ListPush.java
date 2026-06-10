@@ -152,17 +152,17 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     }
 
     private Flux<Integer> buildFlowable(Flux<Object> flowable, RunContext runContext, RedisFactory factory) throws Exception {
-        String renderedKey = runContext.render(key).as(String.class).orElseThrow();
-        SerdeType renderedSerde = runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING);
-        int renderedBatchSize = runContext.render(batchSize).as(Integer.class).orElse(DEFAULT_BATCH_SIZE);
+        String rKey = runContext.render(key).as(String.class).orElseThrow();
+        SerdeType rSerdeType = runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING);
+        int rBatchSize = runContext.render(batchSize).as(Integer.class).orElse(DEFAULT_BATCH_SIZE);
 
         return flowable
-            .map(throwFunction(renderedSerde::serialize))
+            .map(throwFunction(rSerdeType::serialize))
             // LPUSH is variadic, so one call per batch preserves the row order while cutting round-trips.
-            .buffer(renderedBatchSize)
+            .buffer(rBatchSize)
             .map(values ->
             {
-                factory.getSyncCommands().lpush(renderedKey, values.toArray(new String[0]));
+                factory.getSyncCommands().lpush(rKey, values.toArray(new String[0]));
 
                 return values.size();
             });
