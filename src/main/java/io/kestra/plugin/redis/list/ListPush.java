@@ -2,7 +2,6 @@ package io.kestra.plugin.redis.list;
 
 import java.io.BufferedInputStream;
 import java.net.URI;
-import java.util.Collections;
 import java.util.List;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
@@ -66,6 +65,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     aliases = "io.kestra.plugin.redis.ListPush"
 )
 public class ListPush extends AbstractRedisConnection implements RunnableTask<ListPush.Output> {
+    private static final int BATCH_SIZE = 500;
+
     @PluginProperty(group = "main")
     @Schema(
         title = "Redis list key",
@@ -142,16 +143,19 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     }
 
     private Flux<Integer> buildFlowable(Flux<Object> flowable, RunContext runContext, RedisFactory factory) throws Exception {
-        return flowable
-            .map(throwFunction(row ->
-            {
-                factory.getSyncCommands().lpush(
-                    runContext.render(key).as(String.class).orElseThrow(),
-                    Collections.singletonList(runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING).serialize(row)).toArray(new String[0])
-                );
+        String renderedKey = runContext.render(key).as(String.class).orElseThrow();
+        SerdeType renderedSerde = runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING);
 
-                return 1;
-            }));
+        return flowable
+            .map(throwFunction(renderedSerde::serialize))
+            // LPUSH is variadic, so one call per batch preserves the row order while cutting round-trips.
+            .buffer(BATCH_SIZE)
+            .map(values ->
+            {
+                factory.getSyncCommands().lpush(renderedKey, values.toArray(new String[0]));
+
+                return values.size();
+            });
     }
 
     @Builder
