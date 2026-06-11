@@ -154,11 +154,11 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
 
     private Flux<Integer> buildFlowable(Flux<Object> flowable, RunContext runContext, RedisFactory factory) throws Exception {
         String rKey = runContext.render(key).as(String.class).orElseThrow();
-        SerdeType rSerdeType = runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING);
+        SerdeType rSerde = runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING);
         int rBatchSize = runContext.render(batchSize).as(Integer.class).orElse(DEFAULT_BATCH_SIZE);
 
         return flowable
-            .map(throwFunction(rSerdeType::serialize))
+            .map(throwFunction(rSerde::serialize))
             // LPUSH is variadic, so one call per batch preserves the row order while cutting round-trips.
             .buffer(rBatchSize)
             .map(values ->
