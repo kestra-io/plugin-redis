@@ -19,6 +19,7 @@ import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -100,7 +101,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     )
     @Builder.Default
     @NotNull
-    private Property<Integer> batchSize = Property.ofValue(DEFAULT_BATCH_SIZE);
+    private Property<@Min(1) Integer> batchSize = Property.ofValue(DEFAULT_BATCH_SIZE);
 
     @Override
     public Output run(RunContext runContext) throws Exception {

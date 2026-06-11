@@ -34,6 +34,7 @@ import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @KestraTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -151,6 +152,21 @@ class ListPushTest {
             assertThat(cmd.lindex("batchKey", 0), is(String.valueOf(rows - 1)));
             assertThat(cmd.lindex("batchKey", rows - 1), is("0"));
         }
+    }
+
+    @Test
+    void testListPushRejectsInvalidBatchSize() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+        URI uri = createTestFile(10);
+
+        ListPush task = ListPush.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("batchKey"))
+            .from(uri.toString())
+            .batchSize(Property.ofValue(0))
+            .build();
+
+        assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
     }
 
     @BeforeEach
