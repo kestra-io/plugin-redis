@@ -2,7 +2,6 @@ package io.kestra.plugin.redis.list;
 
 import java.io.BufferedInputStream;
 import java.net.URI;
-import java.util.Collections;
 import java.util.List;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
@@ -20,6 +19,7 @@ import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -66,6 +66,8 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
     aliases = "io.kestra.plugin.redis.ListPush"
 )
 public class ListPush extends AbstractRedisConnection implements RunnableTask<ListPush.Output> {
+    private static final int DEFAULT_BATCH_SIZE = 500;
+
     @PluginProperty(group = "main")
     @Schema(
         title = "Redis list key",
@@ -91,6 +93,15 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     @Builder.Default
     @NotNull
     private Property<SerdeType> serdeType = Property.ofValue(SerdeType.STRING);
+
+    @PluginProperty(group = "execution")
+    @Schema(
+        title = "Batch size",
+        description = "Number of values sent per variadic LPUSH command. Defaults to 500. Lower it for large values, raise it to cut round-trips further on high-latency links."
+    )
+    @Builder.Default
+    @NotNull
+    private Property<@Min(1) Integer> batchSize = Property.ofValue(DEFAULT_BATCH_SIZE);
 
     @Override
     public Output run(RunContext runContext) throws Exception {
@@ -142,16 +153,20 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
     }
 
     private Flux<Integer> buildFlowable(Flux<Object> flowable, RunContext runContext, RedisFactory factory) throws Exception {
-        return flowable
-            .map(throwFunction(row ->
-            {
-                factory.getSyncCommands().lpush(
-                    runContext.render(key).as(String.class).orElseThrow(),
-                    Collections.singletonList(runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING).serialize(row)).toArray(new String[0])
-                );
+        String rKey = runContext.render(key).as(String.class).orElseThrow();
+        SerdeType rSerde = runContext.render(serdeType).as(SerdeType.class).orElse(SerdeType.STRING);
+        int rBatchSize = runContext.render(batchSize).as(Integer.class).orElse(DEFAULT_BATCH_SIZE);
 
-                return 1;
-            }));
+        return flowable
+            .map(throwFunction(rSerde::serialize))
+            // LPUSH is variadic, so one call per batch preserves the row order while cutting round-trips.
+            .buffer(rBatchSize)
+            .map(values ->
+            {
+                factory.getSyncCommands().lpush(rKey, values.toArray(new String[0]));
+
+                return values.size();
+            });
     }
 
     @Builder
