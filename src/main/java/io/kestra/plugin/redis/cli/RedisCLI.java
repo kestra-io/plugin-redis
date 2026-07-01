@@ -132,6 +132,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @Builder.Default
     private Property<Integer> database = Property.ofValue(0);
 
+    @ToString.Exclude
     @PluginProperty(group = "connection", secret = true)
     @Schema(
         title = "Username for ACL authentication",
@@ -139,6 +140,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     )
     private Property<String> username;
 
+    @ToString.Exclude
     @PluginProperty(group = "connection", secret = true)
     @Schema(
         title = "Password for authentication",
@@ -157,7 +159,9 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @PluginProperty(group = "main")
     @Schema(
         title = "Commands to run",
-        description = "List of redis-cli commands executed in order; task stops on first failure or error output."
+        description = "List of redis-cli commands executed in order; task stops on first failure or error output. "
+            + "Each command is tokenized with shell-style quoting and passed to redis-cli as literal arguments, so shell/variable "
+            + "expansion (`$VAR`, `$(...)`, backticks) is not performed; use the `env` property or Kestra expressions for dynamic values."
     )
     @NotNull
     private Property<List<String>> commands;
@@ -233,12 +237,12 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
         logger.info("Executing {} Redis CLI command(s) against {}:{}", rCommands.size(), rHost, rPort);
 
         StringBuilder baseCommand = new StringBuilder("redis-cli");
-        baseCommand.append(" -h ").append(rHost);
+        baseCommand.append(" -h ").append(shellQuote(rHost));
         baseCommand.append(" -p ").append(rPort);
         baseCommand.append(" -n ").append(rDatabase);
 
         if (rUsername != null && !rUsername.isEmpty()) {
-            baseCommand.append(" --user ").append(rUsername);
+            baseCommand.append(" --user ").append(shellQuote(rUsername));
         }
         if (rTls) {
             baseCommand.append(" --tls");
@@ -316,7 +320,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
 
             String cmd =
                 // 1) run redis-cli, capture stdout+stderr
-                "OUT=$(" + baseCommand + " " + redisCommand + " 2>&1); " +
+                "OUT=$(" + baseCommand + " " + shellQuoteRedisCommand(redisCommand) + " 2>&1); " +
                     "RC=$?; " +
 
                     // 2) some redis-cli errors still exit 0 -> force RC=1 if output looks like an error
@@ -342,6 +346,102 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
         }
 
         return wrappedShellCommands;
+    }
+
+    /**
+     * Shell-quotes a single literal value so it is passed to redis-cli as one
+     * argument, immune to shell metacharacter interpretation (CWE-78).
+     */
+    // package-private for unit testing
+    static String shellQuote(String value) {
+        return "'" + value.replace("'", "'\\''") + "'";
+    }
+
+    /**
+     * Splits a user-supplied redis-cli command line into individual tokens
+     * (honoring shell-style single/double quoting and backslash escapes, the
+     * same word-splitting the /bin/sh wrapper previously applied), then
+     * shell-quotes each token independently. This keeps the original
+     * multi-argument semantics (e.g. {@code SET mykey "Hello World"} -> three
+     * arguments, {@code SET key a\ b} -> {@code a b}) while preventing any
+     * embedded shell metacharacter (;, $(), &&, |, backticks, newlines, etc.)
+     * from being interpreted by the /bin/sh -c wrapper (CWE-78 / OWASP
+     * A03:2021).
+     *
+     * <p>Because every token is passed as a literal, shell/variable expansion
+     * ({@code $VAR}, {@code $(...)}, backticks) is intentionally NOT performed
+     * on command values; use the {@code env} property for dynamic values.
+     */
+    // package-private for unit testing
+    static String shellQuoteRedisCommand(String redisCommand) {
+        List<String> tokens = tokenize(redisCommand);
+        StringBuilder quoted = new StringBuilder();
+        for (String token : tokens) {
+            if (quoted.length() > 0) {
+                quoted.append(' ');
+            }
+            quoted.append(shellQuote(token));
+        }
+        return quoted.toString();
+    }
+
+    // package-private for unit testing
+    static List<String> tokenize(String input) {
+        List<String> tokens = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inSingleQuotes = false;
+        boolean inDoubleQuotes = false;
+        boolean hasToken = false;
+
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+
+            if (inSingleQuotes) {
+                if (c == '\'') {
+                    inSingleQuotes = false;
+                } else {
+                    current.append(c);
+                }
+            } else if (inDoubleQuotes) {
+                if (c == '"') {
+                    inDoubleQuotes = false;
+                } else if (c == '\\' && i + 1 < input.length() && (input.charAt(i + 1) == '"' || input.charAt(i + 1) == '\\')) {
+                    current.append(input.charAt(++i));
+                } else {
+                    current.append(c);
+                }
+            } else {
+                if (c == '\\' && i + 1 < input.length()) {
+                    current.append(input.charAt(++i));
+                    hasToken = true;
+                    continue;
+                } else if (Character.isWhitespace(c)) {
+                    if (hasToken) {
+                        tokens.add(current.toString());
+                        current.setLength(0);
+                        hasToken = false;
+                    }
+                    continue;
+                } else if (c == '\'') {
+                    inSingleQuotes = true;
+                    hasToken = true;
+                    continue;
+                } else if (c == '"') {
+                    inDoubleQuotes = true;
+                    hasToken = true;
+                    continue;
+                } else {
+                    current.append(c);
+                }
+            }
+            hasToken = true;
+        }
+
+        if (hasToken) {
+            tokens.add(current.toString());
+        }
+
+        return tokens;
     }
 
     @Override

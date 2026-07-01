@@ -9,7 +9,7 @@ import jakarta.validation.constraints.NotNull;
 public interface RedisConnectionInterface {
 
     @NotNull
-    @PluginProperty(group = "main")
+    @PluginProperty(group = "main", secret = true)
     @Schema(
         title = "Redis connection string"
     )
