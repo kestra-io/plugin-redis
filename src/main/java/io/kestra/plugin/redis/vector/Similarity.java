@@ -15,6 +15,8 @@ import io.kestra.plugin.redis.AbstractRedisConnection;
 
 import io.lettuce.core.VSimArgs;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -86,36 +88,40 @@ public class Similarity extends AbstractRedisConnection implements RunnableTask<
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Result count",
-        description = "Maps to the VSIM `COUNT` option; the maximum number of matches to return."
+        description = "Maps to the VSIM `COUNT` option; the maximum number of matches to return. When left unset, the property is omitted from the `VSIM` call and Redis applies its own default (10)."
     )
+    @Min(1)
     private Property<Integer> count;
 
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Filter expression",
-        description = "Maps to the VSIM `FILTER` option; restricts matches to elements whose attributes satisfy this expression, see [attribute filtering](https://redis.io/docs/latest/develop/data-types/vector-sets/#filtered-search)."
+        description = "Maps to the VSIM `FILTER` option; restricts matches to elements whose attributes satisfy this expression, see [attribute filtering](https://redis.io/docs/latest/develop/data-types/vector-sets/#filtered-search). When left unset, the property is omitted from the `VSIM` call and no filtering is applied."
     )
     private Property<String> filter;
 
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Filter efficiency",
-        description = "Maps to the VSIM `FILTER-EF` option; caps the effort spent scanning candidates to satisfy `filter` before giving up."
+        description = "Maps to the VSIM `FILTER-EF` option; caps the effort spent scanning candidates to satisfy `filter` before giving up. Only meaningful together with `filter`. When left unset, the property is omitted from the `VSIM` call and Redis applies its own default."
     )
+    @Min(1)
     private Property<Integer> filterEfficiency;
 
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Exploration factor",
-        description = "Maps to the VSIM `EF` option; controls the search effort in the underlying HNSW graph, higher values improve recall at the cost of speed."
+        description = "Maps to the VSIM `EF` option; controls the search effort in the underlying HNSW graph, higher values improve recall at the cost of speed. When left unset, the property is omitted from the `VSIM` call and Redis applies its own default."
     )
+    @Min(1)
     private Property<Integer> explorationFactor;
 
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Epsilon",
-        description = "Maps to the VSIM `EPSILON` option; a distance threshold controlling the range of the graph exploration."
+        description = "Maps to the VSIM `EPSILON` option; a distance threshold controlling the range of the graph exploration. Must be a non-negative number. When left unset, the property is omitted from the `VSIM` call and Redis applies its own default."
     )
+    @DecimalMin("0.0")
     private Property<Double> epsilon;
 
     @Override

@@ -66,6 +66,55 @@ class AddTest {
     }
 
     @Test
+    void testAddVectorWithReduceDim() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+        String key = "addTestReduceDimVectorSet-" + UUID.randomUUID();
+
+        Add task = Add.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .element(Property.ofValue("elem1"))
+            .vector(Property.ofValue(Arrays.asList(1.0, 2.0, 3.0, 4.0)))
+            .reduceDim(Property.ofValue(2))
+            .build();
+
+        Add.Output output = task.run(runContext);
+
+        assertThat(output.getAdded(), is(true));
+
+        try (var factory = task.redisFactory(runContext)) {
+            assertThat(factory.getSyncCommands().vdim(key), is(2L));
+        }
+    }
+
+    @Test
+    void testAddVectorWithCheckAndSet() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+        String key = "addTestCheckAndSetVectorSet-" + UUID.randomUUID();
+
+        Add firstAdd = Add.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .element(Property.ofValue("elem1"))
+            .vector(Property.ofValue(Arrays.asList(1.0, 2.0, 3.0)))
+            .checkAndSet(Property.ofValue(true))
+            .build();
+
+        assertThat(firstAdd.run(runContext).getAdded(), is(true));
+
+        // element already exists: VADD replies false even though the vector below is different and gets stored
+        Add secondAdd = Add.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .element(Property.ofValue("elem1"))
+            .vector(Property.ofValue(Arrays.asList(4.0, 5.0, 6.0)))
+            .checkAndSet(Property.ofValue(true))
+            .build();
+
+        assertThat(secondAdd.run(runContext).getAdded(), is(false));
+    }
+
+    @Test
     void testAddEmptyVectorFails() {
         RunContext runContext = runContextFactory.of(Map.of());
 

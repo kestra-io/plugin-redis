@@ -15,6 +15,7 @@ import io.kestra.plugin.redis.models.SerdeType;
 import io.lettuce.core.VAddArgs;
 import io.lettuce.core.vector.QuantizationType;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -84,29 +85,32 @@ public class Add extends AbstractRedisConnection implements RunnableTask<Add.Out
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Reduce dimensionality",
-        description = "Maps to the VADD `REDUCE` option. When set, the vector is randomly projected down to this many dimensions before being stored, trading precision for reduced memory usage."
+        description = "Maps to the VADD `REDUCE` option. When set, the vector is randomly projected down to this many dimensions before being stored, trading precision for reduced memory usage. Must be less than `vector`'s dimensionality. When left unset, the property is omitted from the `VADD` call and the vector is stored at its original dimensionality."
     )
+    @Min(1)
     private Property<Integer> reduceDim;
 
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Quantization type",
-        description = "Maps to the VADD quantization option. One of `NO_QUANTIZATION`, `BINARY`, or `Q8`. Defaults to Redis' own default (8-bit quantization) when not set."
+        description = "Maps to the VADD quantization option. Reuses Lettuce's own `io.lettuce.core.vector.QuantizationType` enum, whose constants are `NO_QUANTIZATION` (full-precision floats), `BINARY` (1-bit per component), and `Q8` (8-bit integers). When left unset, the property is omitted from the `VADD` call and Redis applies its own default (`Q8`)."
     )
     private Property<QuantizationType> quantization;
 
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Exploration factor",
-        description = "Maps to the VADD `EF` option. Controls the search effort used while inserting the new node into the underlying HNSW graph; higher values improve insertion quality at the cost of speed."
+        description = "Maps to the VADD `EF` option. Controls the search effort used while inserting the new node into the underlying HNSW graph; higher values improve insertion quality at the cost of speed. When left unset, the property is omitted from the `VADD` call and Redis applies its own default."
     )
+    @Min(1)
     private Property<Integer> explorationFactor;
 
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Max connections per node",
-        description = "Maps to the VADD `M` option. Maximum number of connections each node of the underlying HNSW graph can have; higher values improve recall at the cost of memory."
+        description = "Maps to the VADD `M` option. Maximum number of connections each node of the underlying HNSW graph can have; higher values improve recall at the cost of memory. When left unset, the property is omitted from the `VADD` call and Redis applies its own default."
     )
+    @Min(1)
     private Property<Integer> maxNodes;
 
     @PluginProperty(group = "advanced")
@@ -165,7 +169,7 @@ public class Add extends AbstractRedisConnection implements RunnableTask<Add.Out
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
             title = "Whether the element was added",
-            description = "Raw `VADD` reply: true when the element was added or updated, false otherwise."
+            description = "Raw `VADD` reply: true only when the element id did not previously exist in the vector set. False means the element already existed, whether or not its vector or attributes were changed by this call."
         )
         private Boolean added;
     }

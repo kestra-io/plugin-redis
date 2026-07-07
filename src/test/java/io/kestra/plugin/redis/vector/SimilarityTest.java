@@ -2,6 +2,7 @@ package io.kestra.plugin.redis.vector;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -77,6 +78,58 @@ class SimilarityTest {
 
         assertThat(output.getMatches(), hasItem("elem1"));
         assertThat(output.getScores().get("elem1"), is(1.0));
+    }
+
+    @Test
+    void testSimilarityWithAttributesFilter() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+        String key = "similarityTestFilterVectorSet-" + UUID.randomUUID();
+
+        Add.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .element(Property.ofValue("elemElectronics"))
+            .vector(Property.ofValue(Arrays.asList(1.0, 0.0, 0.0)))
+            .attributes(Property.ofValue(Map.of("category", "electronics")))
+            .build()
+            .run(runContext);
+
+        Add.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .element(Property.ofValue("elemBooks"))
+            .vector(Property.ofValue(Arrays.asList(0.9, 0.1, 0.0)))
+            .attributes(Property.ofValue(Map.of("category", "books")))
+            .build()
+            .run(runContext);
+
+        Similarity.Output output = Similarity.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .vector(Property.ofValue(Arrays.asList(1.0, 0.0, 0.0)))
+            .count(Property.ofValue(5))
+            .filter(Property.ofValue(".category == \"electronics\""))
+            .build()
+            .run(runContext);
+
+        assertThat(output.getMatches(), contains("elemElectronics"));
+    }
+
+    @Test
+    void testSimilarityWithFilterEfficiencyAndEpsilon() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        Similarity.Output output = Similarity.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(VECTOR_SET))
+            .vector(Property.ofValue(Arrays.asList(1.0, 0.0, 0.0)))
+            .count(Property.ofValue(5))
+            .filterEfficiency(Property.ofValue(50))
+            .epsilon(Property.ofValue(0.5))
+            .build()
+            .run(runContext);
+
+        assertThat(output.getMatches(), is(not(empty())));
     }
 
     @Test

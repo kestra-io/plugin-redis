@@ -36,7 +36,7 @@ import lombok.experimental.SuperBuilder;
                 tasks:
                   - id: delete
                     type: io.kestra.plugin.redis.vector.Delete
-                    url: redis://:redis@localhost:6379/0
+                    url: "redis://:{{ secret('REDIS_PASSWORD') }}@{{ secret('REDIS_HOST') }}:6379"
                     key: doc_embeddings
                     elements:
                       - doc_42
