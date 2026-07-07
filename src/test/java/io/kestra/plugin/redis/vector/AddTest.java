@@ -15,9 +15,13 @@ import io.kestra.core.runners.RunContextFactory;
 
 import io.lettuce.core.vector.QuantizationType;
 import jakarta.inject.Inject;
+import jakarta.validation.ConstraintViolationException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @KestraTest
@@ -112,6 +116,39 @@ class AddTest {
             .build();
 
         assertThat(secondAdd.run(runContext).getAdded(), is(false));
+    }
+
+    @Test
+    void testReduceDimBoundsValidation() {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        // proves the @Min(1) constraint on `reduceDim` is declared on the Property<T> type parameter
+        // (not the field itself), which is the only position Kestra's PropertyValueExtractor unwraps for
+        // validation; a field-level annotation would throw UnexpectedTypeException instead of validating.
+        Add validTask = Add.builder()
+            .id("add")
+            .type(Add.class.getName())
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("addTestValidationVectorSet-" + UUID.randomUUID()))
+            .element(Property.ofValue("elem1"))
+            .vector(Property.ofValue(Arrays.asList(1.0, 2.0, 3.0)))
+            .reduceDim(Property.ofValue(1))
+            .build();
+
+        assertDoesNotThrow(() -> runContext.validate(validTask));
+
+        Add invalidTask = Add.builder()
+            .id("add")
+            .type(Add.class.getName())
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("addTestValidationVectorSet-" + UUID.randomUUID()))
+            .element(Property.ofValue("elem1"))
+            .vector(Property.ofValue(Arrays.asList(1.0, 2.0, 3.0)))
+            .reduceDim(Property.ofValue(0))
+            .build();
+
+        ConstraintViolationException e = assertThrows(ConstraintViolationException.class, () -> runContext.validate(invalidTask));
+        assertThat(e.getConstraintViolations(), is(not(empty())));
     }
 
     @Test

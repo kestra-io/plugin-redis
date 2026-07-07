@@ -1,6 +1,7 @@
 package io.kestra.plugin.redis.vector;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import io.kestra.core.models.annotations.Example;
@@ -87,8 +88,7 @@ public class Add extends AbstractRedisConnection implements RunnableTask<Add.Out
         title = "Reduce dimensionality",
         description = "Maps to the VADD `REDUCE` option. When set, the vector is randomly projected down to this many dimensions before being stored, trading precision for reduced memory usage. Must be less than `vector`'s dimensionality. When left unset, the property is omitted from the `VADD` call and the vector is stored at its original dimensionality."
     )
-    @Min(1)
-    private Property<Integer> reduceDim;
+    private Property<@Min(1) Integer> reduceDim;
 
     @PluginProperty(group = "advanced")
     @Schema(
@@ -102,16 +102,14 @@ public class Add extends AbstractRedisConnection implements RunnableTask<Add.Out
         title = "Exploration factor",
         description = "Maps to the VADD `EF` option. Controls the search effort used while inserting the new node into the underlying HNSW graph; higher values improve insertion quality at the cost of speed. When left unset, the property is omitted from the `VADD` call and Redis applies its own default."
     )
-    @Min(1)
-    private Property<Integer> explorationFactor;
+    private Property<@Min(1) Integer> explorationFactor;
 
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Max connections per node",
         description = "Maps to the VADD `M` option. Maximum number of connections each node of the underlying HNSW graph can have; higher values improve recall at the cost of memory. When left unset, the property is omitted from the `VADD` call and Redis applies its own default."
     )
-    @Min(1)
-    private Property<Integer> maxNodes;
+    private Property<@Min(1) Integer> maxNodes;
 
     @PluginProperty(group = "advanced")
     @Schema(
@@ -123,9 +121,9 @@ public class Add extends AbstractRedisConnection implements RunnableTask<Add.Out
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Attributes",
-        description = "Arbitrary JSON object attached to the element. Serialized and stored alongside the vector, it can later be referenced in a `Similarity` task's `filter` expression."
+        description = "Arbitrary JSON object attached to the element, as key-value pairs. Serialized and stored alongside the vector, it can later be referenced in a `Similarity` task's `filter` expression."
     )
-    private Property<Object> attributes;
+    private Property<Map<String, Object>> attributes;
 
     @Override
     public Output run(RunContext runContext) throws Exception {
@@ -144,9 +142,9 @@ public class Add extends AbstractRedisConnection implements RunnableTask<Add.Out
             runContext.render(this.maxNodes).as(Integer.class).ifPresent(v -> args.maxNodes(v.longValue()));
             runContext.render(this.checkAndSet).as(Boolean.class).ifPresent(args::checkAndSet);
 
-            Optional<Object> rAttributes = runContext.render(this.attributes).as(Object.class);
-            if (rAttributes.isPresent()) {
-                args.attributes(SerdeType.JSON.serialize(rAttributes.get()));
+            Map<String, Object> rAttributes = runContext.render(this.attributes).asMap(String.class, Object.class);
+            if (!rAttributes.isEmpty()) {
+                args.attributes(SerdeType.JSON.serialize(rAttributes));
             }
 
             Double[] vectorArray = rVector.toArray(new Double[0]);

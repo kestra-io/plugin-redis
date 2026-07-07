@@ -14,9 +14,11 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 
 import jakarta.inject.Inject;
+import jakarta.validation.ConstraintViolationException;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @KestraTest
@@ -118,18 +120,53 @@ class SimilarityTest {
     @Test
     void testSimilarityWithFilterEfficiencyAndEpsilon() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
+        String key = "similarityTestFilterEfficiencyEpsilonVectorSet-" + UUID.randomUUID();
 
-        Similarity.Output output = Similarity.builder()
+        Add.builder()
             .url(Property.ofValue(REDIS_URI))
-            .key(Property.ofValue(VECTOR_SET))
+            .key(Property.ofValue(key))
+            .element(Property.ofValue("elemNear"))
             .vector(Property.ofValue(Arrays.asList(1.0, 0.0, 0.0)))
-            .count(Property.ofValue(5))
-            .filterEfficiency(Property.ofValue(50))
-            .epsilon(Property.ofValue(0.5))
+            .attributes(Property.ofValue(Map.of("category", "electronics")))
             .build()
             .run(runContext);
 
-        assertThat(output.getMatches(), is(not(empty())));
+        // orthogonal to the query vector: VSIM reports a similarity score of 0.5, i.e. a distance of 0.5
+        Add.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .element(Property.ofValue("elemFar"))
+            .vector(Property.ofValue(Arrays.asList(0.0, 1.0, 0.0)))
+            .attributes(Property.ofValue(Map.of("category", "electronics")))
+            .build()
+            .run(runContext);
+
+        // an epsilon tighter than elemFar's distance (0.5) excludes it, while the same query without
+        // epsilon returns both: this fails if `epsilon` were silently dropped before reaching VSimArgs.
+        Similarity.Output narrowed = Similarity.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .vector(Property.ofValue(Arrays.asList(1.0, 0.0, 0.0)))
+            .count(Property.ofValue(5))
+            .filter(Property.ofValue(".category == \"electronics\""))
+            .filterEfficiency(Property.ofValue(50))
+            .epsilon(Property.ofValue(0.1))
+            .build()
+            .run(runContext);
+
+        assertThat(narrowed.getMatches(), contains("elemNear"));
+        assertThat(narrowed.getScores().get("elemNear"), is(1.0));
+
+        Similarity.Output unbounded = Similarity.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .vector(Property.ofValue(Arrays.asList(1.0, 0.0, 0.0)))
+            .count(Property.ofValue(5))
+            .filter(Property.ofValue(".category == \"electronics\""))
+            .build()
+            .run(runContext);
+
+        assertThat(unbounded.getMatches(), containsInAnyOrder("elemNear", "elemFar"));
     }
 
     @Test
@@ -145,6 +182,49 @@ class SimilarityTest {
 
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
         assertThat(e.getMessage(), is("Exactly one of `vector` or `element` must be set to run a similarity search"));
+    }
+
+    @Test
+    void testCountBoundsValidation() {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        // proves the @Min/@Max constraints on `count` are declared on the Property<T> type parameter
+        // (not the field itself), which is the only position Kestra's PropertyValueExtractor unwraps for
+        // validation; a field-level annotation would throw UnexpectedTypeException instead of validating.
+        Similarity validTask = Similarity.builder()
+            .id("similarity")
+            .type(Similarity.class.getName())
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(VECTOR_SET))
+            .vector(Property.ofValue(Arrays.asList(1.0, 0.0, 0.0)))
+            .count(Property.ofValue(1))
+            .build();
+
+        assertDoesNotThrow(() -> runContext.validate(validTask));
+
+        Similarity belowMin = Similarity.builder()
+            .id("similarity")
+            .type(Similarity.class.getName())
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(VECTOR_SET))
+            .vector(Property.ofValue(Arrays.asList(1.0, 0.0, 0.0)))
+            .count(Property.ofValue(0))
+            .build();
+
+        ConstraintViolationException belowMinViolation = assertThrows(ConstraintViolationException.class, () -> runContext.validate(belowMin));
+        assertThat(belowMinViolation.getConstraintViolations(), is(not(empty())));
+
+        Similarity aboveMax = Similarity.builder()
+            .id("similarity")
+            .type(Similarity.class.getName())
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(VECTOR_SET))
+            .vector(Property.ofValue(Arrays.asList(1.0, 0.0, 0.0)))
+            .count(Property.ofValue(10001))
+            .build();
+
+        ConstraintViolationException aboveMaxViolation = assertThrows(ConstraintViolationException.class, () -> runContext.validate(aboveMax));
+        assertThat(aboveMaxViolation.getConstraintViolations(), is(not(empty())));
     }
 
     @Test
