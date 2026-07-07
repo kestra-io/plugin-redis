@@ -1,0 +1,8 @@
+group: io.kestra.plugin.redis.vector
+name: "vector"
+title: "Redis Vector"
+description: "Tasks that store and query embeddings in Redis vector sets."
+body: "Configure Redis connection info and use VADD/VSIM/VREM to add embeddings to a vector set, run KNN similarity search, and remove elements, enabling similarity search and RAG pipelines directly against Redis."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

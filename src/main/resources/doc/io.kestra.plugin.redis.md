@@ -15,3 +15,13 @@ Set `url` to a Redis URI (e.g. `redis://:password@host:6379/0`) on each task. Us
 `pubsub.Publish` sends messages to a Redis channel — set `channel` and pass items via `from`.
 
 `list.Trigger` polls a Redis list on a schedule and starts one execution per batch; `list.RealtimeTrigger` starts one execution per item as it arrives. Use `Trigger` for controlled throughput and `RealtimeTrigger` for low-latency processing.
+
+### Vector
+
+Requires Redis 8.0 or later — vector sets (`VADD`/`VSIM`/`VREM`) are a native Redis 8 data type, not a module.
+
+`vector.Add` runs `VADD` to attach an embedding (`vector`) to an `element` id inside a vector set (`key`), creating the set on first use. Optional `advanced` properties map to VADD's own tuning knobs: `reduceDim` (`REDUCE`), `quantization` (`NO_QUANTIZATION`/`BINARY`/`Q8`), `explorationFactor` (`EF`), `maxNodes` (`M`), `checkAndSet` (`CAS`), and `attributes` (a JSON object stored alongside the vector, usable later as a `Similarity` filter).
+
+`vector.Similarity` runs `VSIM` for KNN similarity search on a vector set (`key`). Set exactly one of `vector` (a query embedding) or `element` (search by an existing member); `count`, `filter`, `filterEfficiency`, `explorationFactor`, and `epsilon` map to VSIM's own options. Outputs `matches` (ranked element ids) and `scores` (their similarity scores).
+
+`vector.Delete` runs `VREM` once per id in `elements` (VREM has no multi-element form) and returns how many were actually removed; set `failedOnMissing` to fail the task if some ids did not exist.

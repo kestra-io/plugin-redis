@@ -1,7 +1,8 @@
 services:
   redis:
-    image: redis/redis-stack-server:latest
+    # redis-stack-server never shipped a Redis 8 build (Vector Sets are Redis 8 core, not a Stack module),
+    # so we use the official Redis 8 image directly; it bundles JSON/Search/TimeSeries in core since Redis 8.
+    image: redis:8-alpine
     ports:
       - "6379:6379"
-    environment:
-      - REDIS_ARGS=--requirepass redis
+    command: ["redis-server", "--requirepass", "redis"]

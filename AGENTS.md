@@ -40,6 +40,9 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.redis.string.Increment`
 - `io.kestra.plugin.redis.string.Set`
 - `io.kestra.plugin.redis.string.Ttl`
+- `io.kestra.plugin.redis.vector.Add`
+- `io.kestra.plugin.redis.vector.Similarity`
+- `io.kestra.plugin.redis.vector.Delete`
 
 ### Project Structure
 
