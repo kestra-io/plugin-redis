@@ -14,7 +14,6 @@ import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
 
 import io.lettuce.core.VAddArgs;
-import io.lettuce.core.vector.QuantizationType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -93,7 +92,7 @@ public class Add extends AbstractRedisConnection implements RunnableTask<Add.Out
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Quantization type",
-        description = "Maps to the VADD quantization option. Reuses Lettuce's own `io.lettuce.core.vector.QuantizationType` enum, whose constants are `NO_QUANTIZATION` (full-precision floats), `BINARY` (1-bit per component), and `Q8` (8-bit integers). When left unset, the property is omitted from the `VADD` call and Redis applies its own default (`Q8`)."
+        description = "Maps to the VADD quantization option: `NO_QUANTIZATION` (full-precision floats), `BINARY` (1-bit per component), or `Q8` (8-bit integers). When left unset, the property is omitted from the `VADD` call and Redis applies its own default (`Q8`)."
     )
     private Property<QuantizationType> quantization;
 
@@ -137,7 +136,9 @@ public class Add extends AbstractRedisConnection implements RunnableTask<Add.Out
             }
 
             VAddArgs args = new VAddArgs();
-            runContext.render(this.quantization).as(QuantizationType.class).ifPresent(args::quantizationType);
+            runContext.render(this.quantization).as(QuantizationType.class)
+                .map(type -> io.lettuce.core.vector.QuantizationType.valueOf(type.name()))
+                .ifPresent(args::quantizationType);
             runContext.render(this.explorationFactor).as(Integer.class).ifPresent(v -> args.explorationFactor(v.longValue()));
             runContext.render(this.maxNodes).as(Integer.class).ifPresent(v -> args.maxNodes(v.longValue()));
             runContext.render(this.checkAndSet).as(Boolean.class).ifPresent(args::checkAndSet);

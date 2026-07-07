@@ -74,7 +74,12 @@ class DeleteTest {
             .failedOnMissing(Property.ofValue(true))
             .build();
 
-        NullPointerException e = Assertions.assertThrows(NullPointerException.class, () -> task.run(runContext));
-        assertThat(e.getMessage(), is("Missing elements, only 0 element removed"));
+        IllegalStateException e = Assertions.assertThrows(IllegalStateException.class, () -> task.run(runContext));
+        assertThat(
+            e.getMessage(), is(
+                "Only 0 of 2 element(s) removed — verify the element ids exist in the vector set "
+                    + "before calling Delete, or set `failedOnMissing` to false to ignore missing ids."
+            )
+        );
     }
 }

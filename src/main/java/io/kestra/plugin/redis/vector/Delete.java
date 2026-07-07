@@ -83,7 +83,10 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
             boolean isAllRemoved = count == rElements.size();
 
             if (!isAllRemoved && runContext.render(failedOnMissing).as(Boolean.class).orElse(false)) {
-                throw new NullPointerException("Missing elements, only " + count + " element removed");
+                throw new IllegalStateException(
+                    "Only " + count + " of " + rElements.size() + " element(s) removed — verify the element ids exist "
+                        + "in the vector set before calling Delete, or set `failedOnMissing` to false to ignore missing ids."
+                );
             }
 
             runContext.logger().info("Removed {} element(s) from vector set '{}'", count, rKey);

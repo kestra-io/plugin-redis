@@ -13,7 +13,6 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 
-import io.lettuce.core.vector.QuantizationType;
 import jakarta.inject.Inject;
 import jakarta.validation.ConstraintViolationException;
 
