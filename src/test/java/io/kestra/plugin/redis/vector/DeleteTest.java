@@ -64,6 +64,31 @@ class DeleteTest {
     }
 
     @Test
+    void testDeleteDuplicateElementDoesNotFailOnMissing() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+        String key = "deleteTestDuplicateVectorSet";
+
+        Add.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .element(Property.ofValue("elemDeleteDuplicate"))
+            .vector(Property.ofValue(Arrays.asList(1.0, 0.0, 0.0)))
+            .build()
+            .run(runContext);
+
+        Delete task = Delete.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .elements(Property.ofValue(Arrays.asList("elemDeleteDuplicate", "elemDeleteDuplicate")))
+            .failedOnMissing(Property.ofValue(true))
+            .build();
+
+        Delete.Output output = task.run(runContext);
+
+        assertThat(output.getCount(), is(1));
+    }
+
+    @Test
     void testDeleteMissingElementFails() {
         RunContext runContext = runContextFactory.of(Map.of());
 

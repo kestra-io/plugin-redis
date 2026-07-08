@@ -82,7 +82,8 @@ public class Similarity extends AbstractRedisConnection implements RunnableTask<
     @PluginProperty(group = "main")
     @Schema(
         title = "Query element",
-        description = "The id of an existing element to search similar elements for. Set exactly one of `vector` or `element`."
+        description = "The id of an existing element to search similar elements for. Set exactly one of `vector` or `element`. " +
+            "If the id does not exist in the vector set, `VSIM` returns an empty result rather than an error."
     )
     private Property<String> element;
 

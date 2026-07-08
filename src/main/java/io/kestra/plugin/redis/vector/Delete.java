@@ -74,7 +74,9 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
             String rKey = runContext.render(this.key).as(String.class).orElseThrow();
-            List<String> rElements = runContext.render(this.elements).asList(String.class);
+            List<String> rElements = runContext.render(this.elements).asList(String.class).stream()
+                .distinct()
+                .toList();
 
             long count = rElements.stream()
                 .filter(element -> factory.getSyncCommands().vrem(rKey, element))

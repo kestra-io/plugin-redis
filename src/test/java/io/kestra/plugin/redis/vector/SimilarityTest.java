@@ -60,8 +60,7 @@ class SimilarityTest {
             .build()
             .run(runContext);
 
-        assertThat(output.getMatches(), hasSize(2));
-        assertThat(output.getMatches().getFirst(), is("elem1"));
+        assertThat(output.getMatches(), contains("elem1", "elem2"));
         assertThat(output.getScores(), aMapWithSize(2));
         assertThat(output.getScores().get("elem1"), is(1.0));
     }
