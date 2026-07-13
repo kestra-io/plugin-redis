@@ -15,7 +15,7 @@ tasks:
     wait: false
 
   - id: call_subflows_in_loop
-    type: io.kestra.plugin.core.flow.ForEach
+    type: io.kestra.plugin.core.flow.Loop
     values:
       - increment
       - keys-json
@@ -27,7 +27,7 @@ tasks:
       - id: call-subflow-task
         type: io.kestra.plugin.core.flow.Subflow
         namespace: "{{ flow.namespace }}"
-        flowId: "{{ taskrun.value }}"
+        flowId: "{{ item.value }}"
         wait: true
         transmitFailed: true
         inputs:
