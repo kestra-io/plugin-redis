@@ -68,19 +68,19 @@ import lombok.extern.jackson.Jacksonized;
                 namespace: company.team
 
                 tasks:
-                - id: set
+                  - id: set
                     type: io.kestra.plugin.redis.string.Set
-                    url: "{{ secret('REDIS_URI')}}"
+                    url: "{{ secret('REDIS_URI') }}"
                     key: "key_json_{{ execution.id }}"
                     value: |
-                    {{ {
+                      {{ {
                         "flow": flow.id,
                         "namespace": flow.namespace
-                    } | toJson }}
+                      } | toJson }}
                     serdeType: JSON
-                - id: get
+                  - id: get
                     type: io.kestra.plugin.redis.string.Get
-                    url: "{{ secret('REDIS_URI')}}"
+                    url: "{{ secret('REDIS_URI') }}"
                     serdeType: JSON
                     key: "key_json_{{ execution.id }}"
                 """

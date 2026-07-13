@@ -1,6 +1,7 @@
 package io.kestra.plugin.redis;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
@@ -17,6 +18,8 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @NoArgsConstructor
 public abstract class AbstractRedisConnection extends Task implements RedisConnectionInterface {
+    @ToString.Exclude
+    @PluginProperty(group = "main", secret = true)
     private Property<String> url;
 
     public RedisFactory redisFactory(RunContext runContext) throws Exception {

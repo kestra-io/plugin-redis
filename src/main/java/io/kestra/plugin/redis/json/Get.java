@@ -101,12 +101,12 @@ public class Get extends AbstractRedisConnection implements RunnableTask<Get.Out
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The fetched data."
+            title = "The fetched data"
         )
         private Object data;
 
         @Schema(
-            title = "The fetched key."
+            title = "The fetched key"
         )
         private String key;
     }

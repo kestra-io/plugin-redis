@@ -155,12 +155,12 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Number of elements retrieved."
+            title = "Number of elements retrieved"
         )
         private Integer count;
 
         @Schema(
-            title = "URI of a Kestra internal storage file."
+            title = "URI of a Kestra internal storage file"
         )
         private URI uri;
     }

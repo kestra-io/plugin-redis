@@ -26,10 +26,15 @@ import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.redis.string.Delete;
 
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.sync.RedisCommands;
+
 import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @KestraTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -91,6 +96,79 @@ class ListPushTest {
         assertThat(runOutput.getCount(), is(2));
     }
 
+    @Test
+    void testListPushPreservesOrderAcrossBatches() throws Exception {
+        // 1200 rows spans more than one batch of 500, so the list must end up as the input reversed.
+        RunContext runContext = runContextFactory.of(Map.of());
+        int rows = 1200;
+        URI uri = createTestFile(rows);
+
+        ListPush task = ListPush.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("batchKey"))
+            .from(uri.toString())
+            .build();
+
+        ListPush.Output runOutput = task.run(runContext);
+
+        assertThat(runOutput.getCount(), is(rows));
+
+        try (RedisClient client = RedisClient.create(REDIS_URI);
+             StatefulRedisConnection<String, String> connection = client.connect()) {
+            RedisCommands<String, String> cmd = connection.sync();
+
+            assertThat(cmd.llen("batchKey"), is((long) rows));
+            assertThat(cmd.lindex("batchKey", 0), is(String.valueOf(rows - 1)));
+            assertThat(cmd.lindex("batchKey", rows - 1), is("0"));
+            List<String> full = cmd.lrange("batchKey", 0, -1);
+            for (int i = 0; i < rows; i++) {
+                assertThat(full.get(i), is(String.valueOf(rows - 1 - i)));
+            }
+        }
+    }
+
+    @Test
+    void testListPushWithCustomBatchSize() throws Exception {
+        // 250 rows with batchSize 100 means 3 batches (100, 100, 50); result is still the input reversed.
+        RunContext runContext = runContextFactory.of(Map.of());
+        int rows = 250;
+        URI uri = createTestFile(rows);
+
+        ListPush task = ListPush.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("batchKey"))
+            .from(uri.toString())
+            .batchSize(Property.ofValue(100))
+            .build();
+
+        ListPush.Output runOutput = task.run(runContext);
+
+        assertThat(runOutput.getCount(), is(rows));
+
+        try (RedisClient client = RedisClient.create(REDIS_URI);
+             StatefulRedisConnection<String, String> connection = client.connect()) {
+            RedisCommands<String, String> cmd = connection.sync();
+            assertThat(cmd.llen("batchKey"), is((long) rows));
+            assertThat(cmd.lindex("batchKey", 0), is(String.valueOf(rows - 1)));
+            assertThat(cmd.lindex("batchKey", rows - 1), is("0"));
+        }
+    }
+
+    @Test
+    void testListPushRejectsInvalidBatchSize() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+        URI uri = createTestFile(10);
+
+        ListPush task = ListPush.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("batchKey"))
+            .from(uri.toString())
+            .batchSize(Property.ofValue(0))
+            .build();
+
+        assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
+    }
+
     @BeforeEach
     void setUp() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
@@ -102,6 +180,24 @@ class ListPushTest {
             .url(Property.ofValue(REDIS_URI))
             .keys(Property.ofValue(List.of("mykeyFile")))
             .build().run(runContext);
+        Delete.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .keys(Property.ofValue(List.of("batchKey")))
+            .build().run(runContext);
+    }
+
+    URI createTestFile(int rows) throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
+        try (OutputStream output = new FileOutputStream(tempFile)) {
+            for (int i = 0; i < rows; i++) {
+                FileSerde.write(output, i);
+            }
+            output.flush();
+        }
+
+        return storageInterface.put(TenantService.MAIN_TENANT, null, URI.create("/" + IdUtils.create() + ".ion"), new FileInputStream(tempFile));
     }
 
     URI createTestFile() throws Exception {
