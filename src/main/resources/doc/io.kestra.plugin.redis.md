@@ -4,7 +4,7 @@ Read, write, and react to data in Redis using string operations, list operations
 
 ## Common properties
 
-Set `url` to a Redis URI (e.g. `redis://:password@host:6379/0`) on each task. Use the `rediss://` scheme for SSL connections. Apply `url` globally with [plugin defaults](https://kestra.io/docs/workflow-components/plugin-defaults) to avoid repeating it, and store credentials in [secrets](https://kestra.io/docs/concepts/secret).
+Set `url` to a Redis URI (e.g. `redis://:password@host:6379/0`) on each task. Use the `rediss://` scheme for SSL connections. Store credentials in [secrets](https://kestra.io/docs/concepts/secret).
 
 ## Tasks
 
