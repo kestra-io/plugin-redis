@@ -2,6 +2,9 @@ package io.kestra.plugin.redis.list;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 
@@ -12,6 +15,7 @@ import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.triggers.*;
 import io.kestra.core.runners.RunContext;
+import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.RedisConnectionInterface;
 import io.kestra.plugin.redis.models.SerdeType;
 
@@ -76,10 +80,39 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     private Property<Duration> maxDuration;
 
+    @Builder.Default
+    @Getter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private final AtomicBoolean isActive = new AtomicBoolean(true);
+
+    // Holds the latch for the currently in-flight evaluate() call. Unlike RealtimeTrigger (whose
+    // loop runs once for the trigger's whole lifetime), evaluate() here runs once per poll cycle,
+    // so a single fixed CountDownLatch would be exhausted after the first cycle and no longer
+    // synchronize kill() with a later in-flight call; a fresh latch is published on every call.
+    @Builder.Default
+    @Getter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private final AtomicReference<CountDownLatch> waitForTermination = new AtomicReference<>();
+
+    @Builder.Default
+    @Getter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private final AtomicReference<AbstractRedisConnection.RedisFactory> factoryRef = new AtomicReference<>();
+
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
         RunContext runContext = conditionContext.getRunContext();
         Logger logger = runContext.logger();
+
+        if (!isActive.get()) {
+            return Optional.empty();
+        }
+
+        CountDownLatch latch = new CountDownLatch(1);
+        waitForTermination.set(latch);
 
         ListPop task = ListPop.builder()
             .url(this.url)
@@ -89,7 +122,32 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             .maxDuration(this.maxDuration)
             .serdeType(this.serdeType)
             .build();
-        ListPop.Output run = task.run(runContext);
+
+        ListPop.Output run;
+        try {
+            AbstractRedisConnection.RedisFactory factory = task.redisFactory(runContext);
+            factoryRef.set(factory);
+            // Re-check right after publishing: closes the gap between opening the connection and
+            // storing it, where a kill() landing in between would otherwise find nothing to close.
+            if (!isActive.get()) {
+                closeQuietly(factory);
+                return Optional.empty();
+            }
+
+            try {
+                run = task.run(runContext, factory);
+            } catch (Exception e) {
+                if (!isActive.get()) {
+                    // The connection was closed by kill() to unblock the in-flight command: this is
+                    // an expected shutdown, not a trigger error.
+                    return Optional.empty();
+                }
+                throw e;
+            }
+        } finally {
+            factoryRef.set(null);
+            latch.countDown();
+        }
 
         if (logger.isDebugEnabled()) {
             logger.debug("Found '{}' data.", run.getCount());
@@ -102,6 +160,44 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         Execution execution = TriggerService.generateExecution(this, conditionContext, context, run);
 
         return Optional.of(execution);
+    }
+
+    private static void closeQuietly(AbstractRedisConnection.RedisFactory factory) {
+        if (factory == null) {
+            return;
+        }
+        try {
+            factory.close();
+        } catch (Exception ignored) {
+            // best-effort: kill() must never throw into the worker
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     **/
+    @Override
+    public void kill() {
+        stop(true);
+    }
+
+    private void stop(boolean wait) {
+        if (!isActive.compareAndSet(true, false)) {
+            return;
+        }
+
+        closeQuietly(factoryRef.get());
+
+        if (wait) {
+            CountDownLatch latch = this.waitForTermination.get();
+            if (latch != null) {
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
     }
 
     @Builder.Default
