@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -111,10 +112,10 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             return Optional.empty();
         }
 
-        CountDownLatch latch = new CountDownLatch(1);
+        var latch = new CountDownLatch(1);
         waitForTermination.set(latch);
 
-        ListPop task = ListPop.builder()
+        var task = ListPop.builder()
             .url(this.url)
             .key(this.key)
             .count(this.count)
@@ -125,12 +126,12 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
         ListPop.Output run;
         try {
-            AbstractRedisConnection.RedisFactory factory = task.redisFactory(runContext);
+            var factory = task.redisFactory(runContext);
             factoryRef.set(factory);
             // Re-check right after publishing: closes the gap between opening the connection and
-            // storing it, where a kill() landing in between would otherwise find nothing to close.
+            // storing it, where a kill() landing in between would otherwise leave the fresh
+            // connection running until this cycle finishes instead of being torn down immediately.
             if (!isActive.get()) {
-                closeQuietly(factory);
                 return Optional.empty();
             }
 
@@ -145,7 +146,10 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
                 throw e;
             }
         } finally {
-            factoryRef.set(null);
+            // Close on every path (happy, killed, or failed): releaseFactory()'s atomic hand-off
+            // with kill()/stop() guarantees exactly one side ever closes the connection, so the
+            // normal (non-killed) path never leaks a Lettuce client/connection either.
+            releaseFactory();
             latch.countDown();
         }
 
@@ -162,14 +166,21 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         return Optional.of(execution);
     }
 
-    private static void closeQuietly(AbstractRedisConnection.RedisFactory factory) {
+    /**
+     * Atomically hands off the live factory so exactly one of {@code evaluate()}'s {@code finally}
+     * and {@code kill()}/{@code stop()} closes it, whichever reaches it first; the other finds
+     * {@code factoryRef} already cleared and does nothing.
+     */
+    private void releaseFactory() {
+        AbstractRedisConnection.RedisFactory factory = factoryRef.getAndSet(null);
         if (factory == null) {
             return;
         }
         try {
             factory.close();
-        } catch (Exception ignored) {
-            // best-effort: kill() must never throw into the worker
+        } catch (Exception e) {
+            LoggerFactory.getLogger(Trigger.class)
+                .warn("Failed to close Redis connection for trigger id={} during kill()/stop()", this.id, e);
         }
     }
 
@@ -186,10 +197,10 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
             return;
         }
 
-        closeQuietly(factoryRef.get());
+        releaseFactory();
 
         if (wait) {
-            CountDownLatch latch = this.waitForTermination.get();
+            var latch = this.waitForTermination.get();
             if (latch != null) {
                 try {
                     latch.await();

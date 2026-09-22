@@ -96,10 +96,10 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
 
     /**
      * Runs the pop loop against an externally owned {@link RedisFactory}.
-     * Used by {@link Trigger} so it can hold a reference to the live connection and close it
-     * from {@code kill()} to unblock an in-flight {@code lpop} call.
+     * Used by {@link Trigger} (same package) so it can hold a reference to the live connection
+     * and close it from {@code kill()} to unblock an in-flight {@code lpop} call.
      */
-    public Output run(RunContext runContext, RedisFactory factory) throws Exception {
+    Output run(RunContext runContext, RedisFactory factory) throws Exception {
         final String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
 
         File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
