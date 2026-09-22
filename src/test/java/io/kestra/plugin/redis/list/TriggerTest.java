@@ -87,23 +87,38 @@ class TriggerTest extends AbstractTriggerTest {
                 } finally {
                     completed.countDown();
                 }
-            });
-            runner.start();
+            }, "trigger-evaluate-kill-test");
+            runner.setDaemon(true);
 
-            // Only proceed once the proxy confirms it actually swallowed an LPOP request:
-            // evaluate() is now genuinely blocked on the sync command, so kill() is what has to
-            // unblock it, not evaluate() finishing on its own.
-            assertThat("evaluate() must reach the blocking lpop call before kill() is exercised",
-                proxy.awaitLpopSwallowed(Duration.ofSeconds(10)), is(true));
+            try {
+                runner.start();
 
-            long killStart = System.currentTimeMillis();
-            trigger.kill();
-            long killElapsedMs = System.currentTimeMillis() - killStart;
+                // Only proceed once the proxy confirms it actually swallowed an LPOP request:
+                // evaluate() is now genuinely blocked on the sync command, so kill() is what has to
+                // unblock it, not evaluate() finishing on its own.
+                assertThat("evaluate() must reach the blocking lpop call before kill() is exercised",
+                    proxy.awaitLpopSwallowed(Duration.ofSeconds(10)), is(true));
 
-            assertThat("Trigger.kill() must not block for the full maxDuration", killElapsedMs, lessThan(10000L));
-            assertThat("evaluate() must return promptly after kill()", completed.await(10, TimeUnit.SECONDS), is(true));
-            assertThat("A killed evaluate() must not be reported as a trigger error", thrown.get(), nullValue());
-            assertThat("A killed evaluate() must not fire an execution", result.get().isPresent(), is(false));
+                long killStart = System.currentTimeMillis();
+                trigger.kill();
+                long killElapsedMs = System.currentTimeMillis() - killStart;
+
+                assertThat("Trigger.kill() must not block for the full maxDuration", killElapsedMs, lessThan(10000L));
+                assertThat("evaluate() must return promptly after kill()", completed.await(10, TimeUnit.SECONDS), is(true));
+                assertThat("A killed evaluate() must not be reported as a trigger error", thrown.get(), nullValue());
+                assertThat("A killed evaluate() must not fire an execution", result.get().isPresent(), is(false));
+            } finally {
+                // Deterministic teardown even if an assertion above fails before kill() is reached:
+                // kill() is idempotent (guarded by isActive.compareAndSet), so calling it here
+                // unconditionally unblocks a still-running evaluate() instead of leaking a thread
+                // stuck on the swallowed lpop, and the bounded join/interrupt guarantee this test
+                // never hangs the suite even on an unexpected failure.
+                trigger.kill();
+                runner.join(Duration.ofSeconds(10).toMillis());
+                if (runner.isAlive()) {
+                    runner.interrupt();
+                }
+            }
         }
     }
 

@@ -108,62 +108,69 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
         RunContext runContext = conditionContext.getRunContext();
         Logger logger = runContext.logger();
 
-        if (!isActive.get()) {
-            return Optional.empty();
-        }
-
+        // Publish the fresh per-cycle latch before anything else, including the isActive check
+        // below: otherwise a kill() landing between that check and the publish could still observe
+        // the previous (already-completed) cycle's latch and return without truly waiting on this
+        // one. The outer finally always counts it down exactly once, on every return/throw path.
         var latch = new CountDownLatch(1);
         waitForTermination.set(latch);
 
-        var task = ListPop.builder()
-            .url(this.url)
-            .key(this.key)
-            .count(this.count)
-            .maxRecords(this.maxRecords)
-            .maxDuration(this.maxDuration)
-            .serdeType(this.serdeType)
-            .build();
-
-        ListPop.Output run;
         try {
-            var factory = task.redisFactory(runContext);
-            factoryRef.set(factory);
-            // Re-check right after publishing: closes the gap between opening the connection and
-            // storing it, where a kill() landing in between would otherwise leave the fresh
-            // connection running until this cycle finishes instead of being torn down immediately.
             if (!isActive.get()) {
                 return Optional.empty();
             }
 
+            var task = ListPop.builder()
+                .url(this.url)
+                .key(this.key)
+                .count(this.count)
+                .maxRecords(this.maxRecords)
+                .maxDuration(this.maxDuration)
+                .serdeType(this.serdeType)
+                .build();
+
+            ListPop.Output run;
             try {
-                run = task.run(runContext, factory);
-            } catch (Exception e) {
+                var factory = task.redisFactory(runContext);
+                factoryRef.set(factory);
+                // Re-check right after publishing: closes the gap between opening the connection and
+                // storing it, where a kill() landing in between would otherwise leave the fresh
+                // connection running until this cycle finishes instead of being torn down immediately.
                 if (!isActive.get()) {
-                    // The connection was closed by kill() to unblock the in-flight command: this is
-                    // an expected shutdown, not a trigger error.
                     return Optional.empty();
                 }
-                throw e;
+
+                try {
+                    run = task.run(runContext, factory);
+                } catch (Exception e) {
+                    if (!isActive.get()) {
+                        // The connection was closed by kill() to unblock the in-flight command: this
+                        // is an expected shutdown, not a trigger error.
+                        return Optional.empty();
+                    }
+                    throw e;
+                }
+            } finally {
+                // Close on every path (happy, killed, or failed): releaseFactory()'s atomic hand-off
+                // with kill()/stop() guarantees exactly one side ever closes the connection, so the
+                // normal (non-killed) path never leaks a Lettuce client/connection either.
+                releaseFactory();
             }
+
+            if (logger.isDebugEnabled()) {
+                logger.debug("Found '{}' data.", run.getCount());
+            }
+
+            if (run.getCount() == 0) {
+                return Optional.empty();
+            }
+
+            Execution execution = TriggerService.generateExecution(this, conditionContext, context, run);
+
+            return Optional.of(execution);
         } finally {
-            // Close on every path (happy, killed, or failed): releaseFactory()'s atomic hand-off
-            // with kill()/stop() guarantees exactly one side ever closes the connection, so the
-            // normal (non-killed) path never leaks a Lettuce client/connection either.
-            releaseFactory();
             latch.countDown();
         }
-
-        if (logger.isDebugEnabled()) {
-            logger.debug("Found '{}' data.", run.getCount());
-        }
-
-        if (run.getCount() == 0) {
-            return Optional.empty();
-        }
-
-        Execution execution = TriggerService.generateExecution(this, conditionContext, context, run);
-
-        return Optional.of(execution);
     }
 
     /**
