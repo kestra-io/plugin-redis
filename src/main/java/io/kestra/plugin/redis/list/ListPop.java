@@ -90,49 +90,58 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
     @Override
     public Output run(RunContext runContext) throws Exception {
         try (RedisFactory factory = this.redisFactory(runContext)) {
-            final String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
+            return this.run(runContext, factory);
+        }
+    }
 
-            File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
+    /**
+     * Runs the pop loop against an externally owned {@link RedisFactory}.
+     * Used by {@link Trigger} (same package) so it can hold a reference to the live connection
+     * and close it from {@code kill()} to unblock an in-flight {@code lpop} call.
+     */
+    Output run(RunContext runContext, RedisFactory factory) throws Exception {
+        final String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
 
-            if (
-                runContext.render(this.maxDuration).as(Duration.class).isEmpty() &&
-                    runContext.render(this.maxRecords).as(Integer.class).isEmpty()
-            ) {
-                throw new IllegalArgumentException("maxDuration or maxRecords must be set to avoid infinite loop");
-            }
+        File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
 
-            try (var output = new BufferedOutputStream(new FileOutputStream(tempFile), FileSerde.BUFFER_SIZE)) {
-                AtomicInteger total = new AtomicInteger();
-                ZonedDateTime started = ZonedDateTime.now();
+        if (
+            runContext.render(this.maxDuration).as(Duration.class).isEmpty() &&
+                runContext.render(this.maxRecords).as(Integer.class).isEmpty()
+        ) {
+            throw new IllegalArgumentException("maxDuration or maxRecords must be set to avoid infinite loop");
+        }
 
-                boolean empty;
-                do {
-                    List<String> data = factory.getSyncCommands().lpop(renderedKey, runContext.render(this.count).as(Integer.class).orElse(100));
-                    empty = data.isEmpty();
+        try (var output = new BufferedOutputStream(new FileOutputStream(tempFile), FileSerde.BUFFER_SIZE)) {
+            AtomicInteger total = new AtomicInteger();
+            ZonedDateTime started = ZonedDateTime.now();
 
-                    var flux = Flux
-                        .fromIterable(data)
-                        .map(
-                            throwFunction(
-                                str -> runContext
-                                    .render(this.serdeType)
-                                    .as(SerdeType.class)
-                                    .orElse(SerdeType.STRING)
-                                    .deserialize(str)
-                            )
-                        );
+            boolean empty;
+            do {
+                List<String> data = factory.getSyncCommands().lpop(renderedKey, runContext.render(this.count).as(Integer.class).orElse(100));
+                empty = data.isEmpty();
 
-                    Mono<Long> longMono = FileSerde.writeAll(output, flux);
+                var flux = Flux
+                    .fromIterable(data)
+                    .map(
+                        throwFunction(
+                            str -> runContext
+                                .render(this.serdeType)
+                                .as(SerdeType.class)
+                                .orElse(SerdeType.STRING)
+                                .deserialize(str)
+                        )
+                    );
 
-                    total.addAndGet(longMono.block().intValue());
-                } while (!this.ended(runContext, empty, total, started));
+                Mono<Long> longMono = FileSerde.writeAll(output, flux);
 
-                output.flush();
+                total.addAndGet(longMono.block().intValue());
+            } while (!this.ended(runContext, empty, total, started));
 
-                runContext.metric(Counter.of("popped.records.count", total.get(), "key", renderedKey));
+            output.flush();
 
-                return Output.builder().uri(runContext.storage().putFile(tempFile)).count(total.get()).build();
-            }
+            runContext.metric(Counter.of("popped.records.count", total.get(), "key", renderedKey));
+
+            return Output.builder().uri(runContext.storage().putFile(tempFile)).count(total.get()).build();
         }
     }
 
