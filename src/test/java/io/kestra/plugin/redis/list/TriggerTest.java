@@ -4,7 +4,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -23,7 +22,6 @@ import io.kestra.core.junit.annotations.EvaluateTrigger;
 import io.kestra.core.models.conditions.ConditionContext;
 import io.kestra.core.models.executions.Execution;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.runners.RunContext;
 import io.kestra.core.utils.IdUtils;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -62,8 +60,8 @@ class TriggerTest extends AbstractTriggerTest {
         // replying: the sync command is then truly stuck, and only kill() closing the connection
         // can free it.
         // Backend host/port mirror REDIS_URI ("redis://:redis@localhost:6379/0") from AbstractTriggerTest.
-        try (BlockingLpopProxy proxy = BlockingLpopProxy.start("localhost", 6379)) {
-            Trigger trigger = Trigger.builder()
+        try (var proxy = BlockingLpopProxy.start("localhost", 6379)) {
+            var trigger = Trigger.builder()
                 .id(TriggerTest.class.getSimpleName())
                 .type(Trigger.class.getName())
                 .url(Property.ofValue("redis://:redis@localhost:" + proxy.getPort() + "/0"))
@@ -71,15 +69,15 @@ class TriggerTest extends AbstractTriggerTest {
                 .maxDuration(Property.ofValue(Duration.ofSeconds(30)))
                 .build();
 
-            RunContext runContext = runContextFactory.of(Map.of());
-            ConditionContext conditionContext = ConditionContext.builder()
+            var runContext = runContextFactory.of(Map.of());
+            var conditionContext = ConditionContext.builder()
                 .runContext(runContext)
                 .build();
 
             var completed = new CountDownLatch(1);
             var thrown = new AtomicReference<Throwable>();
             var result = new AtomicReference<Optional<Execution>>();
-            Thread runner = new Thread(() -> {
+            var runner = new Thread(() -> {
                 try {
                     result.set(trigger.evaluate(conditionContext, null));
                 } catch (Throwable t) {
@@ -99,9 +97,9 @@ class TriggerTest extends AbstractTriggerTest {
                 assertThat("evaluate() must reach the blocking lpop call before kill() is exercised",
                     proxy.awaitLpopSwallowed(Duration.ofSeconds(10)), is(true));
 
-                long killStart = System.currentTimeMillis();
+                var killStart = System.currentTimeMillis();
                 trigger.kill();
-                long killElapsedMs = System.currentTimeMillis() - killStart;
+                var killElapsedMs = System.currentTimeMillis() - killStart;
 
                 assertThat("Trigger.kill() must not block for the full maxDuration", killElapsedMs, lessThan(10000L));
                 assertThat("evaluate() must return promptly after kill()", completed.await(10, TimeUnit.SECONDS), is(true));
@@ -139,7 +137,7 @@ class TriggerTest extends AbstractTriggerTest {
             this.backendHost = backendHost;
             this.backendPort = backendPort;
 
-            Thread acceptThread = new Thread(this::acceptLoop, "redis-blocking-lpop-proxy-accept");
+            var acceptThread = new Thread(this::acceptLoop, "redis-blocking-lpop-proxy-accept");
             acceptThread.setDaemon(true);
             acceptThread.start();
         }
@@ -159,8 +157,8 @@ class TriggerTest extends AbstractTriggerTest {
         private void acceptLoop() {
             try {
                 while (!serverSocket.isClosed()) {
-                    Socket client = serverSocket.accept();
-                    Thread clientThread = new Thread(() -> handleClient(client), "redis-blocking-lpop-proxy-client");
+                    var client = serverSocket.accept();
+                    var clientThread = new Thread(() -> handleClient(client), "redis-blocking-lpop-proxy-client");
                     clientThread.setDaemon(true);
                     clientThread.start();
                 }
@@ -170,13 +168,13 @@ class TriggerTest extends AbstractTriggerTest {
         }
 
         private void handleClient(Socket client) {
-            try (client; Socket backend = new Socket(backendHost, backendPort)) {
-                Thread backendToClient = new Thread(() -> pipe(backend, client), "redis-blocking-lpop-proxy-b2c");
+            try (client; var backend = new Socket(backendHost, backendPort)) {
+                var backendToClient = new Thread(() -> pipe(backend, client), "redis-blocking-lpop-proxy-b2c");
                 backendToClient.setDaemon(true);
                 backendToClient.start();
 
-                InputStream in = client.getInputStream();
-                OutputStream out = backend.getOutputStream();
+                var in = client.getInputStream();
+                var out = backend.getOutputStream();
                 byte[] command;
                 while ((command = readRespCommand(in)) != null) {
                     if (isLpop(command)) {
@@ -206,13 +204,13 @@ class TriggerTest extends AbstractTriggerTest {
          * requests in) and returns its raw bytes, or {@code null} on EOF before a new command starts.
          */
         private static byte[] readRespCommand(InputStream in) throws IOException {
-            ByteArrayOutputStream raw = new ByteArrayOutputStream();
-            Integer arity = readRespInt(in, raw, '*');
+            var raw = new ByteArrayOutputStream();
+            var arity = readRespInt(in, raw, '*');
             if (arity == null) {
                 return null;
             }
             for (int i = 0; i < arity; i++) {
-                Integer length = readRespInt(in, raw, '$');
+                var length = readRespInt(in, raw, '$');
                 if (length == null) {
                     return null;
                 }
@@ -227,7 +225,7 @@ class TriggerTest extends AbstractTriggerTest {
          * integer, or {@code null} if the stream ended before a full line could be read.
          */
         private static Integer readRespInt(InputStream in, ByteArrayOutputStream raw, char prefix) throws IOException {
-            int first = in.read();
+            var first = in.read();
             if (first == -1) {
                 return null;
             }
@@ -236,7 +234,7 @@ class TriggerTest extends AbstractTriggerTest {
                 throw new IOException("Unexpected RESP prefix: " + (char) first);
             }
 
-            StringBuilder digits = new StringBuilder();
+            var digits = new StringBuilder();
             int b;
             while ((b = in.read()) != -1 && b != '\r') {
                 raw.write(b);
@@ -247,7 +245,7 @@ class TriggerTest extends AbstractTriggerTest {
             }
             raw.write(b); // '\r'
 
-            int lf = in.read();
+            var lf = in.read();
             if (lf == -1) {
                 return null;
             }
@@ -257,7 +255,7 @@ class TriggerTest extends AbstractTriggerTest {
         }
 
         private static void readExactly(InputStream in, ByteArrayOutputStream raw, int length) throws IOException {
-            byte[] buffer = in.readNBytes(length);
+            var buffer = in.readNBytes(length);
             if (buffer.length != length) {
                 throw new EOFException("Unexpected end of stream while reading RESP payload");
             }
@@ -267,7 +265,7 @@ class TriggerTest extends AbstractTriggerTest {
         private static boolean isLpop(byte[] rawCommand) {
             // The command name is the first bulk string element; decoding it back out of the raw
             // bytes is simpler than threading it separately through readRespCommand's return value.
-            String[] lines = new String(rawCommand, StandardCharsets.US_ASCII).split("\r\n");
+            var lines = new String(rawCommand, StandardCharsets.US_ASCII).split("\r\n");
             return lines.length > 2 && "LPOP".equalsIgnoreCase(lines[2]);
         }
 
