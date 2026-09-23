@@ -70,10 +70,14 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
 
     @Builder.Default
     @Getter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private final AtomicBoolean isActive = new AtomicBoolean(true);
 
     @Builder.Default
     @Getter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private final CountDownLatch waitForTermination = new CountDownLatch(1);
 
     @Override
