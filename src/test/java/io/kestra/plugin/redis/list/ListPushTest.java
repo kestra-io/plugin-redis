@@ -24,6 +24,7 @@ import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.storages.StorageInterface;
 import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
+import io.kestra.plugin.redis.models.SerdeType;
 import io.kestra.plugin.redis.string.Delete;
 
 import io.lettuce.core.RedisClient;
@@ -224,5 +225,48 @@ class ListPushTest {
         }
 
         return uri;
+    }
+
+    @Test
+    void testListPushJsonObjectsAsList() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+        String key = "jsonObjects_" + IdUtils.create();
+
+        ListPush task = ListPush.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .serdeType(Property.ofValue(SerdeType.JSON))
+            .from(List.of(Map.of("id", 1), Map.of("id", 2)))
+            .build();
+
+        ListPush.Output runOutput = task.run(runContext);
+
+        assertThat(runOutput.getCount(), is(2));
+        assertThat(lrange(key), is(List.of("{\"id\":2}", "{\"id\":1}")));
+    }
+
+    @Test
+    void testListPushJsonObjectsAsJsonString() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+        String key = "jsonObjectsString_" + IdUtils.create();
+
+        ListPush task = ListPush.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .serdeType(Property.ofValue(SerdeType.JSON))
+            .from("[{\"id\": 1}, {\"id\": 2}]")
+            .build();
+
+        ListPush.Output runOutput = task.run(runContext);
+
+        assertThat(runOutput.getCount(), is(2));
+        assertThat(lrange(key), is(List.of("{\"id\":2}", "{\"id\":1}")));
+    }
+
+    private List<String> lrange(String key) {
+        try (RedisClient client = RedisClient.create(REDIS_URI);
+             StatefulRedisConnection<String, String> connection = client.connect()) {
+            return connection.sync().lrange(key, 0, -1);
+        }
     }
 }

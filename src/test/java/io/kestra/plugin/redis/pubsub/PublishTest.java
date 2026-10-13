@@ -21,6 +21,7 @@ import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.storages.StorageInterface;
 import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
+import io.kestra.plugin.redis.models.SerdeType;
 import io.kestra.plugin.redis.string.Delete;
 
 import jakarta.inject.Inject;
@@ -93,5 +94,21 @@ class PublishTest {
             FileSerde.write(output, i);
         }
         return storageInterface.put(TenantService.MAIN_TENANT, null, URI.create("/" + IdUtils.create() + ".ion"), new FileInputStream(tempFile));
+    }
+
+    @Test
+    void testPublishJsonObjectsAsList() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        Publish task = Publish.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .channel(Property.ofValue("mychJson"))
+            .serdeType(Property.ofValue(SerdeType.JSON))
+            .from(List.of(Map.of("id", 1), Map.of("id", 2)))
+            .build();
+
+        Publish.Output runOutput = task.run(runContext);
+
+        assertThat(runOutput.getCount(), is(2));
     }
 }
