@@ -3,7 +3,6 @@ package io.kestra.plugin.redis.list;
 import java.io.BufferedInputStream;
 import java.net.URI;
 import java.util.List;
-import java.util.Map;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
@@ -17,6 +16,7 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.redis.AbstractRedisConnection;
+import io.kestra.plugin.redis.models.ItemRenderer;
 import io.kestra.plugin.redis.models.SerdeType;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -134,7 +134,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
                 {
                     for (Object o : fromList) {
                         try {
-                            objectFluxSink.next(renderItem(runContext, o));
+                            objectFluxSink.next(ItemRenderer.render(runContext, o));
                         } catch (Exception e) {
                             objectFluxSink.error(e);
                         }
@@ -168,18 +168,6 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
 
                 return values.size();
             });
-    }
-
-    // Strings and maps may hold expressions, other values go to SerdeType unchanged.
-    @SuppressWarnings("unchecked")
-    private static Object renderItem(RunContext runContext, Object item) throws IllegalVariableEvaluationException {
-        if (item instanceof String itemString) {
-            return runContext.render(itemString);
-        }
-        if (item instanceof Map<?, ?> itemMap) {
-            return runContext.render((Map<String, Object>) itemMap);
-        }
-        return item;
     }
 
     @Builder

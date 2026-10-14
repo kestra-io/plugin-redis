@@ -4,7 +4,6 @@ import java.io.BufferedInputStream;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
@@ -17,6 +16,7 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.redis.AbstractRedisConnection;
+import io.kestra.plugin.redis.models.ItemRenderer;
 import io.kestra.plugin.redis.models.SerdeType;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -50,8 +50,10 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     url: redis://:redis@localhost:6379/0
                     channel: mych
                     from:
-                      - value1
-                      - value2
+                      - id: 1
+                        name: alice
+                      - id: 2
+                        name: bob
                     serdeType: JSON
                 """
         )
@@ -110,7 +112,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
                 {
                     for (Object o : fromList) {
                         try {
-                            objectFluxSink.next(renderItem(runContext, o));
+                            objectFluxSink.next(ItemRenderer.render(runContext, o));
                         } catch (Exception e) {
                             objectFluxSink.error(e);
                         }
@@ -149,18 +151,6 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
 
                 return 1;
             }));
-    }
-
-    // Strings and maps may hold expressions, other values go to SerdeType unchanged.
-    @SuppressWarnings("unchecked")
-    private static Object renderItem(RunContext runContext, Object item) throws IllegalVariableEvaluationException {
-        if (item instanceof String itemString) {
-            return runContext.render(itemString);
-        }
-        if (item instanceof Map<?, ?> itemMap) {
-            return runContext.render((Map<String, Object>) itemMap);
-        }
-        return item;
     }
 
     @Builder

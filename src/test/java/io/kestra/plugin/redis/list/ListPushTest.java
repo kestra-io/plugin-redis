@@ -263,6 +263,24 @@ class ListPushTest {
         assertThat(lrange(key), is(List.of("{\"id\":2}", "{\"id\":1}")));
     }
 
+    @Test
+    void testListPushRendersNestedListItems() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of("x", "rendered"));
+        String key = "nestedList_" + IdUtils.create();
+
+        ListPush task = ListPush.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(key))
+            .serdeType(Property.ofValue(SerdeType.JSON))
+            .from(List.of(List.of("nested", "{{ x }}", 3, true, Map.of("k", "{{ x }}"))))
+            .build();
+
+        ListPush.Output runOutput = task.run(runContext);
+
+        assertThat(runOutput.getCount(), is(1));
+        assertThat(lrange(key), is(List.of("[\"nested\",\"rendered\",3,true,{\"k\":\"rendered\"}]")));
+    }
+
     private List<String> lrange(String key) {
         try (RedisClient client = RedisClient.create(REDIS_URI);
              StatefulRedisConnection<String, String> connection = client.connect()) {
