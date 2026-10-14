@@ -16,6 +16,7 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.redis.AbstractRedisConnection;
+import io.kestra.plugin.redis.models.ItemRenderer;
 import io.kestra.plugin.redis.models.SerdeType;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -133,7 +134,7 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
                 {
                     for (Object o : fromList) {
                         try {
-                            objectFluxSink.next(runContext.render((String) o));
+                            objectFluxSink.next(ItemRenderer.render(runContext, o));
                         } catch (Exception e) {
                             objectFluxSink.error(e);
                         }

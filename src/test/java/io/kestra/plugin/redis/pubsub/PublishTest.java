@@ -8,6 +8,9 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +24,12 @@ import io.kestra.core.serializers.FileSerde;
 import io.kestra.core.storages.StorageInterface;
 import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
+import io.kestra.plugin.redis.models.SerdeType;
 import io.kestra.plugin.redis.string.Delete;
+
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.pubsub.RedisPubSubAdapter;
+import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 
 import jakarta.inject.Inject;
 
@@ -93,5 +101,40 @@ class PublishTest {
             FileSerde.write(output, i);
         }
         return storageInterface.put(TenantService.MAIN_TENANT, null, URI.create("/" + IdUtils.create() + ".ion"), new FileInputStream(tempFile));
+    }
+
+    @Test
+    void testPublishJsonObjectsAsList() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+        String channel = "mychJson_" + IdUtils.create();
+
+        List<String> received = new CopyOnWriteArrayList<>();
+        CountDownLatch latch = new CountDownLatch(2);
+
+        try (RedisClient client = RedisClient.create(REDIS_URI);
+             StatefulRedisPubSubConnection<String, String> connection = client.connectPubSub()) {
+            connection.addListener(new RedisPubSubAdapter<>() {
+                @Override
+                public void message(String ch, String message) {
+                    received.add(message);
+                    latch.countDown();
+                }
+            });
+            // Wait for the subscription ack so no message is published before we listen.
+            connection.sync().subscribe(channel);
+
+            Publish task = Publish.builder()
+                .url(Property.ofValue(REDIS_URI))
+                .channel(Property.ofValue(channel))
+                .serdeType(Property.ofValue(SerdeType.JSON))
+                .from(List.of(Map.of("id", 1), Map.of("id", 2)))
+                .build();
+
+            Publish.Output runOutput = task.run(runContext);
+
+            assertThat(runOutput.getCount(), is(2));
+            assertThat(latch.await(10, TimeUnit.SECONDS), is(true));
+            assertThat(received, is(List.of("{\"id\":1}", "{\"id\":2}")));
+        }
     }
 }

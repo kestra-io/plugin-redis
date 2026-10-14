@@ -16,6 +16,7 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.redis.AbstractRedisConnection;
+import io.kestra.plugin.redis.models.ItemRenderer;
 import io.kestra.plugin.redis.models.SerdeType;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -49,8 +50,10 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
                     url: redis://:redis@localhost:6379/0
                     channel: mych
                     from:
-                      - value1
-                      - value2
+                      - id: 1
+                        name: alice
+                      - id: 2
+                        name: bob
                     serdeType: JSON
                 """
         )
@@ -109,7 +112,7 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
                 {
                     for (Object o : fromList) {
                         try {
-                            objectFluxSink.next(runContext.render((String) o));
+                            objectFluxSink.next(ItemRenderer.render(runContext, o));
                         } catch (Exception e) {
                             objectFluxSink.error(e);
                         }
