@@ -99,4 +99,20 @@ class SetTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
         assertThat(exception.getMessage(), containsString("you can't use 'keepTtl' with 'expirationDuration' or 'expirationDate'"));
     }
+
+    @Test
+    void testSetBothExpirationDurationAndDate() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        Set.Options options = Set.Options.builder()
+            .expirationDuration(Property.ofValue(java.time.Duration.ofSeconds(10)))
+            .expirationDate(Property.ofValue(java.time.ZonedDateTime.now().plusSeconds(10)))
+            .build();
+
+        IllegalArgumentException exception = assertThrows(
+            IllegalArgumentException.class,
+            () -> options.asRedisSet(runContext)
+        );
+        assertThat(exception.getMessage(), containsString("you can't use both 'expirationDuration' and 'expirationDate'"));
+    }
 }

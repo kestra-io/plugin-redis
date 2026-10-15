@@ -171,13 +171,13 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
     public static class Options {
         @Schema(
             title = "Expiration duration",
-            description = "Relative TTL; cannot be combined with expirationDate when keepTtl is true."
+            description = "Relative TTL; cannot be combined with expirationDate."
         )
         private Property<Duration> expirationDuration;
 
         @Schema(
             title = "Expiration date",
-            description = "Absolute timestamp; cannot be combined with expirationDuration when keepTtl is true."
+            description = "Absolute timestamp; cannot be combined with expirationDuration."
         )
         private Property<ZonedDateTime> expirationDate;
 
@@ -213,6 +213,13 @@ public class Set extends AbstractRedisConnection implements RunnableTask<Set.Out
                 throw new IllegalArgumentException(
                     "Invalid Redis options: you can't use 'keepTtl' with 'expirationDuration' or 'expirationDate'.\n" +
                         "Use either keepTtl to keep existing TTL, or set a new expiration."
+                );
+            }
+
+            if (renderedExpirationDuration != null && renderedExpirationDate != null) {
+                throw new IllegalArgumentException(
+                    "Invalid Redis options: you can't use both 'expirationDuration' and 'expirationDate'.\n" +
+                        "Use either expirationDuration for a relative TTL, or expirationDate for an absolute expiration time."
                 );
             }
 
