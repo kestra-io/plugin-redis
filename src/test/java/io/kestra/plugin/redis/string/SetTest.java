@@ -1,5 +1,7 @@
 package io.kestra.plugin.redis.string;
 
+import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -12,6 +14,8 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.plugin.redis.models.SerdeType;
 
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.api.StatefulRedisConnection;
 import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -98,5 +102,74 @@ class SetTest {
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
         assertThat(exception.getMessage(), containsString("you can't use 'keepTtl' with 'expirationDuration' or 'expirationDate'"));
+    }
+
+    @Test
+    void testSetWithExpirationDurationAndDate() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        Set task = Set.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("keySetBothExpirations"))
+            .value(Property.ofValue("value"))
+            .options(
+                Set.Options.builder()
+                    .expirationDuration(Property.ofValue(Duration.ofSeconds(10)))
+                    .expirationDate(Property.ofValue(ZonedDateTime.now().plusMinutes(1)))
+                    .build()
+            )
+            .build();
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
+        assertThat(exception.getMessage(), containsString("you can't use both 'expirationDuration' and 'expirationDate'"));
+    }
+
+    @Test
+    void testSetWithExpirationDurationOnly() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        Set task = Set.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("keySetExpirationDuration"))
+            .value(Property.ofValue("value"))
+            .options(
+                Set.Options.builder()
+                    .expirationDuration(Property.ofValue(Duration.ofMinutes(1)))
+                    .build()
+            )
+            .build();
+
+        task.run(runContext);
+
+        assertThat(pttl("keySetExpirationDuration"), greaterThan(0L));
+    }
+
+    @Test
+    void testSetWithExpirationDateOnly() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        Set task = Set.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("keySetExpirationDate"))
+            .value(Property.ofValue("value"))
+            .options(
+                Set.Options.builder()
+                    .expirationDate(Property.ofValue(ZonedDateTime.now().plusMinutes(1)))
+                    .build()
+            )
+            .build();
+
+        task.run(runContext);
+
+        assertThat(pttl("keySetExpirationDate"), greaterThan(0L));
+    }
+
+    private static long pttl(String key) {
+        try (
+            RedisClient client = RedisClient.create(REDIS_URI);
+            StatefulRedisConnection<String, String> connection = client.connect()
+        ) {
+            return connection.sync().pttl(key);
+        }
     }
 }
