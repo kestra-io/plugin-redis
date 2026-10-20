@@ -49,7 +49,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 
                 triggers:
                   - id: watch
-                    type: io.kestra.plugin.redis.RealtimeTrigger
+                    type: io.kestra.plugin.redis.list.RealtimeTrigger
                     url: redis://localhost:6379/0
                     key: mytriggerkey
                 """
