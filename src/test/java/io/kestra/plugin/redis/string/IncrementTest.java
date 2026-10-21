@@ -68,6 +68,37 @@ class IncrementTest {
     }
 
     @Test
+    void integerValue() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        String s = IdUtils.create();
+
+        // YAML `amount: 2` is rendered as an Integer, not a Long
+        Increment task = Increment.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(s))
+            .amount(Property.ofValue(2))
+            .build();
+
+        assertThat(task.run(runContext).getValue(), is(2L));
+        assertThat(task.run(runContext).getValue(), is(4L));
+    }
+
+    @Test
+    void integerExpression() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        // `amount: "{{ 3 }}"` is also rendered as an Integer
+        Increment task = Increment.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(IdUtils.create()))
+            .amount(Property.ofExpression("{{ 3 }}"))
+            .build();
+
+        assertThat(task.run(runContext).getValue(), is(3L));
+    }
+
+    @Test
     void doubleValue() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
 

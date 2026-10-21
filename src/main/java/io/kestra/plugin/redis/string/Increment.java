@@ -80,7 +80,7 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
             Number increment = runContext.render(amount).as(Number.class)
                 .map(number ->
                 {
-                    if (number instanceof Long) {
+                    if (number instanceof Long || number instanceof Integer || number instanceof Short || number instanceof Byte) {
                         return factory.getSyncCommands().incrby(renderedKey, number.longValue());
                     } else {
                         return factory.getSyncCommands().incrbyfloat(renderedKey, number.doubleValue());
