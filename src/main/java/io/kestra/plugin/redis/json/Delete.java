@@ -81,6 +81,8 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
             Map<String, List<String>> renderedKeys = runContext.render(keys).asMap(String.class, List.class);
 
             long totalDeleted = 0;
+            long requested = 0;
+            boolean anyMissing = false;
 
             for (Map.Entry<String, List<String>> entry : renderedKeys.entrySet()) {
                 String redisKey = entry.getKey();
@@ -93,11 +95,13 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
                 for (String path : paths) {
                     long count = factory.getSyncCommands().jsonDel(redisKey, JsonPath.of(path));
                     totalDeleted += count;
+                    requested++;
+                    anyMissing |= count == 0;
                 }
             }
 
-            if (totalDeleted < renderedKeys.size() && runContext.render(failedOnMissing).as(Boolean.class).orElse(false)) {
-                throw new NullPointerException("Missing keys or path, only " + totalDeleted + " deleted out of " + renderedKeys.size());
+            if (anyMissing && runContext.render(failedOnMissing).as(Boolean.class).orElse(false)) {
+                throw new NullPointerException("Missing keys or path, only " + totalDeleted + " deleted out of " + requested);
             }
 
             runContext.metric(Counter.of("deleted.records.count", totalDeleted));

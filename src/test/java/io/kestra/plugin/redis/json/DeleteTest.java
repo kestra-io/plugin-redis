@@ -77,6 +77,28 @@ class DeleteTest {
         assertThat(e.getMessage(), is("Missing keys or path, only 1 deleted out of 2"));
     }
 
+    @Test
+    void testDeleteWithMissingPathOnExistingKeyAndFail() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        createSetTask("keyDeletePaths", Map.of("field", "value4")).run(runContext);
+
+        Delete task = Delete.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .keys(
+                Property.ofValue(
+                    Map.of(
+                        "keyDeletePaths", List.of("$.field", "$.missingField")
+                    )
+                )
+            )
+            .failedOnMissing(Property.ofValue(true))
+            .build();
+
+        Exception e = Assertions.assertThrows(NullPointerException.class, () -> task.run(runContext));
+        assertThat(e.getMessage(), is("Missing keys or path, only 1 deleted out of 2"));
+    }
+
     static Set createSetTask(String key, Object value) {
         return Set.builder()
             .url(Property.ofValue(REDIS_URI))
