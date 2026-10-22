@@ -1,6 +1,9 @@
 package io.kestra.plugin.redis.list;
 
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -11,6 +14,7 @@ import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.kestra.plugin.redis.string.Delete;
 
@@ -71,6 +75,42 @@ class ListPopTest {
         assertThat(runOutput.getCount(), is(1));
     }
 
+    @Test
+    void shouldKeepValidItemsWhenOneIsNotJson() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        ListPush.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("mypopkeyjsonmixed"))
+            .from(Arrays.asList("{\"city\":\"Paris\"}", "{\"city\":\"London\"}", "not-json", "{\"city\":\"Rome\"}", "{\"city\":\"Berlin\"}", "{\"city\":\"Madrid\"}"))
+            .build().run(runContext);
+
+        ListPop.Output runOutput = ListPop.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("mypopkeyjsonmixed"))
+            .serdeType(Property.ofValue(SerdeType.JSON))
+            .maxRecords(Property.ofValue(10))
+            .build()
+            .run(runContext);
+
+        assertThat(runOutput.getCount(), is(6));
+
+        List<Object> items = new ArrayList<>();
+        try (InputStream inputStream = runContext.storage().getFile(runOutput.getUri())) {
+            FileSerde.read(inputStream, items::add);
+        }
+        assertThat(
+            items, containsInAnyOrder(
+                Map.of("city", "Paris"),
+                Map.of("city", "London"),
+                "not-json",
+                Map.of("city", "Rome"),
+                Map.of("city", "Berlin"),
+                Map.of("city", "Madrid")
+            )
+        );
+    }
+
     @BeforeEach
     void setUp() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
@@ -81,6 +121,10 @@ class ListPopTest {
         Delete.builder()
             .url(Property.ofValue(REDIS_URI))
             .keys(Property.ofValue(Arrays.asList("mypopkeyjson")))
+            .build().run(runContext);
+        Delete.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .keys(Property.ofValue(Arrays.asList("mypopkeyjsonmixed")))
             .build().run(runContext);
         ListPush.builder()
             .url(Property.ofValue(REDIS_URI))

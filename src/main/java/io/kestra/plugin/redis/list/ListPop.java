@@ -74,7 +74,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
 
     @Schema(
         title = "Serialization format",
-        description = "Defaults to STRING; controls how items are decoded."
+        description = "Defaults to STRING; controls how items are decoded. With JSON, an item that is not valid JSON is kept as a string and a warning is logged."
     )
     @Builder.Default
     @NotNull
@@ -122,15 +122,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
 
                 var flux = Flux
                     .fromIterable(data)
-                    .map(
-                        throwFunction(
-                            str -> runContext
-                                .render(this.serdeType)
-                                .as(SerdeType.class)
-                                .orElse(SerdeType.STRING)
-                                .deserialize(str)
-                        )
-                    );
+                    .map(throwFunction(str -> this.deserialize(runContext, renderedKey, str)));
 
                 Mono<Long> longMono = FileSerde.writeAll(output, flux);
 
@@ -142,6 +134,16 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
             runContext.metric(Counter.of("popped.records.count", total.get(), "key", renderedKey));
 
             return Output.builder().uri(runContext.storage().putFile(tempFile)).count(total.get()).build();
+        }
+    }
+
+    private Object deserialize(RunContext runContext, String key, String value) throws IllegalVariableEvaluationException {
+        var rSerdeType = runContext.render(this.serdeType).as(SerdeType.class).orElse(SerdeType.STRING);
+        try {
+            return rSerdeType.deserialize(value);
+        } catch (IOException e) {
+            runContext.logger().warn("Unable to deserialize an item popped from '{}' as {}, keeping it as a string: {}", key, rSerdeType, e.getMessage());
+            return value;
         }
     }
 
