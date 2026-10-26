@@ -106,21 +106,11 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
 
     @Override
     public Output run(RunContext runContext) throws Exception {
+        Object from = resolveFrom(this.from, runContext);
+
         try (RedisFactory factory = this.redisFactory(runContext)) {
 
             Integer count;
-
-            Object from = null;
-            if (this.from instanceof String fromString) {
-                String renderedFrom = runContext.render(fromString);
-                try {
-                    from = JacksonMapper.ofJson().readValue(renderedFrom, List.class);
-                } catch (Exception e) {
-                    from = renderedFrom;
-                }
-            } else {
-                from = this.from;
-            }
 
             if (from instanceof String fromUrl) {
                 URI fromURI = new URI(runContext.render(fromUrl));
@@ -144,13 +134,39 @@ public class ListPush extends AbstractRedisConnection implements RunnableTask<Li
                 Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                 count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
             } else {
-                // should not occur as validation mandates String or List
-                throw new IllegalVariableEvaluationException("Invalid 'from' property type :" + from.getClass());
+                throw new IllegalVariableEvaluationException("Invalid 'from' property type :" + (from == null ? "null" : from.getClass()));
             }
 
             runContext.metric(Counter.of("inserted.records.count", count));
             return Output.builder().count(count).build();
         }
+    }
+
+    public static Object resolveFrom(Object fromProperty, RunContext runContext) throws IllegalVariableEvaluationException {
+        Object rawFrom = fromProperty;
+        if (rawFrom instanceof Property<?> propertyFrom) {
+            @SuppressWarnings("unchecked")
+            Property<Object> property = (Property<Object>) propertyFrom;
+            rawFrom = runContext.render(property).as(Object.class).orElse(null);
+        }
+
+        Object from = null;
+        if (rawFrom instanceof String fromString) {
+            String renderedFrom = runContext.render(fromString);
+            try {
+                from = JacksonMapper.ofJson().readValue(renderedFrom, List.class);
+            } catch (Exception e) {
+                from = renderedFrom;
+            }
+        } else {
+            from = rawFrom;
+        }
+
+        if (from instanceof String || from instanceof List<?>) {
+            return from;
+        }
+
+        throw new IllegalVariableEvaluationException("Invalid 'from' property type :" + (from == null ? "null" : from.getClass()));
     }
 
     private Flux<Integer> buildFlowable(Flux<Object> flowable, RunContext runContext, RedisFactory factory) throws Exception {

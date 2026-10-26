@@ -97,17 +97,19 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
 
     @Override
     public Output run(RunContext runContext) throws Exception {
+        Object from = resolveFrom(this.from, runContext);
+
         try (RedisFactory factory = this.redisFactory(runContext)) {
 
             Integer count;
-            if (this.from instanceof String fromStr) {
-                URI from = new URI(runContext.render(fromStr));
-                try (var inputStream = new BufferedInputStream(runContext.storage().getFile(from), FileSerde.BUFFER_SIZE)) {
+            if (from instanceof String fromStr) {
+                URI fromUri = new URI(runContext.render(fromStr));
+                try (var inputStream = new BufferedInputStream(runContext.storage().getFile(fromUri), FileSerde.BUFFER_SIZE)) {
                     Flux<Object> flowable = FileSerde.readAll(inputStream);
                     Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                     count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
                 }
-            } else if (this.from instanceof List<?> fromList) {
+            } else if (from instanceof List<?> fromList) {
                 Flux<Object> flowable = Flux.create(objectFluxSink ->
                 {
                     for (Object o : fromList) {
@@ -122,13 +124,27 @@ public class Publish extends AbstractRedisConnection implements RunnableTask<Pub
                 Flux<Integer> resultFlowable = this.buildFlowable(flowable, runContext, factory);
                 count = resultFlowable.reduce(Integer::sum).blockOptional().orElse(0);
             } else {
-                // should not occur as validation mandates String or List
-                throw new IllegalVariableEvaluationException("Invalid 'from' property type :" + from.getClass());
+                throw new IllegalVariableEvaluationException("Invalid 'from' property type :" + (from == null ? "null" : from.getClass()));
             }
 
             runContext.metric(Counter.of("published.records.count", count));
             return Output.builder().count(count).build();
         }
+    }
+
+    public static Object resolveFrom(Object fromProperty, RunContext runContext) throws IllegalVariableEvaluationException {
+        Object rawFrom = fromProperty;
+        if (rawFrom instanceof Property<?> propertyFrom) {
+            @SuppressWarnings("unchecked")
+            Property<Object> property = (Property<Object>) propertyFrom;
+            rawFrom = runContext.render(property).as(Object.class).orElse(null);
+        }
+
+        if (rawFrom instanceof String || rawFrom instanceof List<?>) {
+            return rawFrom;
+        }
+
+        throw new IllegalVariableEvaluationException("Invalid 'from' property type :" + (rawFrom == null ? "null" : rawFrom.getClass()));
     }
 
     private Flux<Integer> buildFlowable(Flux<Object> flowable, RunContext runContext, RedisFactory factory) throws Exception {
