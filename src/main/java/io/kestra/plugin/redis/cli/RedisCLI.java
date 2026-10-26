@@ -325,6 +325,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
                 "OUT=$(" + baseCommand + " " + shellQuoteRedisCommand(redisCommand) + " 2>&1); " +
                     "RC=$?; " +
 
+
                     // 3) escape and flatten output to ONE line (no real newlines) using awk (busybox-friendly)
                     "OUT_ESC=$(printf '%s' \"$OUT\" | " +
                     "awk 'BEGIN{ORS=\"\"} {" +
