@@ -33,7 +33,9 @@ import lombok.experimental.SuperBuilder;
 @Schema(
     title = "Run Redis CLI commands in a container",
     description = """
-        Executes the provided redis-cli commands sequentially using the configured task runner (Docker by default with image redis:7-alpine), failing on the first non-zero or detected Redis error.
+        Executes the provided redis-cli commands sequentially using the configured task runner (Docker by default with image redis:7-alpine).
+        Uses redis-cli -e to fail on every Redis error reply and stops before running later commands.
+        Ordinary string replies remain successful even when their text resembles an error message.
         Supports TLS, username/password auth via REDISCLI_AUTH, and optional JSON output (Redis 7+).
         """
 )
@@ -236,7 +238,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
 
         logger.info("Executing {} Redis CLI command(s) against {}:{}", rCommands.size(), rHost, rPort);
 
-        StringBuilder baseCommand = new StringBuilder("redis-cli");
+        StringBuilder baseCommand = new StringBuilder("redis-cli -e");
         baseCommand.append(" -h ").append(shellQuote(rHost));
         baseCommand.append(" -p ").append(rPort);
         baseCommand.append(" -n ").append(rDatabase);
@@ -322,9 +324,6 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
                 // 1) run redis-cli, capture stdout+stderr
                 "OUT=$(" + baseCommand + " " + shellQuoteRedisCommand(redisCommand) + " 2>&1); " +
                     "RC=$?; " +
-
-                    // 2) some redis-cli errors still exit 0 -> force RC=1 if output looks like an error
-                    "printf '%s' \"$OUT\" | grep -Eiq '^(\\(error\\)|ERR )' && RC=1; " +
 
                     // 3) escape and flatten output to ONE line (no real newlines) using awk (busybox-friendly)
                     "OUT_ESC=$(printf '%s' \"$OUT\" | " +
