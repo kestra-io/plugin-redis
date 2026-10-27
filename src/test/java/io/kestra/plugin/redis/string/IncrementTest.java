@@ -99,6 +99,20 @@ class IncrementTest {
     }
 
     @Test
+    void decimalExpression() throws Exception {
+        RunContext runContext = runContextFactory.of(Map.of());
+
+        // `amount: "{{ 2.0 }}"` keeps the INCRBYFLOAT path
+        Increment task = Increment.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(IdUtils.create()))
+            .amount(Property.ofExpression("{{ 2.0 }}"))
+            .build();
+
+        assertThat(task.run(runContext).getValue(), is(2.0D));
+    }
+
+    @Test
     void doubleValue() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
 
