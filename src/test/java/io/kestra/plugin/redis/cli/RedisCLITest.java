@@ -10,6 +10,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTaskException;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 
@@ -102,7 +103,8 @@ class RedisCLITest {
                 Property.ofValue(
                     List.of(
                         "SET jsonkey_cli 'test_value'",
-                        "GET jsonkey_cli"
+                        "GET jsonkey_cli",
+                        "EVAL_RO 'return cjson.encode({value=42})' 0"
                     )
                 )
             )
@@ -114,7 +116,27 @@ class RedisCLITest {
         assertThat(output.getExitCode(), is(0));
         assertThat(output.getVars(), hasKey("command_2"));
         assertThat(output.getVars().get("command_2").toString(), containsString("test_value"));
+        assertThat(output.getVars().get("command_3"), is(JacksonMapper.ofJson().writeValueAsString("{\"value\":42}")));
         assertThat(output.getStdOutLineCount(), greaterThanOrEqualTo(1));
+    }
+
+    @Test
+    void shouldPreserveControlCharactersAndBackslashesInCommandOutput() throws Exception {
+        var value = "first\tline\rnext\n\"quoted\"\\path";
+        var task = RedisCLI.builder()
+            .id(IdUtils.create())
+            .type(RedisCLI.class.getName())
+            .host(Property.ofValue(host()))
+            .port(Property.ofValue(port()))
+            .password(Property.ofValue("redis"))
+            .commands(Property.ofValue(List.of("ECHO " + RedisCLI.shellQuote(value))))
+            .build();
+        var runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+
+        var output = task.run(runContext);
+
+        assertThat(output.getExitCode(), is(0));
+        assertThat(output.getVars().get("command_1"), is(value));
     }
 
     @Test
