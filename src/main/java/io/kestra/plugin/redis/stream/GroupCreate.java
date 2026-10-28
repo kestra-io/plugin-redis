@@ -48,7 +48,7 @@ import lombok.experimental.SuperBuilder;
                 tasks:
                   - id: create_group
                     type: io.kestra.plugin.redis.stream.GroupCreate
-                    url: redis://:redis@localhost:6379/0
+                    url: "{{ secret('REDIS_URI') }}"
                     key: orders
                     group: billing
                     startId: "$"
@@ -64,7 +64,7 @@ import lombok.experimental.SuperBuilder;
                 tasks:
                   - id: create_group
                     type: io.kestra.plugin.redis.stream.GroupCreate
-                    url: redis://:redis@localhost:6379/0
+                    url: "{{ secret('REDIS_URI') }}"
                     key: orders
                     group: billing_backfill
                     startId: "0"

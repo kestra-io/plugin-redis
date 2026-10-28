@@ -47,15 +47,15 @@ class ReadGroupTest {
 
     @Test
     void deliversExactIdsAndMakesThemPendingForTheConsumer() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_basic_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_basic_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String firstId = fixture.add(key, Map.of("order", "1"));
-            String secondId = fixture.add(key, Map.of("order", "2"));
+            var firstId = fixture.add(key, Map.of("order", "1"));
+            var secondId = fixture.add(key, Map.of("order", "2"));
 
-            ReadGroup.Output output = read(runContext, key).build().run(runContext);
+            var output = read(runContext, key).build().run(runContext);
 
             assertThat(output.getStream(), is(key));
             assertThat(output.getGroup(), is(GROUP));
@@ -79,11 +79,10 @@ class ReadGroupTest {
 
     @Test
     void preservesRawFieldNamesAndValues() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_raw_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_raw_" + IdUtils.create();
 
-        // a field map that a serde would damage: JSON text, a numeric-looking string, an empty value,
-        // whitespace, non-ASCII characters and a duplicated-looking key suffix
+        // values a serde would damage: JSON text, numeric-looking strings, empty, whitespace, non-ASCII
         Map<String, String> fields = new LinkedHashMap<>();
         fields.put("payload", "{\"amount\": 10.50, \"nested\": {\"ok\": true}}");
         fields.put("amount", "0010.50");
@@ -93,11 +92,11 @@ class ReadGroupTest {
         fields.put("newline", "line1\nline2");
         fields.put("quote", "he said \"hi\" and 'bye'");
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String id = fixture.add(key, fields);
+            var id = fixture.add(key, fields);
 
-            ReadGroup.Output output = read(runContext, key).build().run(runContext);
+            var output = read(runContext, key).build().run(runContext);
 
             assertThat(output.getIds(), contains(id));
             assertThat(output.getMessages().getFirst().getFields(), is(fields));
@@ -108,13 +107,13 @@ class ReadGroupTest {
 
     @Test
     void returnsAnEmptyBatchWhenTheGroupHasNothingToDeliver() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_empty_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_empty_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
 
-            ReadGroup.Output output = read(runContext, key).build().run(runContext);
+            var output = read(runContext, key).build().run(runContext);
 
             assertThat(output.getCount(), is(0));
             assertThat(output.getIds(), is(empty()));
@@ -127,18 +126,18 @@ class ReadGroupTest {
 
     @Test
     void blockedReadReturnsEmptyAfterItsOwnTimeoutInsteadOfWaitingForever() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_block_timeout_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_block_timeout_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
 
-            long startedAt = System.nanoTime();
-            ReadGroup.Output output = assertTimeoutPreemptively(
+            var startedAt = System.nanoTime();
+            var output = assertTimeoutPreemptively(
                 Duration.ofSeconds(20),
                 () -> read(runContext, key).blockDuration(Property.ofValue(Duration.ofSeconds(2))).build().run(runContext)
             );
-            Duration elapsed = Duration.ofNanos(System.nanoTime() - startedAt);
+            var elapsed = Duration.ofNanos(System.nanoTime() - startedAt);
 
             assertThat(output.getCount(), is(0));
             assertThat(output.getIds(), is(empty()));
@@ -152,18 +151,18 @@ class ReadGroupTest {
 
     @Test
     void blockedReadIsUnblockedByKillAndAcknowledgesNothing() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_cancel_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_cancel_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
 
             // a block far longer than the test is willing to wait: only kill() can end this read early
-            ReadGroup task = read(runContext, key)
+            var task = read(runContext, key)
                 .blockDuration(Property.ofValue(Duration.ofMinutes(5)))
                 .build();
 
-            CompletableFuture<ReadGroup.Output> reading = CompletableFuture.supplyAsync(() ->
+            var reading = CompletableFuture.supplyAsync(() ->
             {
                 try {
                     return task.run(runContext);
@@ -176,11 +175,11 @@ class ReadGroupTest {
             Thread.sleep(2_000);
             assertThat(reading.isDone(), is(false));
 
-            long killedAt = System.nanoTime();
+            var killedAt = System.nanoTime();
             task.kill();
-            Duration killDuration = Duration.ofNanos(System.nanoTime() - killedAt);
+            var killDuration = Duration.ofNanos(System.nanoTime() - killedAt);
 
-            ExecutionException thrown = assertThrows(ExecutionException.class, () -> reading.get(20, TimeUnit.SECONDS));
+            var thrown = assertThrows(ExecutionException.class, () -> reading.get(20, TimeUnit.SECONDS));
             assertThat(getRootCause(thrown), instanceOf(CancellationException.class));
 
             // kill() only fails the in-flight command, it never waits for the client shutdown
@@ -195,14 +194,14 @@ class ReadGroupTest {
 
     @Test
     void failsWithAClearErrorWhenTheGroupDoesNotExist() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_nogroup_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_nogroup_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             // the stream exists, only the group is missing
             fixture.add(key, Map.of("order", "1"));
 
-            RedisCommandExecutionException e = assertThrows(
+            var e = assertThrows(
                 RedisCommandExecutionException.class,
                 () -> read(runContext, key).build().run(runContext)
             );
@@ -215,10 +214,10 @@ class ReadGroupTest {
 
     @Test
     void failsWhenTheStreamDoesNotExistEither() {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_nostream_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_nostream_" + IdUtils.create();
 
-        RedisCommandExecutionException e = assertThrows(
+        var e = assertThrows(
             RedisCommandExecutionException.class,
             () -> read(runContext, key).build().run(runContext)
         );
@@ -228,12 +227,12 @@ class ReadGroupTest {
 
     @Test
     void offsetZeroRereadsThisConsumerOwnUnacknowledgedEntries() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_own_pending_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_own_pending_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String id = fixture.add(key, Map.of("order", "1"));
+            var id = fixture.add(key, Map.of("order", "1"));
 
             assertThat(read(runContext, key).build().run(runContext).getIds(), contains(id));
 
@@ -241,7 +240,7 @@ class ReadGroupTest {
             assertThat(read(runContext, key).build().run(runContext).getIds(), is(empty()));
 
             // `0` hands this consumer its own unacknowledged entry again, with the same id and fields
-            ReadGroup.Output replay = read(runContext, key)
+            var replay = read(runContext, key)
                 .offset(Property.ofValue("0"))
                 .build()
                 .run(runContext);
@@ -250,7 +249,7 @@ class ReadGroupTest {
             assertThat(replay.getMessages().getFirst().getFields(), is(Map.of("order", "1")));
 
             // a different consumer of the same group does not see another consumer's pending entry
-            ReadGroup.Output otherConsumer = read(runContext, key)
+            var otherConsumer = read(runContext, key)
                 .consumer(Property.ofValue("worker_2"))
                 .offset(Property.ofValue("0"))
                 .build()
@@ -266,16 +265,16 @@ class ReadGroupTest {
 
     @Test
     void countBoundsTheBatch() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_count_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_count_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String firstId = fixture.add(key, Map.of("order", "1"));
+            var firstId = fixture.add(key, Map.of("order", "1"));
             fixture.add(key, Map.of("order", "2"));
             fixture.add(key, Map.of("order", "3"));
 
-            ReadGroup.Output output = read(runContext, key)
+            var output = read(runContext, key)
                 .count(Property.ofValue(1))
                 .build()
                 .run(runContext);
@@ -290,15 +289,15 @@ class ReadGroupTest {
 
     @Test
     void fetchOneReturnsASingleEntryAndDoesNotDeliverAnyOther() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_fetch_one_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_fetch_one_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String firstId = fixture.add(key, Map.of("order", "1"));
+            var firstId = fixture.add(key, Map.of("order", "1"));
             fixture.add(key, Map.of("order", "2"));
 
-            ReadGroup.Output output = read(runContext, key)
+            var output = read(runContext, key)
                 .fetchType(Property.ofValue(FetchType.FETCH_ONE))
                 .count(Property.ofValue(50))
                 .build()
@@ -311,8 +310,7 @@ class ReadGroupTest {
             assertThat(output.getMessages(), is(nullValue()));
             assertThat(output.getIds(), contains(firstId));
 
-            // the requested count of 50 was lowered to 1: no entry was marked as delivered without
-            // its id reaching the flow, so nothing is stranded in the pending list
+            // count was lowered to 1, so no entry is stranded in the pending list without its id reaching the flow
             assertThat(fixture.pendingIds(key, GROUP), contains(firstId));
 
             fixture.delete(key);
@@ -321,13 +319,13 @@ class ReadGroupTest {
 
     @Test
     void fetchOneReturnsNoEntryOnAnEmptyRead() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_fetch_one_empty_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_fetch_one_empty_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
 
-            ReadGroup.Output output = read(runContext, key)
+            var output = read(runContext, key)
                 .fetchType(Property.ofValue(FetchType.FETCH_ONE))
                 .build()
                 .run(runContext);
@@ -342,15 +340,15 @@ class ReadGroupTest {
 
     @Test
     void storeWritesTheBatchToInternalStorageWithIdsAndRawFields() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_store_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_store_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String firstId = fixture.add(key, Map.of("order", "1", "payload", "{\"a\": 1}"));
-            String secondId = fixture.add(key, Map.of("order", "2"));
+            var firstId = fixture.add(key, Map.of("order", "1", "payload", "{\"a\": 1}"));
+            var secondId = fixture.add(key, Map.of("order", "2"));
 
-            ReadGroup.Output output = read(runContext, key)
+            var output = read(runContext, key)
                 .fetchType(Property.ofValue(FetchType.STORE))
                 .build()
                 .run(runContext);
@@ -360,7 +358,7 @@ class ReadGroupTest {
             assertThat(output.getMessages(), is(nullValue()));
             assertThat(output.getUri(), is(notNullValue()));
 
-            List<Map<String, Object>> rows = readStored(runContext, output);
+            var rows = readStored(runContext, output);
 
             assertThat(rows, hasSize(2));
             assertThat(rows.getFirst().get("id"), is(firstId));
@@ -376,14 +374,14 @@ class ReadGroupTest {
 
     @Test
     void noneReturnsIdsWithoutBodiesSoTheBatchStaysAcknowledgeable() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_none_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_none_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String id = fixture.add(key, Map.of("order", "1"));
+            var id = fixture.add(key, Map.of("order", "1"));
 
-            ReadGroup.Output output = read(runContext, key)
+            var output = read(runContext, key)
                 .fetchType(Property.ofValue(FetchType.NONE))
                 .build()
                 .run(runContext);
@@ -401,14 +399,14 @@ class ReadGroupTest {
 
     @Test
     void noAckSkipsThePendingListEntirely() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_noack_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_noack_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String id = fixture.add(key, Map.of("order", "1"));
+            var id = fixture.add(key, Map.of("order", "1"));
 
-            ReadGroup.Output output = read(runContext, key)
+            var output = read(runContext, key)
                 .noAck(Property.ofValue(true))
                 .build()
                 .run(runContext);
@@ -423,17 +421,17 @@ class ReadGroupTest {
 
     @Test
     void rejectsACountOutsideTheAllowedRange() {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_bad_count_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_bad_count_" + IdUtils.create();
 
         for (int invalid : new int[] { 0, -1, 10_001 }) {
-            ReadGroup task = read(runContext, key).id("read").type(ReadGroup.class.getName()).count(Property.ofValue(invalid)).build();
+            var task = read(runContext, key).id("read").type(ReadGroup.class.getName()).count(Property.ofValue(invalid)).build();
 
             assertThat("count " + invalid, modelValidator.isValid(task).isPresent(), is(true));
         }
 
         for (int valid : new int[] { 1, 10_000 }) {
-            ReadGroup task = read(runContext, key).id("read").type(ReadGroup.class.getName()).count(Property.ofValue(valid)).build();
+            var task = read(runContext, key).id("read").type(ReadGroup.class.getName()).count(Property.ofValue(valid)).build();
 
             assertThat("count " + valid, modelValidator.isValid(task).isPresent(), is(false));
         }
@@ -441,49 +439,48 @@ class ReadGroupTest {
 
     @Test
     void rejectsABlockDurationThatWouldWaitForever() {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_bad_block_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_bad_block_" + IdUtils.create();
 
-        ReadGroup zero = read(runContext, key).blockDuration(Property.ofValue(Duration.ZERO)).build();
-        IllegalArgumentException zeroError = assertThrows(IllegalArgumentException.class, () -> zero.run(runContext));
+        var zero = read(runContext, key).blockDuration(Property.ofValue(Duration.ZERO)).build();
+        var zeroError = assertThrows(IllegalArgumentException.class, () -> zero.run(runContext));
         assertThat(zeroError.getMessage(), containsString("blockDuration must be strictly positive"));
 
-        ReadGroup negative = read(runContext, key).blockDuration(Property.ofValue(Duration.ofSeconds(-1))).build();
-        IllegalArgumentException negativeError = assertThrows(IllegalArgumentException.class, () -> negative.run(runContext));
+        var negative = read(runContext, key).blockDuration(Property.ofValue(Duration.ofSeconds(-1))).build();
+        var negativeError = assertThrows(IllegalArgumentException.class, () -> negative.run(runContext));
         assertThat(negativeError.getMessage(), containsString("blockDuration must be strictly positive"));
     }
 
     @Test
     void rejectsABlockDurationAboveOneHour() {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_long_bad_block_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_long_bad_block_" + IdUtils.create();
 
-        ReadGroup tooLong = read(runContext, key).blockDuration(Property.ofValue(Duration.ofDays(1))).build();
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> tooLong.run(runContext));
+        var tooLong = read(runContext, key).blockDuration(Property.ofValue(Duration.ofDays(1))).build();
+        var e = assertThrows(IllegalArgumentException.class, () -> tooLong.run(runContext));
         assertThat(e.getMessage(), containsString("blockDuration must be at most PT1H"));
     }
 
     @Test
     void namesTheMissingRequiredProperty() {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_empty_group_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_empty_group_" + IdUtils.create();
 
-        ReadGroup task = read(runContext, key).group(null).build();
+        var task = read(runContext, key).group(null).build();
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
+        var e = assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
         assertThat(e.getMessage(), containsString("`group` rendered to an empty value"));
     }
 
     @Test
     void blockOutlastingTheClientCommandTimeoutStillWaitsInsteadOfFailing() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_long_block_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_long_block_" + IdUtils.create();
 
-        // a connection string with a 3s command timeout: short enough to make the control fail fast, and the same
-        // situation a default Lettuce client is in when a read blocks for longer than its 60s default
-        String shortTimeoutUri = REDIS_URI + "?timeout=3s";
+        // a 3s command timeout mimics a default Lettuce client reading with a longer BLOCK
+        var shortTimeoutUri = REDIS_URI + "?timeout=3s";
 
-        try (StreamFixture fixture = new StreamFixture(shortTimeoutUri)) {
+        try (var fixture = new StreamFixture(shortTimeoutUri)) {
             fixture.createGroup(key, GROUP, "0");
 
             // control: a client whose command timeout is below the block duration aborts the read instead of waiting
@@ -492,10 +489,9 @@ class ReadGroupTest {
                 () -> fixture.blockingRead(key, GROUP, "control_worker", Duration.ofSeconds(8))
             );
 
-            // the task raises the command timeout above its own block duration, so the read waits out the block and
-            // reports an empty batch rather than failing
-            long startedAt = System.nanoTime();
-            ReadGroup.Output output = ReadGroup.builder()
+            // the task raises the command timeout above its block, so it returns an empty batch instead of failing
+            var startedAt = System.nanoTime();
+            var output = ReadGroup.builder()
                 .url(Property.ofValue(shortTimeoutUri))
                 .key(Property.ofValue(key))
                 .group(Property.ofValue(GROUP))
@@ -503,7 +499,7 @@ class ReadGroupTest {
                 .blockDuration(Property.ofValue(Duration.ofSeconds(8)))
                 .build()
                 .run(runContext);
-            Duration elapsed = Duration.ofNanos(System.nanoTime() - startedAt);
+            var elapsed = Duration.ofNanos(System.nanoTime() - startedAt);
 
             assertThat(output.getCount(), is(0));
             assertThat(elapsed.toMillis(), greaterThan(7_000L));
@@ -514,17 +510,17 @@ class ReadGroupTest {
 
     @Test
     void blockedReadDeliversAnEntryThatArrivesWhileItWaits() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_read_late_entry_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_read_late_entry_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
 
-            ReadGroup task = read(runContext, key)
+            var task = read(runContext, key)
                 .blockDuration(Property.ofValue(Duration.ofSeconds(30)))
                 .build();
 
-            CompletableFuture<ReadGroup.Output> reading = CompletableFuture.supplyAsync(() ->
+            var reading = CompletableFuture.supplyAsync(() ->
             {
                 try {
                     return task.run(runContext);
@@ -534,9 +530,9 @@ class ReadGroupTest {
             });
 
             Thread.sleep(2_000);
-            String id = fixture.add(key, Map.of("order", "late"));
+            var id = fixture.add(key, Map.of("order", "late"));
 
-            ReadGroup.Output output = reading.get(30, TimeUnit.SECONDS);
+            var output = reading.get(30, TimeUnit.SECONDS);
 
             assertThat(output.getIds(), contains(id));
             assertThat(fixture.pendingIds(key, GROUP), contains(id));
@@ -547,7 +543,7 @@ class ReadGroupTest {
 
     @Test
     void rendersEveryPebbleInput() throws Exception {
-        RunContext runContext = runContextFactory.of(
+        var runContext = runContextFactory.of(
             Map.of(
                 "streamKey", "r236_read_rendered_" + IdUtils.create(),
                 "groupName", GROUP,
@@ -557,13 +553,13 @@ class ReadGroupTest {
             )
         );
 
-        String key = (String) runContext.getVariables().get("streamKey");
+        var key = (String) runContext.getVariables().get("streamKey");
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String id = fixture.add(key, Map.of("order", "1"));
+            var id = fixture.add(key, Map.of("order", "1"));
 
-            ReadGroup.Output output = ReadGroup.builder()
+            var output = ReadGroup.builder()
                 .url(Property.ofValue(REDIS_URI))
                 .key(Property.ofExpression("{{ streamKey }}"))
                 .group(Property.ofExpression("{{ groupName }}"))
@@ -603,7 +599,7 @@ class ReadGroupTest {
     }
 
     private static Throwable getRootCause(Throwable throwable) {
-        Throwable cause = throwable;
+        var cause = throwable;
         while (cause.getCause() != null) {
             cause = cause.getCause();
         }

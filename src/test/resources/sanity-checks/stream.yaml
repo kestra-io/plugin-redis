@@ -1,9 +1,7 @@
 id: stream
 namespace: io.kestra.tests
 
-# Full read -> process -> acknowledge path over a Redis stream consumer group.
-# StreamRunnerTest seeds `stream_group_runner_key` with one entry before this flow runs, because the
-# first slice of the stream sub-group only consumes: producing an entry is not one of its tasks.
+# StreamRunnerTest seeds `stream_group_runner_key` before this flow runs.
 tasks:
   - id: create_group
     type: io.kestra.plugin.redis.stream.GroupCreate

@@ -29,17 +29,17 @@ class GroupCreateTest {
 
     @Test
     void createsTheGroupAndIsIdempotentOnTheSecondRun() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_group_create_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_group_create_" + IdUtils.create();
 
-        GroupCreate task = GroupCreate.builder()
+        var task = GroupCreate.builder()
             .url(Property.ofValue(REDIS_URI))
             .key(Property.ofValue(key))
             .group(Property.ofValue("billing"))
             .build();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
-            GroupCreate.Output first = task.run(runContext);
+        try (var fixture = new StreamFixture(REDIS_URI)) {
+            var first = task.run(runContext);
 
             assertThat(first.getCreated(), is(true));
             assertThat(first.getKey(), is(key));
@@ -49,16 +49,16 @@ class GroupCreateTest {
             assertThat(fixture.streamLength(key), is(0L));
 
             // the second run hits BUSYGROUP; ignoreExisting defaults to true, so it is reported, not thrown
-            GroupCreate.Output second = task.run(runContext);
+            var second = task.run(runContext);
 
             assertThat(second.getCreated(), is(false));
             assertThat(second.getGroup(), is("billing"));
 
             // the existing group is untouched: an entry added after the first create is still deliverable
-            String id = fixture.add(key, Map.of("field", "value"));
+            var id = fixture.add(key, Map.of("field", "value"));
             assertThat(fixture.pendingIds(key, "billing"), is(empty()));
 
-            ReadGroup.Output read = ReadGroup.builder()
+            var read = ReadGroup.builder()
                 .url(Property.ofValue(REDIS_URI))
                 .key(Property.ofValue(key))
                 .group(Property.ofValue("billing"))
@@ -74,20 +74,20 @@ class GroupCreateTest {
 
     @Test
     void failsOnAnExistingGroupWhenIgnoreExistingIsFalse() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_group_busy_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_group_busy_" + IdUtils.create();
 
-        GroupCreate strict = GroupCreate.builder()
+        var strict = GroupCreate.builder()
             .url(Property.ofValue(REDIS_URI))
             .key(Property.ofValue(key))
             .group(Property.ofValue("billing"))
             .ignoreExisting(Property.ofValue(false))
             .build();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             assertThat(strict.run(runContext).getCreated(), is(true));
 
-            RedisBusyException e = assertThrows(RedisBusyException.class, () -> strict.run(runContext));
+            var e = assertThrows(RedisBusyException.class, () -> strict.run(runContext));
             assertThat(e.getMessage(), containsString("BUSYGROUP"));
 
             fixture.delete(key);
@@ -96,27 +96,27 @@ class GroupCreateTest {
 
     @Test
     void failsOnAMissingStreamWhenMakeStreamIsFalse() {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_group_nostream_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_group_nostream_" + IdUtils.create();
 
-        GroupCreate task = GroupCreate.builder()
+        var task = GroupCreate.builder()
             .url(Property.ofValue(REDIS_URI))
             .key(Property.ofValue(key))
             .group(Property.ofValue("billing"))
             .makeStream(Property.ofValue(false))
             .build();
 
-        RedisCommandExecutionException e = assertThrows(RedisCommandExecutionException.class, () -> task.run(runContext));
+        var e = assertThrows(RedisCommandExecutionException.class, () -> task.run(runContext));
         assertThat(e.getMessage(), containsString("requires the key to exist"));
     }
 
     @Test
     void startIdDollarSkipsTheBacklogWhileZeroReplaysIt() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_group_startid_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_group_startid_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
-            String backlogId = fixture.add(key, Map.of("order", "1"));
+        try (var fixture = new StreamFixture(REDIS_URI)) {
+            var backlogId = fixture.add(key, Map.of("order", "1"));
 
             GroupCreate.builder()
                 .url(Property.ofValue(REDIS_URI))
@@ -135,16 +135,16 @@ class GroupCreateTest {
                 .run(runContext);
 
             // `$` treats the existing entry as already handled
-            ReadGroup.Output fromNow = readOnce(runContext, key, "from_now");
+            var fromNow = readOnce(runContext, key, "from_now");
             assertThat(fromNow.getCount(), is(0));
             assertThat(fromNow.getIds(), is(empty()));
 
             // `0` replays the retained backlog
-            ReadGroup.Output fromStart = readOnce(runContext, key, "from_start");
+            var fromStart = readOnce(runContext, key, "from_start");
             assertThat(fromStart.getIds(), contains(backlogId));
 
             // and an entry added afterwards reaches the `$` group
-            String laterId = fixture.add(key, Map.of("order", "2"));
+            var laterId = fixture.add(key, Map.of("order", "2"));
             assertThat(readOnce(runContext, key, "from_now").getIds(), contains(laterId));
 
             fixture.delete(key);
@@ -153,14 +153,14 @@ class GroupCreateTest {
 
     @Test
     void startsTheGroupAfterAnExplicitStreamId() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_group_explicit_id_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_group_explicit_id_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
-            String firstId = fixture.add(key, Map.of("order", "1"));
-            String secondId = fixture.add(key, Map.of("order", "2"));
+        try (var fixture = new StreamFixture(REDIS_URI)) {
+            var firstId = fixture.add(key, Map.of("order", "1"));
+            var secondId = fixture.add(key, Map.of("order", "2"));
 
-            GroupCreate.Output output = GroupCreate.builder()
+            var output = GroupCreate.builder()
                 .url(Property.ofValue(REDIS_URI))
                 .key(Property.ofValue(key))
                 .group(Property.ofValue("after_first"))

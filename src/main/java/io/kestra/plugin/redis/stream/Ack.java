@@ -51,7 +51,7 @@ import lombok.experimental.SuperBuilder;
                 tasks:
                   - id: read
                     type: io.kestra.plugin.redis.stream.ReadGroup
-                    url: redis://:redis@localhost:6379/0
+                    url: "{{ secret('REDIS_URI') }}"
                     key: orders
                     group: billing
                     consumer: billing_worker_1
@@ -63,7 +63,7 @@ import lombok.experimental.SuperBuilder;
 
                   - id: acknowledge
                     type: io.kestra.plugin.redis.stream.Ack
-                    url: redis://:redis@localhost:6379/0
+                    url: "{{ secret('REDIS_URI') }}"
                     key: orders
                     group: billing
                     ids: "{{ outputs.read.ids }}"
@@ -80,7 +80,7 @@ import lombok.experimental.SuperBuilder;
                 tasks:
                   - id: acknowledge
                     type: io.kestra.plugin.redis.stream.Ack
-                    url: redis://:redis@localhost:6379/0
+                    url: "{{ secret('REDIS_URI') }}"
                     key: orders
                     group: billing
                     ids:

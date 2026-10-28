@@ -74,14 +74,14 @@ import reactor.core.publisher.Flux;
                 tasks:
                   - id: create_group
                     type: io.kestra.plugin.redis.stream.GroupCreate
-                    url: redis://:redis@localhost:6379/0
+                    url: "{{ secret('REDIS_URI') }}"
                     key: orders
                     group: billing
                     startId: "0"
 
                   - id: read
                     type: io.kestra.plugin.redis.stream.ReadGroup
-                    url: redis://:redis@localhost:6379/0
+                    url: "{{ secret('REDIS_URI') }}"
                     key: orders
                     group: billing
                     consumer: billing_worker_1
@@ -94,7 +94,7 @@ import reactor.core.publisher.Flux;
 
                   - id: acknowledge
                     type: io.kestra.plugin.redis.stream.Ack
-                    url: redis://:redis@localhost:6379/0
+                    url: "{{ secret('REDIS_URI') }}"
                     key: orders
                     group: billing
                     ids: "{{ outputs.read.ids }}"
@@ -111,7 +111,7 @@ import reactor.core.publisher.Flux;
                 tasks:
                   - id: read_pending
                     type: io.kestra.plugin.redis.stream.ReadGroup
-                    url: redis://:redis@localhost:6379/0
+                    url: "{{ secret('REDIS_URI') }}"
                     key: orders
                     group: billing
                     consumer: billing_worker_1
@@ -129,7 +129,7 @@ import reactor.core.publisher.Flux;
                 tasks:
                   - id: read
                     type: io.kestra.plugin.redis.stream.ReadGroup
-                    url: redis://:redis@localhost:6379/0
+                    url: "{{ secret('REDIS_URI') }}"
                     key: orders
                     group: billing
                     consumer: billing_worker_1

@@ -30,25 +30,24 @@ class AckTest {
 
     @Test
     void removesTheExactIdFromThePendingList() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_ack_exact_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_ack_exact_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String firstId = fixture.add(key, Map.of("order", "1"));
-            String secondId = fixture.add(key, Map.of("order", "2"));
+            var firstId = fixture.add(key, Map.of("order", "1"));
+            var secondId = fixture.add(key, Map.of("order", "2"));
 
-            ReadGroup.Output read = readAll(runContext, key);
+            var read = readAll(runContext, key);
             assertThat(read.getIds(), contains(firstId, secondId));
             assertThat(fixture.pendingIds(key, GROUP), contains(firstId, secondId));
 
-            Ack.Output output = ack(runContext, key, List.of(firstId));
+            var output = ack(runContext, key, List.of(firstId));
 
             assertThat(output.getCount(), is(1L));
             assertThat(output.getSize(), is(1));
 
-            // verified on a separate connection with XPENDING: exactly the acknowledged id is gone,
-            // and the one that was not acknowledged is still there
+            // XPENDING on a separate connection shows only the acknowledged id is gone
             assertThat(fixture.pendingIds(key, GROUP), contains(secondId));
             assertThat(fixture.pendingIds(key, GROUP, "worker_1"), contains(secondId));
 
@@ -61,14 +60,14 @@ class AckTest {
 
     @Test
     void failureBeforeTheAcknowledgementLeavesTheEntryPending() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_ack_failure_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_ack_failure_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String id = fixture.add(key, Map.of("order", "1"));
+            var id = fixture.add(key, Map.of("order", "1"));
 
-            ReadGroup.Output read = readAll(runContext, key);
+            var read = readAll(runContext, key);
             assertThat(read.getIds(), contains(id));
 
             // the business step fails, so the flow never reaches Ack
@@ -82,7 +81,7 @@ class AckTest {
             assertThat(fixture.pendingIds(key, GROUP, "worker_1"), contains(id));
 
             // a later run of the same consumer picks it up again with offset 0 and can then acknowledge it
-            ReadGroup.Output replay = ReadGroup.builder()
+            var replay = ReadGroup.builder()
                 .url(Property.ofValue(REDIS_URI))
                 .key(Property.ofValue(key))
                 .group(Property.ofValue(GROUP))
@@ -102,12 +101,12 @@ class AckTest {
 
     @Test
     void acknowledgingTwiceIsHarmlessAndCountsOnlyWhatItRemoved() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_ack_twice_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_ack_twice_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String id = fixture.add(key, Map.of("order", "1"));
+            var id = fixture.add(key, Map.of("order", "1"));
 
             readAll(runContext, key);
 
@@ -115,7 +114,7 @@ class AckTest {
             assertThat(fixture.pendingIds(key, GROUP), is(empty()));
 
             // the retry removes nothing because the entry is no longer pending, and it does not fail
-            Ack.Output retry = ack(runContext, key, List.of(id));
+            var retry = ack(runContext, key, List.of(id));
 
             assertThat(retry.getCount(), is(0L));
             assertThat(retry.getSize(), is(1));
@@ -127,16 +126,16 @@ class AckTest {
 
     @Test
     void failsOnAShortCountWhenFailedOnMissingIsTrue() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_ack_strict_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_ack_strict_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String pendingId = fixture.add(key, Map.of("order", "1"));
+            var pendingId = fixture.add(key, Map.of("order", "1"));
             readAll(runContext, key);
 
             // one real pending id and one that was never delivered to this group
-            Ack strict = Ack.builder()
+            var strict = Ack.builder()
                 .url(Property.ofValue(REDIS_URI))
                 .key(Property.ofValue(key))
                 .group(Property.ofValue(GROUP))
@@ -144,7 +143,7 @@ class AckTest {
                 .failedOnMissing(Property.ofValue(true))
                 .build();
 
-            IllegalStateException e = assertThrows(IllegalStateException.class, () -> strict.run(runContext));
+            var e = assertThrows(IllegalStateException.class, () -> strict.run(runContext));
             assertThat(e.getMessage(), containsString("Only 1 of 2 entries acknowledged"));
 
             // XACK is not transactional: the id that was pending has still been removed
@@ -156,15 +155,15 @@ class AckTest {
 
     @Test
     void acceptsAShortCountByDefault() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_ack_lenient_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_ack_lenient_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String pendingId = fixture.add(key, Map.of("order", "1"));
+            var pendingId = fixture.add(key, Map.of("order", "1"));
             readAll(runContext, key);
 
-            Ack.Output output = ack(runContext, key, List.of(pendingId, "1-1"));
+            var output = ack(runContext, key, List.of(pendingId, "1-1"));
 
             assertThat(output.getCount(), is(1L));
             assertThat(output.getSize(), is(2));
@@ -175,17 +174,16 @@ class AckTest {
 
     @Test
     void deduplicatesIdsBeforeCalling() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_ack_dedup_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_ack_dedup_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String id = fixture.add(key, Map.of("order", "1"));
+            var id = fixture.add(key, Map.of("order", "1"));
             readAll(runContext, key);
 
-            // the duplicate must not make the requested size 2 and the count 1, which would look like a
-            // missing entry and fail a strict acknowledgement for no reason
-            Ack.Output output = Ack.builder()
+            // a duplicate must not look like a missing entry and fail a strict acknowledgement
+            var output = Ack.builder()
                 .url(Property.ofValue(REDIS_URI))
                 .key(Property.ofValue(key))
                 .group(Property.ofValue(GROUP))
@@ -204,10 +202,10 @@ class AckTest {
 
     @Test
     void anEmptyIdListIsANoOp() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_ack_empty_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_ack_empty_" + IdUtils.create();
 
-        Ack.Output output = Ack.builder()
+        var output = Ack.builder()
             .url(Property.ofValue(REDIS_URI))
             .key(Property.ofValue(key))
             .group(Property.ofValue(GROUP))
@@ -223,18 +221,18 @@ class AckTest {
 
     @Test
     void acknowledgesNothingOnAGroupThatDoesNotExist() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
-        String key = "r236_ack_nogroup_" + IdUtils.create();
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_ack_nogroup_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
-            String id = fixture.add(key, Map.of("order", "1"));
+        try (var fixture = new StreamFixture(REDIS_URI)) {
+            var id = fixture.add(key, Map.of("order", "1"));
 
             // XACK on a missing group is not an error in Redis: it acknowledges nothing
-            Ack.Output output = ack(runContext, key, List.of(id));
+            var output = ack(runContext, key, List.of(id));
             assertThat(output.getCount(), is(0L));
 
             // which is exactly what failedOnMissing is for
-            Ack strict = Ack.builder()
+            var strict = Ack.builder()
                 .url(Property.ofValue(REDIS_URI))
                 .key(Property.ofValue(key))
                 .group(Property.ofValue(GROUP))
@@ -242,7 +240,7 @@ class AckTest {
                 .failedOnMissing(Property.ofValue(true))
                 .build();
 
-            IllegalStateException e = assertThrows(IllegalStateException.class, () -> strict.run(runContext));
+            var e = assertThrows(IllegalStateException.class, () -> strict.run(runContext));
             assertThat(e.getMessage(), containsString("Only 0 of 1 entries acknowledged"));
 
             fixture.delete(key);
@@ -251,17 +249,17 @@ class AckTest {
 
     @Test
     void rendersEveryPebbleInput() throws Exception {
-        String key = "r236_ack_rendered_" + IdUtils.create();
+        var key = "r236_ack_rendered_" + IdUtils.create();
 
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.createGroup(key, GROUP, "0");
-            String id = fixture.add(key, Map.of("order", "1"));
+            var id = fixture.add(key, Map.of("order", "1"));
 
-            RunContext readContext = runContextFactory.of(Map.of());
-            ReadGroup.Output read = readAll(readContext, key);
+            var readContext = runContextFactory.of(Map.of());
+            var read = readAll(readContext, key);
             assertThat(read.getIds(), contains(id));
 
-            RunContext runContext = runContextFactory.of(
+            var runContext = runContextFactory.of(
                 Map.of(
                     "streamKey", key,
                     "groupName", GROUP,
@@ -269,7 +267,7 @@ class AckTest {
                 )
             );
 
-            Ack.Output output = Ack.builder()
+            var output = Ack.builder()
                 .url(Property.ofValue(REDIS_URI))
                 .key(Property.ofExpression("{{ streamKey }}"))
                 .group(Property.ofExpression("{{ groupName }}"))

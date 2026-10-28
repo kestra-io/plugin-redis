@@ -15,14 +15,7 @@ import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.models.stream.PendingMessage;
 
-/**
- * Seeds streams and reads delivery state back with its own Lettuce connection.
- *
- * <p>
- * Every assertion about pending entries goes through this class rather than through the task outputs, so a test that
- * claims an entry left the pending list is checking Redis with {@code XPENDING} instead of trusting what the task under
- * test reported.
- */
+// Seeds streams and reads delivery state back on its own Lettuce connection, so assertions do not trust task output.
 final class StreamFixture implements AutoCloseable {
     private final RedisClient client;
 
@@ -69,12 +62,9 @@ final class StreamFixture implements AutoCloseable {
         return this.commands.xlen(key);
     }
 
-    /**
-     * Runs one {@code XREADGROUP ... BLOCK} on this fixture's own connection, as a control for the task's handling of a
-     * block that outlasts the client command timeout.
-     */
+    // control: one XREADGROUP BLOCK on this fixture's own connection, to show a short client timeout aborts it
     List<String> blockingRead(String key, String group, String consumer, Duration block) {
-        List<StreamMessage<String, String>> read = this.commands.xreadgroup(
+        var read = this.commands.xreadgroup(
             Consumer.from(group, consumer),
             new XReadArgs().count(10).block(block),
             XReadArgs.StreamOffset.from(key, ">")

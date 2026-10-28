@@ -15,13 +15,7 @@ import io.kestra.core.models.flows.State;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
-/**
- * Runs the full read, process and acknowledge path of {@code sanity-checks/stream.yaml} through the Kestra runner.
- *
- * <p>
- * The stream is seeded here rather than inside the flow: the first slice of the stream sub-group only consumes, so
- * no task of it produces an entry.
- */
+// Runs sanity-checks/stream.yaml; the stream is seeded here because this slice of the sub-group only consumes.
 @KestraTest(startRunner = true)
 class StreamRunnerTest {
     private static final String REDIS_URI = "redis://:redis@localhost:6379/0";
@@ -30,7 +24,7 @@ class StreamRunnerTest {
 
     @BeforeEach
     void setUp() {
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             // a previous run of this flow leaves the group and its entry behind
             fixture.delete(KEY);
 
@@ -44,7 +38,7 @@ class StreamRunnerTest {
 
     @AfterEach
     void tearDown() {
-        try (StreamFixture fixture = new StreamFixture(REDIS_URI)) {
+        try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.delete(KEY);
         }
     }
