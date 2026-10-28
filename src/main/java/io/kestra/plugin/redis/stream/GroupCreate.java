@@ -105,7 +105,9 @@ public class GroupCreate extends AbstractRedisConnection implements RunnableTask
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Create the stream when the key is missing",
-        description = "Defaults to true, which adds `MKSTREAM` so an empty stream is created instead of failing on a missing key. Set to false to require the stream to exist already."
+        description = """
+            Defaults to true, which adds `MKSTREAM` so an empty stream is created instead of failing on a missing \
+            key. Set to false to require the stream to exist already."""
     )
     @Builder.Default
     @NotNull
@@ -114,7 +116,10 @@ public class GroupCreate extends AbstractRedisConnection implements RunnableTask
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Succeed when the group already exists",
-        description = "Defaults to true, which turns the `BUSYGROUP` error of a second run into a no-op and leaves the existing group untouched, including its current position and pending entries. Set to false to fail instead. The `created` output tells the two cases apart."
+        description = """
+            Defaults to true, which turns the `BUSYGROUP` error of a second run into a no-op and leaves the existing \
+            group untouched, including its current position and pending entries. Set to false to fail instead. The \
+            `created` output tells the two cases apart."""
     )
     @Builder.Default
     @NotNull
@@ -122,49 +127,51 @@ public class GroupCreate extends AbstractRedisConnection implements RunnableTask
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        try (RedisFactory factory = this.redisFactory(runContext)) {
-            String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
-            String renderedGroup = runContext.render(this.group).as(String.class).orElseThrow();
-            String renderedStartId = runContext.render(this.startId).as(String.class).orElse("$");
-            boolean renderedMakeStream = runContext.render(this.makeStream).as(Boolean.class).orElse(true);
-            boolean renderedIgnoreExisting = runContext.render(this.ignoreExisting).as(Boolean.class).orElse(true);
+        try (var factory = this.redisFactory(runContext)) {
+            var rKey = runContext.render(this.key).as(String.class)
+                .orElseThrow(() -> new IllegalArgumentException("`key` rendered to an empty value; set the Redis stream key"));
+            var rGroup = runContext.render(this.group).as(String.class)
+                .orElseThrow(() -> new IllegalArgumentException("`group` rendered to an empty value; set a consumer group name"));
+            var rStartId = runContext.render(this.startId).as(String.class).orElse("$");
+            var rMakeStream = runContext.render(this.makeStream).as(Boolean.class).orElse(true);
+            var rIgnoreExisting = runContext.render(this.ignoreExisting).as(Boolean.class).orElse(true);
 
             try {
                 factory.getSyncCommands().xgroupCreate(
-                    XReadArgs.StreamOffset.from(renderedKey, renderedStartId),
-                    renderedGroup,
-                    XGroupCreateArgs.Builder.mkstream(renderedMakeStream)
+                    XReadArgs.StreamOffset.from(rKey, rStartId),
+                    rGroup,
+                    XGroupCreateArgs.Builder.mkstream(rMakeStream)
                 );
             } catch (RedisBusyException e) {
-                if (!renderedIgnoreExisting) {
+                if (!rIgnoreExisting) {
                     throw e;
                 }
 
                 runContext.logger().info(
                     "Consumer group '{}' already exists on stream '{}', leaving it untouched.",
-                    renderedGroup,
-                    renderedKey
+                    rGroup,
+                    rKey
                 );
 
                 return Output.builder()
-                    .key(renderedKey)
-                    .group(renderedGroup)
-                    .startId(renderedStartId)
+                    .key(rKey)
+                    .group(rGroup)
+                    .startId(rStartId)
                     .created(false)
                     .build();
             }
 
             runContext.logger().info(
                 "Created consumer group '{}' on stream '{}' starting at '{}'.",
-                renderedGroup,
-                renderedKey,
-                renderedStartId
+                rGroup,
+                rKey,
+                rStartId
             );
 
             return Output.builder()
-                .key(renderedKey)
-                .group(renderedGroup)
-                .startId(renderedStartId)
+                .key(rKey)
+                .group(rGroup)
+                .startId(rStartId)
                 .created(true)
                 .build();
         }

@@ -1,16 +1,14 @@
 package io.kestra.plugin.redis.stream;
 
 import java.io.BufferedOutputStream;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -29,8 +27,11 @@ import io.kestra.core.serializers.FileSerde;
 import io.kestra.plugin.redis.AbstractRedisConnection;
 
 import io.lettuce.core.Consumer;
+import io.lettuce.core.StreamMessage;
 import io.lettuce.core.XReadArgs;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -51,7 +52,7 @@ import reactor.core.publisher.Flux;
 
         The read is bounded on both axes. `count` caps how many entries a single call delivers, and `blockDuration` caps \
         how long the call waits when the group has nothing to deliver; leaving `blockDuration` unset makes the call return \
-        immediately. `XREADGROUP BLOCK 0`, which waits forever, is deliberately not reachable. Killing the task closes the \
+        immediately, and it cannot exceed one hour. `XREADGROUP BLOCK 0`, which waits forever, is deliberately not reachable. Killing the task closes the \
         connection, so a waiting read stops instead of holding a worker thread.
 
         Delivery is at-least-once. Every entry this task returns is added to the group's Pending Entries List for this \
@@ -147,17 +148,10 @@ import reactor.core.publisher.Flux;
     }
 )
 public class ReadGroup extends AbstractRedisConnection implements RunnableTask<ReadGroup.Output> {
-    /**
-     * Added on top of {@code blockDuration} so Lettuce's own command timeout never fires before the server returns from
-     * {@code BLOCK}; without it a block longer than the default client timeout would fail an otherwise healthy read.
-     */
+    // BLOCK can outlast Lettuce's default command timeout, so the client timeout is raised above it.
     private static final Duration COMMAND_TIMEOUT_MARGIN = Duration.ofSeconds(10);
 
-    /**
-     * Upper bound on how long {@link #kill()} waits for the in-flight read to unwind after the connection is closed.
-     * Lettuce's {@code shutdown()} itself blocks for up to two seconds, so the margin is deliberate.
-     */
-    private static final Duration KILL_AWAIT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration MAX_BLOCK_DURATION = Duration.ofHours(1);
 
     @PluginProperty(group = "main")
     @Schema(
@@ -170,7 +164,9 @@ public class ReadGroup extends AbstractRedisConnection implements RunnableTask<R
     @PluginProperty(group = "main")
     @Schema(
         title = "Consumer group name",
-        description = "Rendered group name; the group must already exist, so create it with `GroupCreate` first. Reading from a missing group fails with `NOGROUP`."
+        description = """
+            Rendered group name; the group must already exist, so create it with `GroupCreate` first. \
+            Reading from a missing group fails with `NOGROUP`."""
     )
     @NotNull
     private Property<String> group;
@@ -178,7 +174,10 @@ public class ReadGroup extends AbstractRedisConnection implements RunnableTask<R
     @PluginProperty(group = "main")
     @Schema(
         title = "Consumer name inside the group",
-        description = "Rendered consumer name. Redis tracks pending entries per consumer, so entries delivered under this name stay owned by it until they are acknowledged. Use a stable name per worker role rather than a value that changes on every execution, otherwise unacknowledged entries are stranded under a name nothing reads again."
+        description = """
+            Rendered consumer name. Redis tracks pending entries per consumer, so entries delivered under this name \
+            stay owned by it until they are acknowledged. Use a stable name per worker role rather than a value that \
+            changes on every execution, otherwise unacknowledged entries are stranded under a name nothing reads again."""
     )
     @NotNull
     private Property<String> consumer;
@@ -186,7 +185,11 @@ public class ReadGroup extends AbstractRedisConnection implements RunnableTask<R
     @PluginProperty(group = "main")
     @Schema(
         title = "Stream ID to read from",
-        description = "Defaults to `>`, which delivers entries never handed to any consumer of the group and adds them to this consumer's pending list. Use `0` to re-read this consumer's own already delivered but unacknowledged entries, oldest first, or any explicit stream ID to re-read its pending entries after that ID. Only `>` delivers new entries."
+        description = """
+            Defaults to `>`, which delivers entries never handed to any consumer of the group and adds them to this \
+            consumer's pending list. Use `0` to re-read this consumer's own already delivered but unacknowledged \
+            entries, oldest first, or any explicit stream ID to re-read its pending entries after that ID. Only `>` \
+            delivers new entries."""
     )
     @Builder.Default
     @NotNull
@@ -195,23 +198,33 @@ public class ReadGroup extends AbstractRedisConnection implements RunnableTask<R
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Maximum entries per read",
-        description = "Defaults to 100 and maps to `COUNT`. Must be at least 1. Forced to 1 when `fetchType` is `FETCH_ONE`, so the task never makes Redis mark entries as delivered that the flow cannot see or acknowledge."
+        description = """
+            Defaults to 100 and maps to `COUNT`. Must be between 1 and 10000. Forced to 1 when `fetchType` is \
+            `FETCH_ONE`, so the task never makes Redis mark entries as delivered that the flow cannot see or \
+            acknowledge."""
     )
     @Builder.Default
     @NotNull
-    private Property<Integer> count = Property.ofValue(100);
+    private Property<@Min(1) @Max(10000) Integer> count = Property.ofValue(100);
 
     @PluginProperty(group = "advanced")
     @Schema(
         title = "How long to wait for entries",
-        description = "Maps to `BLOCK`. Unset by default, which makes the read return immediately with whatever is available. When set it must be strictly positive; `BLOCK 0`, which waits forever, is not supported because the read has to stay bounded. The client command timeout is raised above this value for the call."
+        description = """
+            Maps to `BLOCK`. Unset by default, which makes the read return immediately with whatever is available. \
+            When set it must be strictly positive and at most 1 hour (`PT1H`); `BLOCK 0`, which waits forever, is not \
+            supported because the read has to stay bounded. The client command timeout is raised above this value for \
+            the call. The task-level `timeout` can cap the wait further."""
     )
     private Property<Duration> blockDuration;
 
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Skip the pending list for this read",
-        description = "Defaults to false. When true the read adds `NOACK`, so Redis never records the entries as pending and `Ack` has nothing to remove. This downgrades delivery to at-most-once: an entry lost by a failing flow is not redelivered. Leave it false whenever the work must not be lost."
+        description = """
+            Defaults to false. When true the read adds `NOACK`, so Redis never records the entries as pending and \
+            `Ack` has nothing to remove. This downgrades delivery to at-most-once: an entry lost by a failing flow is \
+            not redelivered. Leave it false whenever the work must not be lost."""
     )
     @Builder.Default
     @NotNull
@@ -220,7 +233,11 @@ public class ReadGroup extends AbstractRedisConnection implements RunnableTask<R
     @PluginProperty(group = "advanced")
     @Schema(
         title = "How entries are returned",
-        description = "Defaults to `FETCH`, which returns every entry of the batch in `messages`. `FETCH_ONE` returns a single entry in `message` and forces `count` to 1. `STORE` writes the batch as an ION file to Kestra internal storage and returns its `uri`. `NONE` returns no entry body; `count` and `ids` are still populated, so the batch can be acknowledged or counted without carrying the payload."
+        description = """
+            Defaults to `FETCH`, which returns every entry of the batch in `messages`. `FETCH_ONE` returns a single \
+            entry in `message` and forces `count` to 1. `STORE` writes the batch as an ION file to Kestra internal \
+            storage and returns its `uri`. `NONE` returns no entry body; `count` and `ids` are still populated, so the \
+            batch can be acknowledged or counted without carrying the payload."""
     )
     @Builder.Default
     @NotNull
@@ -236,97 +253,73 @@ public class ReadGroup extends AbstractRedisConnection implements RunnableTask<R
     @Getter(AccessLevel.NONE)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
-    private final AtomicReference<AbstractRedisConnection.RedisFactory> factoryRef = new AtomicReference<>();
-
-    @Builder.Default
-    @Getter(AccessLevel.NONE)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private final AtomicReference<CountDownLatch> waitForTermination = new AtomicReference<>();
-
-    @Builder.Default
-    @Getter(AccessLevel.NONE)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private final AtomicReference<Logger> loggerRef = new AtomicReference<>();
+    private final AtomicReference<RedisFactory> factoryRef = new AtomicReference<>();
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        Logger logger = runContext.logger();
-        loggerRef.set(logger);
+        var logger = runContext.logger();
 
-        // Publish the latch before anything else, including the isActive check: a kill() landing between the check and
-        // the publish would otherwise return without waiting for this read at all. The outer finally always counts it
-        // down exactly once, on every return and throw path.
-        CountDownLatch latch = new CountDownLatch(1);
-        waitForTermination.set(latch);
+        if (!isActive.get()) {
+            throw new CancellationException("Read on a Redis stream consumer group was cancelled before it started.");
+        }
+
+        var factory = this.redisFactory(runContext);
+        factoryRef.set(factory);
 
         try {
+            // kill() may have landed while the connection was opening
             if (!isActive.get()) {
                 throw new CancellationException("Read on a Redis stream consumer group was cancelled before it started.");
             }
 
-            RedisFactory factory = this.redisFactory(runContext);
-            factoryRef.set(factory);
+            return this.read(runContext, factory);
+        } catch (Exception e) {
+            if (!isActive.get()) {
+                logger.info("Read on a Redis stream consumer group was cancelled; no entry was acknowledged.");
 
-            try {
-                // Re-check right after publishing the connection: this closes the window where a kill() between opening
-                // the connection and storing it would leave a live connection behind with nothing able to close it.
-                if (!isActive.get()) {
-                    throw new CancellationException("Read on a Redis stream consumer group was cancelled before it started.");
-                }
-
-                return this.read(runContext, factory);
-            } catch (Exception e) {
-                if (!isActive.get()) {
-                    // kill() closed the connection underneath the blocked command. Nothing was delivered by a command
-                    // that failed, and acknowledgement is a separate task, so no entry can have been acknowledged here.
-                    logger.info("Read on a Redis stream consumer group was cancelled; no entry was acknowledged.");
-
-                    throw new CancellationException("Read on a Redis stream consumer group was cancelled while waiting for entries.");
-                }
-
-                throw e;
-            } finally {
-                // Close on every path. The atomic hand-off in releaseFactory() guarantees exactly one of this block and
-                // kill() ever closes the connection, so the normal path does not leak a Lettuce client either.
-                this.releaseFactory();
+                throw new CancellationException("Read on a Redis stream consumer group was cancelled while waiting for entries.");
             }
+
+            throw e;
         } finally {
-            latch.countDown();
+            this.releaseFactory(logger);
         }
     }
 
-    // Lettuce's xreadgroup takes StreamOffset<K> as a generic varargs parameter, which is an unavoidable
-    // unchecked generic array creation at the call site below.
+    // Lettuce's xreadgroup takes a generic varargs StreamOffset, an unavoidable unchecked array creation.
     @SuppressWarnings("unchecked")
     private Output read(RunContext runContext, RedisFactory factory) throws Exception {
-        String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
-        String renderedGroup = runContext.render(this.group).as(String.class).orElseThrow();
-        String renderedConsumer = runContext.render(this.consumer).as(String.class).orElseThrow();
-        String renderedOffset = runContext.render(this.offset).as(String.class).orElse(">");
-        FetchType renderedFetchType = runContext.render(this.fetchType).as(FetchType.class).orElse(FetchType.FETCH);
+        var rKey = runContext.render(this.key).as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("`key` rendered to an empty value; set the Redis stream key to read"));
+        var rGroup = runContext.render(this.group).as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("`group` rendered to an empty value; set a consumer group name"));
+        var rConsumer = runContext.render(this.consumer).as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("`consumer` rendered to an empty value; set a consumer name"));
+        var rOffset = runContext.render(this.offset).as(String.class).orElse(">");
+        var rFetchType = runContext.render(this.fetchType).as(FetchType.class).orElse(FetchType.FETCH);
 
-        int renderedCount = runContext.render(this.count).as(Integer.class).orElse(100);
-        if (renderedCount < 1) {
-            throw new IllegalArgumentException("count must be at least 1 but was " + renderedCount);
+        var rCount = runContext.render(this.count).as(Integer.class).orElse(100);
+        if (rFetchType == FetchType.FETCH_ONE && rCount > 1) {
+            // more entries than the output carries would sit pending with no ID reaching the flow
+            runContext.logger().debug("fetchType is FETCH_ONE, reading a single entry instead of {}.", rCount);
+            rCount = 1;
         }
-        if (renderedFetchType == FetchType.FETCH_ONE && renderedCount > 1) {
-            // Delivering more entries than the output can carry would mark them as pending under this consumer with no
-            // id reaching the flow, so they could never be acknowledged from it.
-            runContext.logger().debug("fetchType is FETCH_ONE, reading a single entry instead of {}.", renderedCount);
-            renderedCount = 1;
-        }
 
-        XReadArgs readArgs = new XReadArgs().count(renderedCount);
+        var readArgs = new XReadArgs().count(rCount);
 
-        Optional<Duration> renderedBlock = runContext.render(this.blockDuration).as(Duration.class);
-        if (renderedBlock.isPresent()) {
-            Duration block = renderedBlock.get();
+        var rBlock = runContext.render(this.blockDuration).as(Duration.class);
+        if (rBlock.isPresent()) {
+            var block = rBlock.get();
             if (block.isZero() || block.isNegative()) {
                 throw new IllegalArgumentException(
                     "blockDuration must be strictly positive but was " + block
                         + "; leave it unset for a read that returns immediately. Blocking forever is not supported because the read must stay bounded."
+                );
+            }
+            if (block.compareTo(MAX_BLOCK_DURATION) > 0) {
+                throw new IllegalArgumentException(
+                    "blockDuration must be at most " + MAX_BLOCK_DURATION + " but was " + block
+                        + "; use a shorter block and read again, or cap the task with the task-level `timeout`."
                 );
             }
 
@@ -338,43 +331,41 @@ public class ReadGroup extends AbstractRedisConnection implements RunnableTask<R
             readArgs = readArgs.noack(true);
         }
 
-        List<io.lettuce.core.StreamMessage<String, String>> read = factory.getSyncCommands().xreadgroup(
-            Consumer.from(renderedGroup, renderedConsumer),
+        var read = factory.getSyncCommands().xreadgroup(
+            Consumer.from(rGroup, rConsumer),
             readArgs,
-            XReadArgs.StreamOffset.from(renderedKey, renderedOffset)
+            XReadArgs.StreamOffset.from(rKey, rOffset)
         );
 
-        // Redis answers a timed-out BLOCK with a nil reply, which Lettuce surfaces as null on some versions and as an
-        // empty list on others; both mean the same empty batch here.
-        List<Message> messages = (read == null ? List.<io.lettuce.core.StreamMessage<String, String>> of() : read)
-            .stream()
+        // a timed-out BLOCK is a nil reply: null or an empty list depending on the Lettuce version
+        var batch = read == null ? List.<StreamMessage<String, String>> of() : read;
+        var messages = batch.stream()
             .map(
                 message -> Message.builder()
                     .stream(message.getStream())
                     .id(message.getId())
-                    // Redis field names and values are returned untouched, so a payload survives the round trip byte for byte.
-                    .fields(message.getBody() == null ? Map.<String, String> of() : java.util.Collections.unmodifiableMap(new java.util.LinkedHashMap<>(message.getBody())))
+                    .fields(message.getBody() == null ? Map.<String, String> of() : Collections.unmodifiableMap(new LinkedHashMap<>(message.getBody())))
                     .build()
             )
             .toList();
 
-        List<String> ids = messages.stream().map(Message::getId).toList();
+        var ids = messages.stream().map(Message::getId).toList();
 
-        runContext.metric(Counter.of("read.entries.count", messages.size(), "stream", renderedKey, "group", renderedGroup));
+        runContext.metric(Counter.of("read.entries.count", messages.size(), "stream", rKey, "group", rGroup));
 
-        Output.OutputBuilder output = Output.builder()
-            .stream(renderedKey)
-            .group(renderedGroup)
-            .consumer(renderedConsumer)
+        var output = Output.builder()
+            .stream(rKey)
+            .group(rGroup)
+            .consumer(rConsumer)
             .count(messages.size())
             .ids(ids);
 
-        switch (renderedFetchType) {
+        switch (rFetchType) {
             case FETCH -> output.messages(messages);
             case FETCH_ONE -> output.message(messages.isEmpty() ? null : messages.getFirst());
             case STORE -> output.uri(this.store(runContext, messages));
             case NONE -> {
-                // ids and count are still returned so the batch stays acknowledgeable.
+                // ids and count are still returned so the batch stays acknowledgeable
             }
         }
 
@@ -382,7 +373,7 @@ public class ReadGroup extends AbstractRedisConnection implements RunnableTask<R
     }
 
     private URI store(RunContext runContext, List<Message> messages) throws Exception {
-        File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
+        var tempFile = runContext.workingDir().createTempFile(".ion").toFile();
 
         try (var stream = new BufferedOutputStream(new FileOutputStream(tempFile), FileSerde.BUFFER_SIZE)) {
             FileSerde.writeAll(stream, Flux.fromIterable(messages)).block();
@@ -392,12 +383,9 @@ public class ReadGroup extends AbstractRedisConnection implements RunnableTask<R
         return runContext.storage().putFile(tempFile);
     }
 
-    /**
-     * Atomically hands off the live connection so exactly one of {@link #run(RunContext)}'s {@code finally} and
-     * {@link #kill()} closes it, whichever gets there first; the other finds the reference already cleared.
-     */
-    private void releaseFactory() {
-        RedisFactory factory = factoryRef.getAndSet(null);
+    // the atomic hand-off makes sure the connection is closed once, whether by run() or by an earlier path
+    private void releaseFactory(Logger logger) {
+        var factory = factoryRef.getAndSet(null);
         if (factory == null) {
             return;
         }
@@ -405,42 +393,20 @@ public class ReadGroup extends AbstractRedisConnection implements RunnableTask<R
         try {
             factory.close();
         } catch (Exception e) {
-            Logger logger = loggerRef.get();
-            if (logger != null) {
-                logger.warn("Failed to close the Redis connection of task id={}", this.id, e);
-            }
+            logger.warn("Failed to close the Redis connection of task id={}", this.id, e);
         }
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>
-     * Closing the connection is what unblocks an in-flight {@code XREADGROUP ... BLOCK}: the blocked command fails
-     * instead of holding the worker thread for the rest of its block duration.
-     */
+    // closing the connection fails the blocked XREADGROUP without waiting; run() does the full cleanup
     @Override
     public void kill() {
         if (!isActive.compareAndSet(true, false)) {
             return;
         }
 
-        this.releaseFactory();
-
-        CountDownLatch latch = this.waitForTermination.get();
-        if (latch == null) {
-            return;
-        }
-
-        try {
-            if (!latch.await(KILL_AWAIT_TIMEOUT.toSeconds(), TimeUnit.SECONDS)) {
-                Logger logger = loggerRef.get();
-                if (logger != null) {
-                    logger.warn("kill() of task id={} timed out after {} waiting for the in-flight read to stop; proceeding.", this.id, KILL_AWAIT_TIMEOUT);
-                }
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+        var factory = factoryRef.get();
+        if (factory != null) {
+            factory.closeAsync();
         }
     }
 

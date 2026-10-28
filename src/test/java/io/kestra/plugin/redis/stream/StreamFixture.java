@@ -1,5 +1,6 @@
 package io.kestra.plugin.redis.stream;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -7,6 +8,8 @@ import io.lettuce.core.Consumer;
 import io.lettuce.core.Limit;
 import io.lettuce.core.Range;
 import io.lettuce.core.RedisClient;
+import io.lettuce.core.StreamMessage;
+import io.lettuce.core.XGroupCreateArgs;
 import io.lettuce.core.XReadArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
@@ -42,7 +45,7 @@ final class StreamFixture implements AutoCloseable {
         this.commands.xgroupCreate(
             XReadArgs.StreamOffset.from(key, startId),
             group,
-            io.lettuce.core.XGroupCreateArgs.Builder.mkstream(true)
+            XGroupCreateArgs.Builder.mkstream(true)
         );
     }
 
@@ -70,14 +73,14 @@ final class StreamFixture implements AutoCloseable {
      * Runs one {@code XREADGROUP ... BLOCK} on this fixture's own connection, as a control for the task's handling of a
      * block that outlasts the client command timeout.
      */
-    List<String> blockingRead(String key, String group, String consumer, java.time.Duration block) {
-        List<io.lettuce.core.StreamMessage<String, String>> read = this.commands.xreadgroup(
+    List<String> blockingRead(String key, String group, String consumer, Duration block) {
+        List<StreamMessage<String, String>> read = this.commands.xreadgroup(
             Consumer.from(group, consumer),
-            new io.lettuce.core.XReadArgs().count(10).block(block),
+            new XReadArgs().count(10).block(block),
             XReadArgs.StreamOffset.from(key, ">")
         );
 
-        return read == null ? List.of() : read.stream().map(io.lettuce.core.StreamMessage::getId).toList();
+        return read == null ? List.of() : read.stream().map(StreamMessage::getId).toList();
     }
 
     void delete(String... keys) {

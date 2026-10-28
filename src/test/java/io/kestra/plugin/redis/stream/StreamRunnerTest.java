@@ -16,7 +16,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
 /**
- * Runs the full read, process and acknowledge path of {@code flows/stream.yaml} through the Kestra runner.
+ * Runs the full read, process and acknowledge path of {@code sanity-checks/stream.yaml} through the Kestra runner.
  *
  * <p>
  * The stream is seeded here rather than inside the flow: the first slice of the stream sub-group only consumes, so
@@ -50,7 +50,7 @@ class StreamRunnerTest {
     }
 
     @Test
-    @ExecuteFlow("flows/stream.yaml")
+    @ExecuteFlow("sanity-checks/stream.yaml")
     void readProcessAcknowledge(Execution execution) {
         assertThat(execution.getTaskRunList(), hasSize(8));
         assertThat(execution.getState().getCurrent(), is(State.Type.SUCCESS));

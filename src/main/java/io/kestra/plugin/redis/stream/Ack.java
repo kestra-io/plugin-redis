@@ -110,7 +110,9 @@ public class Ack extends AbstractRedisConnection implements RunnableTask<Ack.Out
     @PluginProperty(group = "main")
     @Schema(
         title = "Consumer group name",
-        description = "Rendered group name whose pending list the entries are removed from. `XACK` on a group that does not exist acknowledges nothing rather than failing."
+        description = """
+            Rendered group name whose pending list the entries are removed from. `XACK` on a group that does not \
+            exist acknowledges nothing rather than failing."""
     )
     @NotNull
     private Property<String> group;
@@ -118,7 +120,9 @@ public class Ack extends AbstractRedisConnection implements RunnableTask<Ack.Out
     @PluginProperty(group = "main")
     @Schema(
         title = "Stream IDs to acknowledge",
-        description = "Rendered list of exact stream IDs, typically the `ids` output of `ReadGroup`. Duplicates are removed before the call. An empty list is a no-op and does not call Redis."
+        description = """
+            Rendered list of exact stream IDs, typically the `ids` output of `ReadGroup`. Duplicates are removed \
+            before the call. An empty list is a no-op and does not call Redis."""
     )
     @NotNull
     private Property<List<String>> ids;
@@ -126,7 +130,10 @@ public class Ack extends AbstractRedisConnection implements RunnableTask<Ack.Out
     @PluginProperty(group = "reliability")
     @Schema(
         title = "Fail when some IDs were not pending",
-        description = "Defaults to false, which reports the acknowledged `count` without failing; this keeps a retried acknowledgement harmless. When true, the task throws if fewer entries were removed than requested, which catches IDs that were already acknowledged, never pending for this group, or trimmed out of the stream."
+        description = """
+            Defaults to false, which reports the acknowledged `count` without failing; this keeps a retried \
+            acknowledgement harmless. When true, the task throws if fewer entries were removed than requested, which \
+            catches IDs that were already acknowledged, never pending for this group, or trimmed out of the stream."""
     )
     @Builder.Default
     @NotNull
@@ -134,29 +141,31 @@ public class Ack extends AbstractRedisConnection implements RunnableTask<Ack.Out
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        final String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
-        final String renderedGroup = runContext.render(this.group).as(String.class).orElseThrow();
-        final List<String> renderedIds = runContext.render(this.ids).asList(String.class).stream()
+        var rKey = runContext.render(this.key).as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("`key` rendered to an empty value; set the Redis stream key"));
+        var rGroup = runContext.render(this.group).as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("`group` rendered to an empty value; set a consumer group name"));
+        var rIds = runContext.render(this.ids).asList(String.class).stream()
             .distinct()
             .toList();
 
-        if (renderedIds.isEmpty()) {
-            runContext.logger().info("No stream ID to acknowledge on stream '{}' for group '{}'.", renderedKey, renderedGroup);
+        if (rIds.isEmpty()) {
+            runContext.logger().info("No stream ID to acknowledge on stream '{}' for group '{}'.", rKey, rGroup);
 
             return Output.builder().count(0L).size(0).build();
         }
 
-        try (RedisFactory factory = this.redisFactory(runContext)) {
-            long count = factory.getSyncCommands().xack(
-                renderedKey,
-                renderedGroup,
-                renderedIds.toArray(new String[0])
+        try (var factory = this.redisFactory(runContext)) {
+            var count = factory.getSyncCommands().xack(
+                rKey,
+                rGroup,
+                rIds.toArray(new String[0])
             );
 
-            if (count < renderedIds.size() && runContext.render(this.failedOnMissing).as(Boolean.class).orElse(false)) {
+            if (count < rIds.size() && runContext.render(this.failedOnMissing).as(Boolean.class).orElse(false)) {
                 throw new IllegalStateException(
-                    "Only " + count + " of " + renderedIds.size() + " entries acknowledged on stream '" + renderedKey
-                        + "' for group '" + renderedGroup + "'. The remaining IDs were not pending for this group: they "
+                    "Only " + count + " of " + rIds.size() + " entries acknowledged on stream '" + rKey
+                        + "' for group '" + rGroup + "'. The remaining IDs were not pending for this group: they "
                         + "were already acknowledged, never delivered to this group, or trimmed out of the stream. Set "
                         + "`failedOnMissing` to false to accept that."
                 );
@@ -166,22 +175,22 @@ public class Ack extends AbstractRedisConnection implements RunnableTask<Ack.Out
                 Counter.of(
                     "acknowledged.entries.count",
                     count,
-                    "stream", renderedKey,
-                    "group", renderedGroup
+                    "stream", rKey,
+                    "group", rGroup
                 )
             );
 
             runContext.logger().info(
                 "Acknowledged {} of {} entries on stream '{}' for group '{}'.",
                 count,
-                renderedIds.size(),
-                renderedKey,
-                renderedGroup
+                rIds.size(),
+                rKey,
+                rGroup
             );
 
             return Output.builder()
                 .count(count)
-                .size(renderedIds.size())
+                .size(rIds.size())
                 .build();
         }
     }

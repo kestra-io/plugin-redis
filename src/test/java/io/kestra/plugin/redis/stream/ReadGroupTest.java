@@ -17,6 +17,7 @@ import org.junit.jupiter.api.TestInstance;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
+import io.kestra.core.models.validations.ModelValidator;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.FileSerde;
@@ -36,6 +37,9 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 class ReadGroupTest {
     @Inject
     private RunContextFactory runContextFactory;
+
+    @Inject
+    private ModelValidator modelValidator;
 
     private static final String REDIS_URI = "redis://:redis@localhost:6379/0";
 
@@ -179,8 +183,8 @@ class ReadGroupTest {
             ExecutionException thrown = assertThrows(ExecutionException.class, () -> reading.get(20, TimeUnit.SECONDS));
             assertThat(getRootCause(thrown), instanceOf(CancellationException.class));
 
-            // kill() returned promptly instead of waiting out the 5 minute block
-            assertThat(killDuration.toSeconds(), lessThan(10L));
+            // kill() only fails the in-flight command, it never waits for the client shutdown
+            assertThat(killDuration.toMillis(), lessThan(1_000L));
 
             // a cancelled read delivered nothing, so nothing is pending and nothing was acknowledged
             assertThat(fixture.pendingIds(key, GROUP), is(empty()));
@@ -418,14 +422,21 @@ class ReadGroupTest {
     }
 
     @Test
-    void rejectsACountBelowOne() {
+    void rejectsACountOutsideTheAllowedRange() {
         RunContext runContext = runContextFactory.of(Map.of());
         String key = "r236_read_bad_count_" + IdUtils.create();
 
-        ReadGroup task = read(runContext, key).count(Property.ofValue(0)).build();
+        for (int invalid : new int[] { 0, -1, 10_001 }) {
+            ReadGroup task = read(runContext, key).id("read").type(ReadGroup.class.getName()).count(Property.ofValue(invalid)).build();
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
-        assertThat(e.getMessage(), is("count must be at least 1 but was 0"));
+            assertThat("count " + invalid, modelValidator.isValid(task).isPresent(), is(true));
+        }
+
+        for (int valid : new int[] { 1, 10_000 }) {
+            ReadGroup task = read(runContext, key).id("read").type(ReadGroup.class.getName()).count(Property.ofValue(valid)).build();
+
+            assertThat("count " + valid, modelValidator.isValid(task).isPresent(), is(false));
+        }
     }
 
     @Test
@@ -440,6 +451,27 @@ class ReadGroupTest {
         ReadGroup negative = read(runContext, key).blockDuration(Property.ofValue(Duration.ofSeconds(-1))).build();
         IllegalArgumentException negativeError = assertThrows(IllegalArgumentException.class, () -> negative.run(runContext));
         assertThat(negativeError.getMessage(), containsString("blockDuration must be strictly positive"));
+    }
+
+    @Test
+    void rejectsABlockDurationAboveOneHour() {
+        RunContext runContext = runContextFactory.of(Map.of());
+        String key = "r236_read_long_bad_block_" + IdUtils.create();
+
+        ReadGroup tooLong = read(runContext, key).blockDuration(Property.ofValue(Duration.ofDays(1))).build();
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> tooLong.run(runContext));
+        assertThat(e.getMessage(), containsString("blockDuration must be at most PT1H"));
+    }
+
+    @Test
+    void namesTheMissingRequiredProperty() {
+        RunContext runContext = runContextFactory.of(Map.of());
+        String key = "r236_read_empty_group_" + IdUtils.create();
+
+        ReadGroup task = read(runContext, key).group(null).build();
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
+        assertThat(e.getMessage(), containsString("`group` rendered to an empty value"));
     }
 
     @Test

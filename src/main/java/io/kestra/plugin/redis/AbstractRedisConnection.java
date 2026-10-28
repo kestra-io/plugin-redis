@@ -46,16 +46,14 @@ public abstract class AbstractRedisConnection extends Task implements RedisConne
             syncCommands = redisConnection.sync();
         }
 
-        /**
-         * Overrides the command timeout of the live connection.
-         *
-         * <p>
-         * A blocking Redis command such as {@code XREADGROUP ... BLOCK} occupies the connection for as long as its
-         * own block duration, which can exceed Lettuce's default command timeout and abort a read that is still waiting
-         * as designed. Tasks that issue one raise the timeout above their block duration before sending the command.
-         */
+        // lets a blocking command such as XREADGROUP BLOCK outlast Lettuce's default command timeout
         public void setTimeout(Duration timeout) {
             this.redisConnection.setTimeout(timeout);
+        }
+
+        // non-blocking: fails in-flight commands without waiting for the client shutdown done by close()
+        public void closeAsync() {
+            this.redisConnection.closeAsync();
         }
 
         public void close() {
