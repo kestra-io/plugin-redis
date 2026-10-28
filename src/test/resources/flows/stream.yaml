@@ -1,0 +1,71 @@
+id: stream
+namespace: io.kestra.tests
+
+# Full read -> process -> acknowledge path over a Redis stream consumer group.
+# StreamRunnerTest seeds `stream_group_runner_key` with one entry before this flow runs, because the
+# first slice of the stream sub-group only consumes: producing an entry is not one of its tasks.
+tasks:
+  - id: create_group
+    type: io.kestra.plugin.redis.stream.GroupCreate
+    url: redis://:redis@localhost:6379/0
+    key: stream_group_runner_key
+    group: sanity
+    startId: "0"
+
+  - id: create_group_again
+    type: io.kestra.plugin.redis.stream.GroupCreate
+    url: redis://:redis@localhost:6379/0
+    key: stream_group_runner_key
+    group: sanity
+    startId: "0"
+
+  - id: read
+    type: io.kestra.plugin.redis.stream.ReadGroup
+    url: redis://:redis@localhost:6379/0
+    key: stream_group_runner_key
+    group: sanity
+    consumer: sanity_worker
+    count: 10
+    blockDuration: PT5S
+
+  - id: process
+    type: io.kestra.plugin.core.log.Log
+    message: "handling {{ outputs.read.count }} entries from {{ outputs.read.stream }}"
+
+  - id: assert_read
+    type: io.kestra.plugin.core.execution.Assert
+    errorMessage: "Invalid read data {{ outputs.read }}"
+    conditions:
+      - "{{ outputs.create_group.created == true }}"
+      - "{{ outputs.create_group_again.created == false }}"
+      - "{{ outputs.read.count == 1 }}"
+      - "{{ outputs.read.ids | length == 1 }}"
+      - "{{ outputs.read.stream == 'stream_group_runner_key' }}"
+      - "{{ outputs.read.consumer == 'sanity_worker' }}"
+      - "{{ outputs.read.messages[0].id == outputs.read.ids[0] }}"
+      - "{{ outputs.read.messages[0].fields.order == '1' }}"
+      - "{{ outputs.read.messages[0].fields.payload == '{\"amount\": 10.50}' }}"
+
+  - id: acknowledge
+    type: io.kestra.plugin.redis.stream.Ack
+    url: redis://:redis@localhost:6379/0
+    key: stream_group_runner_key
+    group: sanity
+    ids: "{{ outputs.read.ids }}"
+    failedOnMissing: true
+
+  - id: read_after_ack
+    type: io.kestra.plugin.redis.stream.ReadGroup
+    url: redis://:redis@localhost:6379/0
+    key: stream_group_runner_key
+    group: sanity
+    consumer: sanity_worker
+    offset: "0"
+
+  - id: assert_ack
+    type: io.kestra.plugin.core.execution.Assert
+    errorMessage: "Invalid ack data {{ outputs.acknowledge }} / {{ outputs.read_after_ack }}"
+    conditions:
+      - "{{ outputs.acknowledge.count == 1 }}"
+      - "{{ outputs.acknowledge.size == 1 }}"
+      - "{{ outputs.read_after_ack.count == 0 }}"
