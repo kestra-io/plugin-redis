@@ -61,8 +61,9 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Increment amount",
-        description = "Optional; defaults to 1. A whole number (for example `2`) uses INCRBY and needs the key to hold an integer; " +
-            "write a decimal (for example `2.0`) to use INCRBYFLOAT."
+        description = """
+            Optional, defaults to 1. A whole number (for example `2`) uses INCRBY and needs the key to hold an integer.
+            Write a decimal (for example `2.0`) to use INCRBYFLOAT."""
     )
     private Property<Number> amount;
 
