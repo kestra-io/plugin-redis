@@ -161,7 +161,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @PluginProperty(group = "main")
     @Schema(
         title = "Commands to run",
-        description = "List of redis-cli commands executed in order; task stops on first failure or error output. "
+        description = "List of redis-cli commands executed in order; the task stops at the first command that fails or gets a Redis error reply. "
             + "Each command is tokenized with shell-style quoting and passed to redis-cli as literal arguments, so shell/variable "
             + "expansion (`$VAR`, `$(...)`, backticks) is not performed; use the `env` property or Kestra expressions for dynamic values."
     )
@@ -179,7 +179,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @PluginProperty(group = "execution")
     @Schema(
         title = "Container image",
-        description = "Defaults to redis:7-alpine when docker image is not already set."
+        description = "Defaults to redis:7-alpine when docker image is not already set. The image must provide redis-cli 6.2 or later, because the task runs it with `-e`."
     )
     @Builder.Default
     protected Property<String> containerImage = Property.ofValue(DEFAULT_IMAGE);
@@ -325,8 +325,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
                 "OUT=$(" + baseCommand + " " + shellQuoteRedisCommand(redisCommand) + " 2>&1); " +
                     "RC=$?; " +
 
-
-                    // 3) escape and flatten output to ONE line (no real newlines) using awk (busybox-friendly)
+                    // 2) escape and flatten output to ONE line (no real newlines) using awk (busybox-friendly)
                     "OUT_ESC=$(printf '%s' \"$OUT\" | " +
                     "awk 'BEGIN{ORS=\"\"} {" +
                     "gsub(/\\\\\\\\/,\"\\\\\\\\\\\\\\\\\"); " + // \  -> \\
@@ -336,10 +335,10 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
                     "printf \"%s\", $0" +
                     "}'); " +
 
-                    // 4) print the JSON marker on a single line so TaskLogLineMatcher can parse it
+                    // 3) print the JSON marker on a single line so TaskLogLineMatcher can parse it
                     "printf '::{\"outputs\":{\"%s\":\"%s\"}}::\\n' \"" + key + "\" \"$OUT_ESC\"; " +
 
-                    // 5) propagate RC so CommandsWrapper can throw RunnableTaskException
+                    // 4) propagate RC so CommandsWrapper can throw RunnableTaskException
                     "exit $RC";
 
             wrappedShellCommands.add(cmd);

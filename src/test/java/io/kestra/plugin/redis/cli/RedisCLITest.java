@@ -12,6 +12,7 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
+import io.lettuce.core.RedisClient;
 
 import jakarta.inject.Inject;
 
@@ -227,5 +228,61 @@ class RedisCLITest {
         assertThat(ex.getMessage(), containsString("Command failed with exit code 1"));
         assertThat(ex.getCause(), notNullValue());
         assertThat(ex.getCause().getMessage(), containsString("Command failed with exit code 1"));
+    }
+
+    private RedisCLI.RedisCLIBuilder<?, ?> task() {
+        return RedisCLI.builder()
+            .id(IdUtils.create()).type(RedisCLI.class.getName())
+            .host(Property.ofValue(host())).port(Property.ofValue(port()))
+            .password(Property.ofValue("redis"));
+    }
+
+    @Test
+    void shouldFailForEveryRedisErrorReplyCodeInRawAndJsonModes() {
+        for (var json : List.of(false, true)) {
+            for (var code : List.of("WRONGTYPE", "NOPERM", "NOREPLICAS", "MISCONF", "READONLY")) {
+                var task = task().jsonOutput(Property.ofValue(json))
+                    .commands(Property.ofValue(List.of("EVAL_RO 'return redis.error_reply(\"%s test refusal\")' 0".formatted(code))))
+                    .build();
+                var runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+
+                var error = assertThrows(RunnableTaskException.class, () -> task.run(runContext));
+
+                assertThat(error.getMessage(), containsString("exit code 1"));
+            }
+        }
+    }
+
+    @Test
+    void shouldStopFollowingCommandsAfterWrongTypeError() {
+        var key = "wrongtype_%s".formatted(IdUtils.create());
+        var after = "%s_after".formatted(key);
+        var task = task().commands(Property.ofValue(List.of(
+            "SET %s scalar".formatted(key), "LPUSH %s value".formatted(key), "SET %s reached".formatted(after)
+        ))).build();
+        var runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+
+        assertThrows(RunnableTaskException.class, () -> task.run(runContext));
+
+        var client = RedisClient.create("redis://:redis@%s:%d/0".formatted(host(), port()));
+        try (var connection = client.connect()) {
+            assertThat(connection.sync().get(after), nullValue());
+            assertThat(connection.sync().get(key), is("scalar"));
+        } finally {
+            client.shutdown();
+        }
+    }
+
+    @Test
+    void shouldAcceptOrdinaryStringsThatLookLikeErrorMessages() throws Exception {
+        for (var value : List.of("ERR ordinary text", "(error) ordinary text", "WRONGTYPE ordinary text")) {
+            var task = task().commands(Property.ofValue(List.of("ECHO %s".formatted(RedisCLI.shellQuote(value))))).build();
+            var runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+
+            var output = task.run(runContext);
+
+            assertThat(output.getExitCode(), is(0));
+            assertThat(output.getVars().get("command_1"), is(value));
+        }
     }
 }
