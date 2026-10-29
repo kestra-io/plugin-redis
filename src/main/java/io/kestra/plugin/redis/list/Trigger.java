@@ -72,7 +72,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
 
     @Schema(
         title = "Format of the data contained in Redis",
-        description = "With JSON, an item that is not valid JSON is kept as a string and a warning is logged."
+        description = SERDE_TYPE_DESCRIPTION
     )
     @Builder.Default
     @NotNull

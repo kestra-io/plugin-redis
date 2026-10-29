@@ -1,6 +1,7 @@
 package io.kestra.plugin.redis.list;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -33,14 +34,7 @@ class TriggerJsonTest extends AbstractTriggerTest {
             .build();
         delete.run(TestsUtils.mockRunContext(runContextFactory, delete, ImmutableMap.of()));
 
-        var push = ListPush.builder()
-            .id(TriggerJsonTest.class.getSimpleName())
-            .type(ListPush.class.getName())
-            .url(Property.ofValue(REDIS_URI))
-            .key(Property.ofValue(getKey()))
-            .from(Arrays.asList("{\"city\":\"Paris\"}", "{\"city\":\"London\"}", "not-json", "{\"city\":\"Rome\"}", "{\"city\":\"Berlin\"}", "{\"city\":\"Madrid\"}"))
-            .build();
-        push.run(TestsUtils.mockRunContext(runContextFactory, push, ImmutableMap.of()));
+        push(List.of("{\"city\":\"Paris\"}", "{\"city\":\"London\"}", "not-json", "{\"city\":\"Rome\"}", "{\"city\":\"Berlin\"}", "{\"city\":\"Madrid\"}"));
     }
 
     @Test

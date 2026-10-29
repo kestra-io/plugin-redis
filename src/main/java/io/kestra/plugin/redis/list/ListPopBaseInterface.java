@@ -8,6 +8,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 
 public interface ListPopBaseInterface {
+    String SERDE_TYPE_DESCRIPTION = """
+        Defaults to STRING; controls how list elements are decoded. With JSON, an element that is not valid JSON \
+        is kept as a string and a warning is logged.""";
+
     @PluginProperty(group = "main")
     @Schema(
         title = "Redis list key",
@@ -19,7 +23,7 @@ public interface ListPopBaseInterface {
     @PluginProperty(group = "main")
     @Schema(
         title = "Serialization format",
-        description = "Defaults to STRING; controls how list elements are decoded."
+        description = SERDE_TYPE_DESCRIPTION
     )
     Property<SerdeType> getSerdeType();
 }

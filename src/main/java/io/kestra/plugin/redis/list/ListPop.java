@@ -21,13 +21,12 @@ import io.kestra.plugin.redis.AbstractRedisConnection;
 import io.kestra.plugin.redis.models.SerdeType;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import static io.kestra.core.utils.Rethrow.throwFunction;
 
 @SuperBuilder
 @ToString
@@ -64,6 +63,12 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
             type = Counter.TYPE,
             unit = "records",
             description = "Number of records retrieved from Redis List."
+        ),
+        @Metric(
+            name = "popped.records.undecodable.count",
+            type = Counter.TYPE,
+            unit = "records",
+            description = "Number of records that could not be decoded with `serdeType` and were kept as strings."
         )
     },
     aliases = "io.kestra.plugin.redis.ListPop"
@@ -74,7 +79,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
 
     @Schema(
         title = "Serialization format",
-        description = "Defaults to STRING; controls how items are decoded. With JSON, an item that is not valid JSON is kept as a string and a warning is logged."
+        description = SERDE_TYPE_DESCRIPTION
     )
     @Builder.Default
     @NotNull
@@ -101,6 +106,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
      */
     Output run(RunContext runContext, RedisFactory factory) throws Exception {
         final String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
+        var rSerdeType = runContext.render(this.serdeType).as(SerdeType.class).orElse(SerdeType.STRING);
 
         File tempFile = runContext.workingDir().createTempFile(".ion").toFile();
 
@@ -113,6 +119,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
 
         try (var output = new BufferedOutputStream(new FileOutputStream(tempFile), FileSerde.BUFFER_SIZE)) {
             AtomicInteger total = new AtomicInteger();
+            var undecodable = new AtomicInteger();
             ZonedDateTime started = ZonedDateTime.now();
 
             boolean empty;
@@ -122,7 +129,7 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
 
                 var flux = Flux
                     .fromIterable(data)
-                    .map(throwFunction(str -> this.deserialize(runContext, renderedKey, str)));
+                    .map(str -> deserialize(runContext, renderedKey, rSerdeType, str, undecodable));
 
                 Mono<Long> longMono = FileSerde.writeAll(output, flux);
 
@@ -132,17 +139,20 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
             output.flush();
 
             runContext.metric(Counter.of("popped.records.count", total.get(), "key", renderedKey));
+            runContext.metric(Counter.of("popped.records.undecodable.count", undecodable.get(), "key", renderedKey));
 
             return Output.builder().uri(runContext.storage().putFile(tempFile)).count(total.get()).build();
         }
     }
 
-    private Object deserialize(RunContext runContext, String key, String value) throws IllegalVariableEvaluationException {
-        var rSerdeType = runContext.render(this.serdeType).as(SerdeType.class).orElse(SerdeType.STRING);
+    static Object deserialize(RunContext runContext, String key, SerdeType serdeType, String value, @Nullable AtomicInteger undecodable) {
         try {
-            return rSerdeType.deserialize(value);
+            return serdeType.deserialize(value);
         } catch (IOException e) {
-            runContext.logger().warn("Unable to deserialize an item popped from '{}' as {}, keeping it as a string: {}", key, rSerdeType, e.getMessage());
+            if (undecodable != null) {
+                undecodable.incrementAndGet();
+            }
+            runContext.logger().warn("Unable to deserialize an item popped from '{}' as {}, keeping it as a string: {}", key, serdeType, e.getMessage());
             return value;
         }
     }

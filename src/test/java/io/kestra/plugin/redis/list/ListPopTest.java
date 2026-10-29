@@ -1,6 +1,5 @@
 package io.kestra.plugin.redis.list;
 
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -15,6 +14,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.FileSerde;
+import io.kestra.core.utils.IdUtils;
 import io.kestra.plugin.redis.models.SerdeType;
 import io.kestra.plugin.redis.string.Delete;
 
@@ -77,26 +77,31 @@ class ListPopTest {
 
     @Test
     void shouldKeepValidItemsWhenOneIsNotJson() throws Exception {
-        RunContext runContext = runContextFactory.of(Map.of());
+        var runContext = runContextFactory.of(Map.of());
+        var key = "mypopkeyjsonmixed_%s".formatted(IdUtils.create());
 
         ListPush.builder()
             .url(Property.ofValue(REDIS_URI))
-            .key(Property.ofValue("mypopkeyjsonmixed"))
-            .from(Arrays.asList("{\"city\":\"Paris\"}", "{\"city\":\"London\"}", "not-json", "{\"city\":\"Rome\"}", "{\"city\":\"Berlin\"}", "{\"city\":\"Madrid\"}"))
+            .key(Property.ofValue(key))
+            .from(List.of("{\"city\":\"Paris\"}", "{\"city\":\"London\"}", "not-json", "{\"city\":\"Rome\"}", "{\"city\":\"Berlin\"}", "{\"city\":\"Madrid\"}"))
             .build().run(runContext);
 
-        ListPop.Output runOutput = ListPop.builder()
+        var runOutput = ListPop.builder()
             .url(Property.ofValue(REDIS_URI))
-            .key(Property.ofValue("mypopkeyjsonmixed"))
+            .key(Property.ofValue(key))
             .serdeType(Property.ofValue(SerdeType.JSON))
             .maxRecords(Property.ofValue(10))
             .build()
             .run(runContext);
 
         assertThat(runOutput.getCount(), is(6));
+        assertThat(
+            runContext.metrics().stream().filter(metric -> metric.getName().equals("popped.records.undecodable.count")).findFirst().map(metric -> metric.getValue()).orElse(null),
+            is(1.0)
+        );
 
-        List<Object> items = new ArrayList<>();
-        try (InputStream inputStream = runContext.storage().getFile(runOutput.getUri())) {
+        var items = new ArrayList<>();
+        try (var inputStream = runContext.storage().getFile(runOutput.getUri())) {
             FileSerde.read(inputStream, items::add);
         }
         assertThat(
@@ -121,10 +126,6 @@ class ListPopTest {
         Delete.builder()
             .url(Property.ofValue(REDIS_URI))
             .keys(Property.ofValue(Arrays.asList("mypopkeyjson")))
-            .build().run(runContext);
-        Delete.builder()
-            .url(Property.ofValue(REDIS_URI))
-            .keys(Property.ofValue(Arrays.asList("mypopkeyjsonmixed")))
             .build().run(runContext);
         ListPush.builder()
             .url(Property.ofValue(REDIS_URI))
