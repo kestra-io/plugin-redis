@@ -1,6 +1,6 @@
 @PluginSubGroup(
     title = "Stream",
-    description = "This sub-group of plugins contains tasks for consuming Redis Streams with consumer groups.",
+    description = "This sub-group of plugins contains tasks and a trigger for consuming Redis Streams with consumer groups.",
     categories = {
         PluginSubGroup.PluginCategory.DATA
     }

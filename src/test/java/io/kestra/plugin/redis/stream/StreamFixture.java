@@ -1,6 +1,7 @@
 package io.kestra.plugin.redis.stream;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -9,6 +10,7 @@ import io.lettuce.core.Limit;
 import io.lettuce.core.Range;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.StreamMessage;
+import io.lettuce.core.XClaimArgs;
 import io.lettuce.core.XGroupCreateArgs;
 import io.lettuce.core.XReadArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -56,6 +58,44 @@ final class StreamFixture implements AutoCloseable {
             .stream()
             .map(PendingMessage::getId)
             .toList();
+    }
+
+    // a worker that read entries and then died: they are pending for the consumer and nothing will acknowledge them
+    List<String> deliver(String key, String group, String consumer, int count) {
+        var read = this.commands.xreadgroup(
+            Consumer.from(group, consumer),
+            new XReadArgs().count(count),
+            XReadArgs.StreamOffset.from(key, ">")
+        );
+
+        return read == null ? List.of() : read.stream().map(StreamMessage::getId).toList();
+    }
+
+    // backdates the idle time of pending entries without changing who owns them
+    void makeIdle(String key, String group, Duration idle, String... ids) {
+        for (var entry : this.owners(key, group).entrySet()) {
+            if (List.of(ids).contains(entry.getKey())) {
+                this.commands.xclaim(key, Consumer.from(group, entry.getValue()), new XClaimArgs().minIdleTime(0).idle(idle), entry.getKey());
+            }
+        }
+    }
+
+    // pending entry ID to the consumer that owns it, in pending order
+    Map<String, String> owners(String key, String group) {
+        var owners = new LinkedHashMap<String, String>();
+        for (var pending : this.commands.xpending(key, group, Range.unbounded(), Limit.unlimited())) {
+            owners.put(pending.getId(), pending.getConsumer());
+        }
+
+        return owners;
+    }
+
+    long deliveryCount(String key, String group, String id) {
+        return this.commands.xpending(key, group, Range.create(id, id), Limit.unlimited()).getFirst().getRedeliveryCount();
+    }
+
+    void remove(String key, String... ids) {
+        this.commands.xdel(key, ids);
     }
 
     long streamLength(String key) {

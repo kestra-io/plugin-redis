@@ -1,0 +1,53 @@
+id: stream-recovery
+namespace: io.kestra.tests
+
+# StreamRecoveryRunnerTest leaves two entries delivered to a crashed worker and idle for 30 minutes before this flow runs.
+tasks:
+  - id: claim
+    type: io.kestra.plugin.redis.stream.Claim
+    url: redis://:redis@localhost:6379/0
+    key: stream_recovery_runner_key
+    group: sanity
+    consumer: sanity_recovery
+    minIdleTime: PT10M
+
+  - id: assert_claim
+    type: io.kestra.plugin.core.execution.Assert
+    errorMessage: "Invalid claim data {{ outputs.claim }}"
+    conditions:
+      - "{{ outputs.claim.count == 2 }}"
+      - "{{ outputs.claim.completed == true }}"
+      - "{{ outputs.claim.cursor == '0-0' }}"
+      - "{{ outputs.claim.deletedIds | length == 0 }}"
+      - "{{ outputs.claim.consumer == 'sanity_recovery' }}"
+      - "{{ outputs.claim.messages[0].id == outputs.claim.ids[0] }}"
+      - "{{ outputs.claim.messages[0].fields.order == '1' }}"
+      - "{{ outputs.claim.messages[1].fields.order == '2' }}"
+
+  - id: process
+    type: io.kestra.plugin.core.log.Log
+    message: "recovering {{ outputs.claim.count }} entries from {{ outputs.claim.stream }}"
+
+  - id: acknowledge
+    type: io.kestra.plugin.redis.stream.Ack
+    url: redis://:redis@localhost:6379/0
+    key: stream_recovery_runner_key
+    group: sanity
+    ids: "{{ outputs.claim.ids }}"
+    failedOnMissing: true
+
+  - id: nothing_left
+    type: io.kestra.plugin.redis.stream.Claim
+    url: redis://:redis@localhost:6379/0
+    key: stream_recovery_runner_key
+    group: sanity
+    consumer: sanity_recovery
+    minIdleTime: PT1S
+
+  - id: assert_done
+    type: io.kestra.plugin.core.execution.Assert
+    errorMessage: "Invalid acknowledgement {{ outputs.acknowledge }} {{ outputs.nothing_left }}"
+    conditions:
+      - "{{ outputs.acknowledge.count == 2 }}"
+      - "{{ outputs.acknowledge.size == 2 }}"
+      - "{{ outputs.nothing_left.count == 0 }}"

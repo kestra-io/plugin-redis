@@ -15,12 +15,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.models.flows.Flow;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.models.validations.ModelValidator;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.serializers.FileSerde;
+import io.kestra.core.serializers.YamlParser;
 import io.kestra.core.utils.IdUtils;
 
 import io.lettuce.core.RedisCommandExecutionException;
@@ -434,6 +436,29 @@ class ReadGroupTest {
             var task = read(runContext, key).id("read").type(ReadGroup.class.getName()).count(Property.ofValue(valid)).build();
 
             assertThat("count " + valid, modelValidator.isValid(task).isPresent(), is(false));
+        }
+    }
+
+    @Test
+    void rejectsACountOutsideTheRangeWhenItIsALiteralInFlowYaml() throws Exception {
+        // the annotation on the Property type argument does not bound a YAML literal, so the run has to
+        for (var invalid : new String[] { "0", "10001", "99999" }) {
+            var flow = YamlParser.parse("""
+                id: f
+                namespace: n
+                tasks:
+                  - id: r
+                    type: io.kestra.plugin.redis.stream.ReadGroup
+                    url: redis://:redis@localhost:6379/0
+                    key: k
+                    group: g
+                    consumer: c
+                    count: %s
+                """.formatted(invalid), Flow.class);
+            var task = (ReadGroup) flow.getTasks().getFirst();
+
+            var failure = assertThrows(IllegalArgumentException.class, () -> task.run(runContextFactory.of(Map.of())));
+            assertThat(failure.getMessage(), is("`count` must be between 1 and 10000 but was " + invalid));
         }
     }
 

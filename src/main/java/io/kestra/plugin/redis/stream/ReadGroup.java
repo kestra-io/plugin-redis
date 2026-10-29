@@ -1,18 +1,9 @@
 package io.kestra.plugin.redis.stream;
 
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
 import java.net.URI;
 import java.time.Duration;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.slf4j.Logger;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
@@ -23,11 +14,8 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.common.FetchType;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.serializers.FileSerde;
-import io.kestra.plugin.redis.AbstractRedisConnection;
 
 import io.lettuce.core.Consumer;
-import io.lettuce.core.StreamMessage;
 import io.lettuce.core.XReadArgs;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
@@ -35,7 +23,6 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import reactor.core.publisher.Flux;
 
 @SuperBuilder
 @ToString
@@ -147,7 +134,7 @@ import reactor.core.publisher.Flux;
         )
     }
 )
-public class ReadGroup extends AbstractRedisConnection implements RunnableTask<ReadGroup.Output> {
+public class ReadGroup extends AbstractStreamTask implements RunnableTask<ReadGroup.Output> {
     // BLOCK can outlast Lettuce's default command timeout, so the client timeout is raised above it.
     private static final Duration COMMAND_TIMEOUT_MARGIN = Duration.ofSeconds(10);
 
@@ -243,47 +230,9 @@ public class ReadGroup extends AbstractRedisConnection implements RunnableTask<R
     @NotNull
     private Property<FetchType> fetchType = Property.ofValue(FetchType.FETCH);
 
-    @Builder.Default
-    @Getter(AccessLevel.NONE)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private final AtomicBoolean isActive = new AtomicBoolean(true);
-
-    @Builder.Default
-    @Getter(AccessLevel.NONE)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    private final AtomicReference<RedisFactory> factoryRef = new AtomicReference<>();
-
     @Override
     public Output run(RunContext runContext) throws Exception {
-        var logger = runContext.logger();
-
-        if (!isActive.get()) {
-            throw new CancellationException("Read on a Redis stream consumer group was cancelled before it started.");
-        }
-
-        var factory = this.redisFactory(runContext);
-        factoryRef.set(factory);
-
-        try {
-            // kill() may have landed while the connection was opening
-            if (!isActive.get()) {
-                throw new CancellationException("Read on a Redis stream consumer group was cancelled before it started.");
-            }
-
-            return this.read(runContext, factory);
-        } catch (Exception e) {
-            if (!isActive.get()) {
-                logger.info("Read on a Redis stream consumer group was cancelled; no entry was acknowledged.");
-
-                throw new CancellationException("Read on a Redis stream consumer group was cancelled while waiting for entries.");
-            }
-
-            throw e;
-        } finally {
-            this.releaseFactory(logger);
-        }
+        return this.cancellable(runContext, "Read on a Redis stream consumer group", factory -> this.read(runContext, factory));
     }
 
     // Lettuce's xreadgroup takes a generic varargs StreamOffset, an unavoidable unchecked array creation.
@@ -298,7 +247,7 @@ public class ReadGroup extends AbstractRedisConnection implements RunnableTask<R
         var rOffset = runContext.render(this.offset).as(String.class).orElse(">");
         var rFetchType = runContext.render(this.fetchType).as(FetchType.class).orElse(FetchType.FETCH);
 
-        var rCount = runContext.render(this.count).as(Integer.class).orElse(100);
+        var rCount = requireBetween("count", runContext.render(this.count).as(Integer.class).orElse(100), 1, 10000);
         if (rFetchType == FetchType.FETCH_ONE && rCount > 1) {
             // more entries than the output carries would sit pending with no ID reaching the flow
             runContext.logger().debug("fetchType is FETCH_ONE, reading a single entry instead of {}.", rCount);
@@ -337,17 +286,7 @@ public class ReadGroup extends AbstractRedisConnection implements RunnableTask<R
             XReadArgs.StreamOffset.from(rKey, rOffset)
         );
 
-        // a timed-out BLOCK is a nil reply: null or an empty list depending on the Lettuce version
-        var batch = read == null ? List.<StreamMessage<String, String>> of() : read;
-        var messages = batch.stream()
-            .map(
-                message -> Message.builder()
-                    .stream(message.getStream())
-                    .id(message.getId())
-                    .fields(message.getBody() == null ? Map.<String, String> of() : Collections.unmodifiableMap(new LinkedHashMap<>(message.getBody())))
-                    .build()
-            )
-            .toList();
+        var messages = toMessages(read);
 
         var ids = messages.stream().map(Message::getId).toList();
 
@@ -363,51 +302,13 @@ public class ReadGroup extends AbstractRedisConnection implements RunnableTask<R
         switch (rFetchType) {
             case FETCH -> output.messages(messages);
             case FETCH_ONE -> output.message(messages.isEmpty() ? null : messages.getFirst());
-            case STORE -> output.uri(this.store(runContext, messages));
+            case STORE -> output.uri(store(runContext, messages));
             case NONE -> {
                 // ids and count are still returned so the batch stays acknowledgeable
             }
         }
 
         return output.build();
-    }
-
-    private URI store(RunContext runContext, List<Message> messages) throws Exception {
-        var tempFile = runContext.workingDir().createTempFile(".ion").toFile();
-
-        try (var stream = new BufferedOutputStream(new FileOutputStream(tempFile), FileSerde.BUFFER_SIZE)) {
-            FileSerde.writeAll(stream, Flux.fromIterable(messages)).block();
-            stream.flush();
-        }
-
-        return runContext.storage().putFile(tempFile);
-    }
-
-    // the atomic hand-off makes sure the connection is closed once, whether by run() or by an earlier path
-    private void releaseFactory(Logger logger) {
-        var factory = factoryRef.getAndSet(null);
-        if (factory == null) {
-            return;
-        }
-
-        try {
-            factory.close();
-        } catch (Exception e) {
-            logger.warn("Failed to close the Redis connection of task id={}", this.id, e);
-        }
-    }
-
-    // closing the connection fails the blocked XREADGROUP without waiting; run() does the full cleanup
-    @Override
-    public void kill() {
-        if (!isActive.compareAndSet(true, false)) {
-            return;
-        }
-
-        var factory = factoryRef.get();
-        if (factory != null) {
-            factory.closeAsync();
-        }
     }
 
     @Builder
