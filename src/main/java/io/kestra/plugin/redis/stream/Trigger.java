@@ -111,6 +111,7 @@ import lombok.experimental.SuperBuilder;
 )
 public class Trigger extends AbstractTrigger implements PollingTriggerInterface, TriggerOutput<ReadGroup.Output>, RedisConnectionInterface {
     @PluginProperty(group = "main", secret = true)
+    @ToString.Exclude
     private Property<String> url;
 
     @PluginProperty(group = "main")
@@ -133,7 +134,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Schema(
         title = "Consumer name inside the group",
         description = """
-            Rendered consumer name. Entries read by the trigger are pending for this consumer until they are \\
+            Rendered consumer name. Entries read by the trigger are pending for this consumer until they are \
             acknowledged. Use a stable name that no other reader of the group uses."""
     )
     @NotNull
@@ -143,7 +144,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Schema(
         title = "Maximum entries per evaluation",
         description = """
-            Defaults to 100 and maps to `COUNT`. Must be between 1 and 1000. Forced to 1 when `fetchType` is \\
+            Defaults to 100 and maps to `COUNT`. Must be between 1 and 1000. Forced to 1 when `fetchType` is \
             `FETCH_ONE`, so no entry is marked as delivered without its ID reaching the execution."""
     )
     @Builder.Default
@@ -154,9 +155,9 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Schema(
         title = "How entries are passed to the execution",
         description = """
-            Defaults to `FETCH`, which puts every entry of the batch in `trigger.messages`. `FETCH_ONE` passes a \\
-            single entry in `trigger.message`. `STORE` writes the batch as an ION file and passes its `trigger.uri`, \\
-            which keeps large payloads out of the execution. `NONE` passes no entry body. `trigger.ids` and \\
+            Defaults to `FETCH`, which puts every entry of the batch in `trigger.messages`. `FETCH_ONE` passes a \
+            single entry in `trigger.message`. `STORE` writes the batch as an ION file and passes its `trigger.uri`, \
+            which keeps large payloads out of the execution. `NONE` passes no entry body. `trigger.ids` and \
             `trigger.count` are always set, so the batch can be acknowledged in every mode."""
     )
     @Builder.Default
@@ -181,11 +182,7 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     @Override
     public Optional<Execution> evaluate(ConditionContext conditionContext, TriggerContext context) throws Exception {
         var runContext = conditionContext.getRunContext();
-        var rCount = runContext.render(this.count).as(Integer.class).orElse(100);
-        if (rCount < 1 || rCount > 1000) {
-            // @Min and @Max on a Property type argument do not bound a literal written in flow YAML
-            throw new IllegalArgumentException("`count` must be between 1 and 1000 but was " + rCount);
-        }
+        var rCount = AbstractStreamTask.requireBetween("count", runContext.render(this.count).as(Integer.class).orElse(100), 1, 1000);
 
         // no blockDuration: a blocking read would hold a scheduler thread for the whole wait
         var read = ReadGroup.builder()

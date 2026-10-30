@@ -22,10 +22,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import reactor.core.publisher.Flux;
 
-/**
- * Connection lifecycle shared by the stream tasks that hold a Redis connection while they run: a kill closes the
- * connection without waiting, and a cancelled run never reports success.
- */
+/** Holds the Redis connection while a stream task runs, so a kill can close it without waiting. */
 @SuperBuilder
 @ToString
 @EqualsAndHashCode

@@ -134,6 +134,8 @@ public class Claim extends AbstractStreamTask implements RunnableTask<Claim.Outp
 
     private static final String SCAN_COMPLETE = "0-0";
 
+    private static final int MAX_DELETED_IDS = 1000;
+
     @PluginProperty(group = "main")
     @Schema(
         title = "Redis stream key",
@@ -154,7 +156,7 @@ public class Claim extends AbstractStreamTask implements RunnableTask<Claim.Outp
     @Schema(
         title = "Consumer that takes the entries over",
         description = """
-            Rendered consumer name. Claimed entries become pending for this consumer, and stay so until they are \\
+            Rendered consumer name. Claimed entries become pending for this consumer, and stay so until they are \
             acknowledged. Use a stable name for the recovery role, not the name of the consumer that lost them."""
     )
     @NotNull
@@ -164,8 +166,8 @@ public class Claim extends AbstractStreamTask implements RunnableTask<Claim.Outp
     @Schema(
         title = "Minimum idle time before an entry can be taken",
         description = """
-            Only pending entries not delivered or claimed for at least this long are taken. Must be strictly positive \\
-            and is required: choose a value longer than the slowest handler that reads from this group, otherwise an \\
+            Only pending entries not delivered or claimed for at least this long are taken. Must be strictly positive \
+            and is required: choose a value longer than the slowest handler that reads from this group, otherwise an \
             entry that is still being processed is processed a second time. Truncated to whole milliseconds."""
     )
     @NotNull
@@ -175,7 +177,7 @@ public class Claim extends AbstractStreamTask implements RunnableTask<Claim.Outp
     @Schema(
         title = "Stream ID to start the scan from",
         description = """
-            Defaults to `0-0`, the start of the pending list. Pass the `cursor` output of a previous run to continue \\
+            Defaults to `0-0`, the start of the pending list. Pass the `cursor` output of a previous run to continue \
             its scan. Must be `0-0` or a stream ID such as `1700000000000-0`."""
     )
     @Builder.Default
@@ -186,8 +188,8 @@ public class Claim extends AbstractStreamTask implements RunnableTask<Claim.Outp
     @Schema(
         title = "Page size of one scan step",
         description = """
-            Defaults to 100 and maps to `COUNT`. Must be between 1 and 10000. Redis inspects a limited number of \\
-            pending entries per call, so a page can hold fewer entries than this, or none. Lowered to the remaining \\
+            Defaults to 100 and maps to `COUNT`. Must be between 1 and 10000. Redis inspects a limited number of \
+            pending entries per call, so a page can hold fewer entries than this, or none. Lowered to the remaining \
             `maxRecords` budget so a run never takes more than it can return."""
     )
     @Builder.Default
@@ -198,7 +200,7 @@ public class Claim extends AbstractStreamTask implements RunnableTask<Claim.Outp
     @Schema(
         title = "Maximum entries taken by one run",
         description = """
-            Defaults to 100. Must be between 1 and 10000. The run stops as soon as this many entries were taken. \\
+            Defaults to 100. Must be between 1 and 10000. The run stops as soon as this many entries were taken. \
             Forced to 1 when `fetchType` is `FETCH_ONE`, so no entry is taken that the flow cannot see."""
     )
     @Builder.Default
@@ -209,8 +211,8 @@ public class Claim extends AbstractStreamTask implements RunnableTask<Claim.Outp
     @Schema(
         title = "Maximum scan steps of one run",
         description = """
-            Defaults to 10. Must be between 1 and 1000. Each step is one `XAUTOCLAIM`. This bounds the work when \\
-            Redis keeps answering with empty pages and a non-final cursor. When it is spent before the cursor \\
+            Defaults to 10. Must be between 1 and 1000. Each step is one `XAUTOCLAIM`. This bounds the work when \
+            Redis keeps answering with empty pages and a non-final cursor. When it is spent before the cursor \
             reached `0-0`, `completed` is false and `cursor` is where the next run should continue."""
     )
     @Builder.Default
@@ -221,9 +223,9 @@ public class Claim extends AbstractStreamTask implements RunnableTask<Claim.Outp
     @Schema(
         title = "How entries are returned",
         description = """
-            Defaults to `FETCH`, which returns every taken entry in `messages`. `FETCH_ONE` returns a single entry in \\
-            `message` and forces `maxRecords` and `count` to 1. `STORE` writes the entries as an ION file to Kestra \\
-            internal storage and returns its `uri`. `NONE` returns no entry body; `count`, `ids` and the cursor are \\
+            Defaults to `FETCH`, which returns every taken entry in `messages`. `FETCH_ONE` returns a single entry in \
+            `message` and forces `maxRecords` and `count` to 1. `STORE` writes the entries as an ION file to Kestra \
+            internal storage and returns its `uri`. `NONE` returns no entry body; `count`, `ids` and the cursor are \
             still populated."""
     )
     @Builder.Default
@@ -269,6 +271,7 @@ public class Claim extends AbstractStreamTask implements RunnableTask<Claim.Outp
 
         var claimed = new ArrayList<StreamMessage<String, String>>();
         var deleted = new ArrayList<String>();
+        var deletedTotal = 0L;
         var cursor = rStartId;
         var pages = 0;
         var completed = false;
@@ -294,7 +297,8 @@ public class Claim extends AbstractStreamTask implements RunnableTask<Claim.Outp
                 claimed.addAll(page.getMessages());
             }
             if (page.getDeletedIds() != null) {
-                deleted.addAll(page.getDeletedIds());
+                deletedTotal += page.getDeletedIds().size();
+                page.getDeletedIds().stream().limit(Math.max(MAX_DELETED_IDS - deleted.size(), 0)).forEach(deleted::add);
             }
             cursor = page.getId();
 
@@ -313,7 +317,7 @@ public class Claim extends AbstractStreamTask implements RunnableTask<Claim.Outp
         runContext.metric(Counter.of("claim.entries.count", messages.size(), "stream", rKey, "group", rGroup));
         runContext.logger().info(
             "Took over {} entries of group '{}' on stream '{}' in {} scan steps, {} trimmed from the stream, scan {}.",
-            messages.size(), rGroup, rKey, pages, deleted.size(), completed ? "completed" : "stopped at " + cursor
+            messages.size(), rGroup, rKey, pages, deletedTotal, completed ? "completed" : "stopped at " + cursor
         );
 
         var output = Output.builder()
@@ -323,6 +327,7 @@ public class Claim extends AbstractStreamTask implements RunnableTask<Claim.Outp
             .count(messages.size())
             .ids(ids)
             .deletedIds(List.copyOf(deleted))
+            .deletedCount(deletedTotal)
             .cursor(cursor)
             .completed(completed)
             .pages(pages);
@@ -371,10 +376,17 @@ public class Claim extends AbstractStreamTask implements RunnableTask<Claim.Outp
         @Schema(
             title = "Stream IDs that were pending but no longer exist in the stream",
             description = """
-                Entries deleted or trimmed while pending. Redis 7.0 or later removes them from the pending list, so \\
-                they are not returned as entries and need no acknowledgement. Always empty on older servers."""
+                Entries deleted or trimmed while pending. Redis 7.0 or later removes them from the pending list, so \
+                they are not returned as entries and need no acknowledgement. Lists at most the first 1000 IDs, see `deletedCount` for \
+                the total. Always empty on older servers."""
         )
         private List<String> deletedIds;
+
+        @Schema(
+            title = "Number of pending entries that no longer exist in the stream",
+            description = "Total across all scan steps. `deletedIds` lists the first 1000 only, so a heavily trimmed stream does not flood the output."
+        )
+        private long deletedCount;
 
         @Schema(
             title = "Where the scan stopped",

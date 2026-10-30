@@ -25,6 +25,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
@@ -247,8 +248,33 @@ class ClaimTest {
 
             assertThat(output.getIds(), contains(keptId));
             assertThat(output.getDeletedIds(), contains(trimmedId));
+            assertThat(output.getDeletedCount(), is(1L));
             // Redis dropped the dangling entry from the pending list, so there is nothing left to acknowledge for it
             assertThat(fixture.owners(key, GROUP).keySet(), contains(keptId));
+
+            fixture.delete(key);
+        }
+    }
+
+    @Test
+    void theListOfTrimmedIdsIsCappedButTheCountIsNot() throws Exception {
+        var runContext = runContextFactory.of(Map.of());
+        var key = "r236_claim_cap_" + IdUtils.create();
+
+        try (var fixture = new StreamFixture(REDIS_URI)) {
+            fixture.createGroup(key, GROUP, "0");
+            var ids = new ArrayList<String>();
+            for (var i = 0; i < 1100; i++) {
+                ids.add(fixture.add(key, Map.of("order", String.valueOf(i))));
+            }
+            fixture.deliver(key, GROUP, "worker_1", 1100);
+            fixture.makeIdle(key, GROUP, Duration.ofMinutes(30), ids.toArray(String[]::new));
+            fixture.remove(key, ids.toArray(String[]::new));
+
+            var output = claim(key).count(Property.ofValue(1000)).maxRecords(Property.ofValue(10000)).maxPages(Property.ofValue(5)).fetchType(Property.ofValue(FetchType.NONE)).build().run(runContext);
+
+            assertThat(output.getDeletedCount(), is(1100L));
+            assertThat(output.getDeletedIds(), hasSize(1000));
 
             fixture.delete(key);
         }

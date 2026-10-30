@@ -45,6 +45,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -100,6 +101,17 @@ class TriggerTest {
         try (var fixture = new StreamFixture(REDIS_URI)) {
             fixture.delete(FLOW_KEYS.toArray(String[]::new));
         }
+    }
+
+    @Test
+    void theConnectionUrlIsNotPrintedWithTheTrigger() {
+        var trigger = Trigger.builder()
+            .id("stream_trigger")
+            .type(Trigger.class.getName())
+            .url(Property.ofValue("redis://:topsecret@localhost:6379/0"))
+            .build();
+
+        assertThat(trigger.toString(), not(containsString("topsecret")));
     }
 
     @Test
