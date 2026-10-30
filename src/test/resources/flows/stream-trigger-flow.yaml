@@ -1,0 +1,25 @@
+id: stream-trigger-flow
+namespace: io.kestra.tests
+
+triggers:
+  - id: watch
+    type: io.kestra.plugin.redis.stream.Trigger
+    url: redis://:redis@localhost:6379/0
+    key: stream_trigger_flow_key
+    group: trigger_group
+    consumer: trigger_consumer
+    count: 10
+    interval: PT1S
+
+tasks:
+  - id: process
+    type: io.kestra.plugin.core.log.Log
+    message: "handling {{ trigger.count }} entries"
+
+  - id: acknowledge
+    type: io.kestra.plugin.redis.stream.Ack
+    url: redis://:redis@localhost:6379/0
+    key: stream_trigger_flow_key
+    group: trigger_group
+    ids: "{{ trigger.ids }}"
+    failedOnMissing: true

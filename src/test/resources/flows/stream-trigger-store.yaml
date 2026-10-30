@@ -1,0 +1,16 @@
+id: stream-trigger-store
+namespace: io.kestra.tests
+
+triggers:
+  - id: watch
+    type: io.kestra.plugin.redis.stream.Trigger
+    url: redis://:redis@localhost:6379/0
+    key: stream_trigger_store_key
+    group: trigger_group
+    consumer: trigger_consumer
+    fetchType: STORE
+
+tasks:
+  - id: end
+    type: io.kestra.plugin.core.debug.Return
+    format: "{{ trigger.uri }}"
