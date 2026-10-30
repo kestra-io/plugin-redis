@@ -4,7 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
@@ -14,6 +17,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.*;
 import io.kestra.core.models.tasks.runners.TaskRunner;
 import io.kestra.core.runners.RunContext;
+import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.scripts.exec.scripts.models.DockerOptions;
 import io.kestra.plugin.scripts.exec.scripts.models.ScriptOutput;
 import io.kestra.plugin.scripts.exec.scripts.runners.CommandsWrapper;
@@ -133,6 +137,18 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
         }
         """;
 
+    @Getter(AccessLevel.NONE)
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private final transient AtomicReference<TaskRunner<?>> currentRunner = new AtomicReference<>();
+
+    @Getter(AccessLevel.NONE)
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private final transient AtomicBoolean isKilled = new AtomicBoolean(false);
+
     @PluginProperty(group = "main")
     @Schema(title = "Redis host")
     @NotNull
@@ -242,6 +258,14 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @PluginProperty(group = "destination")
     private Property<List<String>> outputFiles;
 
+    TaskRunner<?> freshTaskRunner(TaskRunner<?> runner) throws Exception {
+        // TaskRunner keeps isKilled across runs, so copy it per command.
+        return JacksonMapper.ofJson().readValue(
+            JacksonMapper.ofJson().writeValueAsString(runner),
+            TaskRunner.class
+        );
+    }
+
     @Override
     public ScriptOutput run(RunContext runContext) throws Exception {
         var logger = runContext.logger();
@@ -296,23 +320,27 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
             dockerBuilder.image(rContainerImage);
         }
 
-        CommandsWrapper commandsWrapper = new CommandsWrapper(runContext)
-            .withEnv(envVars)
-            .withNamespaceFiles(namespaceFiles)
-            .withInputFiles(inputFiles)
-            .withOutputFiles(rOutputFiles.isEmpty() ? null : rOutputFiles)
-            .withContainerImage(rContainerImage)
-            .withTaskRunner(taskRunner)
-            .withDockerOptions(dockerBuilder.build())
-            .withInterpreter(Property.ofValue(List.of("/bin/sh", "-c")));
-
         ScriptOutput lastOutput = null;
         Map<String, Object> mergedVars = new HashMap<>();
 
         for (String wrappedShellCommand : wrappedShellCommands) {
-            lastOutput = commandsWrapper
-                .withCommands(Property.ofValue(List.of(wrappedShellCommand)))
-                .run();
+            if (isKilled.get()) {
+                break;
+            }
+            var commandsWrapper = new CommandsWrapper(runContext)
+                .withEnv(envVars)
+                .withNamespaceFiles(namespaceFiles)
+                .withInputFiles(inputFiles)
+                .withOutputFiles(rOutputFiles.isEmpty() ? null : rOutputFiles)
+                .withContainerImage(rContainerImage)
+                .withTaskRunner(freshTaskRunner(taskRunner))
+                .withDockerOptions(dockerBuilder.build())
+                .withInterpreter(Property.ofValue(List.of("/bin/sh", "-c")))
+                .withCommands(Property.ofValue(List.of(wrappedShellCommand)));
+
+            currentRunner.set(commandsWrapper.getTaskRunner());
+            lastOutput = commandsWrapper.run();
+            currentRunner.set(null);
 
             if (lastOutput.getExitCode() != 0) {
                 throw new IllegalStateException("Redis CLI command failed with exit code: " + lastOutput.getExitCode());
@@ -335,6 +363,16 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
                 .stdErrLineCount(lastOutput.getStdErrLineCount())
                 .taskRunner(lastOutput.getTaskRunner())
                 .build();
+    }
+
+    @Override
+    public void kill() {
+        if (isKilled.compareAndSet(false, true)) {
+            var runner = currentRunner.get();
+            if (runner != null) {
+                runner.kill();
+            }
+        }
     }
 
     private List<String> extractWrappedShellCommands(List<String> rCommands, StringBuilder baseCommand) {
