@@ -264,7 +264,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
 
         logger.info("Executing {} Redis CLI command(s) against {}:{}", rCommands.size(), rHost, rPort);
 
-        StringBuilder baseCommand = new StringBuilder("redis-cli -e");
+        var baseCommand = new StringBuilder("redis-cli -e");
         baseCommand.append(" -h ").append(shellQuote(rHost));
         baseCommand.append(" -p ").append(rPort);
         baseCommand.append(" -n ").append(rDatabase);
