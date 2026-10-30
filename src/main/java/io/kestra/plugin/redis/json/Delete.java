@@ -1,5 +1,6 @@
 package io.kestra.plugin.redis.json;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -26,7 +27,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Schema(
     title = "Delete Redis JSON keys or paths",
-    description = "Runs `JSON.DEL` for each rendered key and JSON path (defaults to `$` when paths are empty), sums deleted elements, and can fail when nothing is removed."
+    description = "Runs `JSON.DEL` for each rendered key and JSON path (defaults to `$` when paths are empty), sums deleted elements, and can fail when a requested key or path deletes nothing."
 )
 @Plugin(
     examples = {
@@ -69,7 +70,7 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
     @PluginProperty(group = "reliability")
     @Schema(
         title = "Fail when deletions are missing",
-        description = "Defaults to false; when true, throws if fewer items are deleted than requested."
+        description = "Defaults to false; when true, the task fails if any requested key or path deletes nothing (for example a missing key or path, a path listed twice, or a child path listed after its parent). Paths that exist are deleted before the task fails."
     )
     @Builder.Default
     private Property<Boolean> failedOnMissing = Property.ofValue(false);
@@ -81,6 +82,8 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
             Map<String, List<String>> renderedKeys = runContext.render(keys).asMap(String.class, List.class);
 
             long totalDeleted = 0;
+            var requested = 0;
+            var missing = new ArrayList<String>();
 
             for (Map.Entry<String, List<String>> entry : renderedKeys.entrySet()) {
                 String redisKey = entry.getKey();
@@ -93,11 +96,18 @@ public class Delete extends AbstractRedisConnection implements RunnableTask<Dele
                 for (String path : paths) {
                     long count = factory.getSyncCommands().jsonDel(redisKey, JsonPath.of(path));
                     totalDeleted += count;
+                    requested++;
+                    if (count == 0) {
+                        missing.add(redisKey + " " + path);
+                    }
                 }
             }
 
-            if (totalDeleted < renderedKeys.size() && runContext.render(failedOnMissing).as(Boolean.class).orElse(false)) {
-                throw new NullPointerException("Missing keys or path, only " + totalDeleted + " deleted out of " + renderedKeys.size());
+            if (!missing.isEmpty() && runContext.render(failedOnMissing).as(Boolean.class).orElse(false)) {
+                throw new IllegalStateException(
+                    missing.size() + " of " + requested + " requested paths deleted nothing: " + String.join(", ", missing)
+                        + ". Paths that exist were still deleted. Set `failedOnMissing` to false to accept that."
+                );
             }
 
             runContext.metric(Counter.of("deleted.records.count", totalDeleted));
