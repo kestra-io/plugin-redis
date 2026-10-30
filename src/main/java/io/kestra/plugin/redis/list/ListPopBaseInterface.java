@@ -9,8 +9,9 @@ import jakarta.validation.constraints.NotNull;
 
 public interface ListPopBaseInterface {
     String SERDE_TYPE_DESCRIPTION = """
-        Defaults to STRING; controls how list elements are decoded. With JSON, an element that is not valid JSON \
-        is kept as a string and a warning is logged.""";
+        Defaults to STRING. Controls how list elements are decoded.
+        With JSON, an element that is not valid JSON is kept as a string and a warning is logged.
+        """;
 
     @PluginProperty(group = "main")
     @Schema(

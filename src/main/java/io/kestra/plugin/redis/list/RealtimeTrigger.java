@@ -103,7 +103,7 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
 
                     while (isActive.get()) {
                         factory.getSyncCommands().lpop(renderedKey, 1)
-                            .forEach(s -> fluxSink.next(ListPop.deserialize(runContext, renderedKey, rSerdeType, s, null)));
+                            .forEach(s -> fluxSink.next(ListPop.deserialize(runContext, renderedKey, rSerdeType, s)));
                         try {
                             Thread.sleep(100);
                         } catch (InterruptedException e) {

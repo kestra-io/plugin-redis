@@ -1,6 +1,5 @@
 package io.kestra.plugin.redis.list;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,7 +29,7 @@ class TriggerJsonTest extends AbstractTriggerTest {
             .id(TriggerJsonTest.class.getSimpleName())
             .type(Delete.class.getName())
             .url(Property.ofValue(REDIS_URI))
-            .keys(Property.ofValue(Arrays.asList(getKey())))
+            .keys(Property.ofValue(List.of(getKey())))
             .build();
         delete.run(TestsUtils.mockRunContext(runContextFactory, delete, ImmutableMap.of()));
 

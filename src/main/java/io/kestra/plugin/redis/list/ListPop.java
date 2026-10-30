@@ -140,19 +140,27 @@ public class ListPop extends AbstractRedisConnection implements RunnableTask<Lis
 
             runContext.metric(Counter.of("popped.records.count", total.get(), "key", renderedKey));
             runContext.metric(Counter.of("popped.records.undecodable.count", undecodable.get(), "key", renderedKey));
+            if (undecodable.get() > 1) {
+                runContext.logger().warn("{} items popped from '{}' could not be deserialized as {} and were kept as strings", undecodable.get(), renderedKey, rSerdeType);
+            }
 
             return Output.builder().uri(runContext.storage().putFile(tempFile)).count(total.get()).build();
         }
     }
 
-    static Object deserialize(RunContext runContext, String key, SerdeType serdeType, String value, @Nullable AtomicInteger undecodable) {
+    static Object deserialize(RunContext runContext, String key, SerdeType serdeType, String value) {
+        return deserialize(runContext, key, serdeType, value, null);
+    }
+
+    private static Object deserialize(RunContext runContext, String key, SerdeType serdeType, String value, @Nullable AtomicInteger undecodable) {
         try {
             return serdeType.deserialize(value);
         } catch (IOException e) {
-            if (undecodable != null) {
-                undecodable.incrementAndGet();
+            // a batch logs only its first failure, run() reports the total
+            var failures = undecodable == null ? 1 : undecodable.incrementAndGet();
+            if (failures == 1) {
+                runContext.logger().warn("Unable to deserialize an item popped from '{}' as {}, keeping it as a string: {}", key, serdeType, e.getMessage());
             }
-            runContext.logger().warn("Unable to deserialize an item popped from '{}' as {}, keeping it as a string: {}", key, serdeType, e.getMessage());
             return value;
         }
     }
