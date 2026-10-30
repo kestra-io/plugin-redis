@@ -37,7 +37,9 @@ import lombok.experimental.SuperBuilder;
 @Schema(
     title = "Run Redis CLI commands in a container",
     description = """
-        Executes the provided redis-cli commands sequentially using the configured task runner (Docker by default with image redis:7-alpine), failing on the first non-zero or detected Redis error.
+        Executes the provided redis-cli commands sequentially using the configured task runner (Docker by default with image redis:7-alpine).
+        Uses redis-cli -e to fail on every Redis error reply and stops before running later commands.
+        Ordinary string replies remain successful even when their text resembles an error message.
         Supports TLS, username/password auth via REDISCLI_AUTH, and optional JSON output (Redis 7+).
         """
 )
@@ -197,7 +199,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @PluginProperty(group = "main")
     @Schema(
         title = "Commands to run",
-        description = "List of redis-cli commands executed in order; task stops on first failure or error output. "
+        description = "List of redis-cli commands executed in order; the task stops at the first command that fails or gets a Redis error reply. "
             + "Each command is tokenized with shell-style quoting and passed to redis-cli as literal arguments, so shell/variable "
             + "expansion (`$VAR`, `$(...)`, backticks) is not performed; use the `env` property or Kestra expressions for dynamic values."
     )
@@ -219,7 +221,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @PluginProperty(group = "execution")
     @Schema(
         title = "Container image",
-        description = "Defaults to redis:7-alpine when docker image is not already set."
+        description = "Defaults to redis:7-alpine when docker image is not already set. The image must provide redis-cli 6.2 or later, because the task runs it with `-e`."
     )
     @Builder.Default
     protected Property<String> containerImage = Property.ofValue(DEFAULT_IMAGE);
@@ -286,7 +288,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
 
         logger.info("Executing {} Redis CLI command(s) against {}:{}", rCommands.size(), rHost, rPort);
 
-        StringBuilder baseCommand = new StringBuilder("redis-cli");
+        var baseCommand = new StringBuilder("redis-cli -e");
         baseCommand.append(" -h ").append(shellQuote(rHost));
         baseCommand.append(" -p ").append(rPort);
         baseCommand.append(" -n ").append(rDatabase);
@@ -387,15 +389,13 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
                 "OUT=$(" + baseCommand + " " + shellQuoteRedisCommand(redisCommand) + " 2>&1); " +
                     "RC=$?; " +
 
-                    // 2) some redis-cli errors still exit 0 -> force RC=1 if output looks like an error
-                    "printf '%s' \"$OUT\" | grep -Eiq '^(\\(error\\)|ERR )' && RC=1; " +
-
+                    // 2) escape and flatten output to ONE line (no real newlines) using awk (busybox-friendly)
                     "OUT_ESC=$(printf '%s' \"$OUT\" | awk " + shellQuote(OUTPUT_ESCAPE_AWK) + "); " +
 
-                    // 4) print the JSON marker on a single line so TaskLogLineMatcher can parse it
+                    // 3) print the JSON marker on a single line so TaskLogLineMatcher can parse it
                     "printf '::{\"outputs\":{\"%s\":\"%s\"}}::\\n' \"" + key + "\" \"$OUT_ESC\"; " +
 
-                    // 5) propagate RC so CommandsWrapper can throw RunnableTaskException
+                    // 4) propagate RC so CommandsWrapper can throw RunnableTaskException
                     "exit $RC";
 
             wrappedShellCommands.add(cmd);
