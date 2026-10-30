@@ -68,6 +68,51 @@ class IncrementTest {
     }
 
     @Test
+    void integerValue() throws Exception {
+        var runContext = runContextFactory.of(Map.of());
+
+        var s = IdUtils.create();
+
+        // YAML `amount: 2` is rendered as an Integer, not a Long
+        var task = Increment.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(s))
+            .amount(Property.ofValue(2))
+            .build();
+
+        assertThat(task.run(runContext).getValue(), is(2L));
+        assertThat(task.run(runContext).getValue(), is(4L));
+    }
+
+    @Test
+    void integerExpression() throws Exception {
+        var runContext = runContextFactory.of(Map.of());
+
+        // `amount: "{{ 3 }}"` is also rendered as an Integer
+        var task = Increment.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(IdUtils.create()))
+            .amount(Property.ofExpression("{{ 3 }}"))
+            .build();
+
+        assertThat(task.run(runContext).getValue(), is(3L));
+    }
+
+    @Test
+    void decimalExpression() throws Exception {
+        var runContext = runContextFactory.of(Map.of());
+
+        // `amount: "{{ 2.0 }}"` keeps the INCRBYFLOAT path
+        var task = Increment.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue(IdUtils.create()))
+            .amount(Property.ofExpression("{{ 2.0 }}"))
+            .build();
+
+        assertThat(task.run(runContext).getValue(), is(2.0D));
+    }
+
+    @Test
     void doubleValue() throws Exception {
         RunContext runContext = runContextFactory.of(Map.of());
 

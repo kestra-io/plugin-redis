@@ -35,6 +35,9 @@ Infrastructure dependencies (Docker Compose services):
 - `io.kestra.plugin.redis.list.RealtimeTrigger`
 - `io.kestra.plugin.redis.list.Trigger`
 - `io.kestra.plugin.redis.pubsub.Publish`
+- `io.kestra.plugin.redis.stream.Ack`
+- `io.kestra.plugin.redis.stream.GroupCreate`
+- `io.kestra.plugin.redis.stream.ReadGroup`
 - `io.kestra.plugin.redis.string.Delete`
 - `io.kestra.plugin.redis.string.Get`
 - `io.kestra.plugin.redis.string.Increment`

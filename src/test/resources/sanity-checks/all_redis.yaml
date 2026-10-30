@@ -14,8 +14,8 @@ tasks:
       - "{{ outputs.init.values.randomPort }}:6379"
     wait: false
 
-  - id: call_subflows_in_loop
-    type: io.kestra.plugin.core.flow.ForEach
+  - id: loop
+    type: io.kestra.plugin.core.flow.Loop
     values:
       - increment
       - keys-json
@@ -24,10 +24,10 @@ tasks:
       - list-string
       - redis-json
     tasks:
-      - id: call-subflow-task
+      - id: subflow
         type: io.kestra.plugin.core.flow.Subflow
         namespace: "{{ flow.namespace }}"
-        flowId: "{{ taskrun.value }}"
+        flowId: "{{ item.value }}"
         wait: true
         transmitFailed: true
         inputs:
