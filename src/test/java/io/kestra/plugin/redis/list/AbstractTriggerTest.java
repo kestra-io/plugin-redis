@@ -3,6 +3,7 @@ package io.kestra.plugin.redis.list;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 import org.junit.jupiter.api.TestInstance;
@@ -47,12 +48,16 @@ abstract class AbstractTriggerTest {
     }
 
     protected ListPush.Output push() throws Exception {
+        return push(Arrays.asList("value1", "value2"));
+    }
+
+    protected ListPush.Output push(List<String> items) throws Exception {
         ListPush task = ListPush.builder()
             .id(TriggerTest.class.getSimpleName())
             .type(ListPush.class.getName())
             .url(Property.ofValue(REDIS_URI))
             .key(Property.ofValue(getKey()))
-            .from(Arrays.asList("value1", "value2"))
+            .from(items)
             .build();
 
         return task.run(TestsUtils.mockRunContext(runContextFactory, task, ImmutableMap.of()));

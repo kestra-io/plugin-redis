@@ -22,8 +22,6 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import reactor.core.publisher.Flux;
 
-import static io.kestra.core.utils.Rethrow.throwConsumer;
-
 @SuperBuilder
 @ToString
 @EqualsAndHashCode
@@ -62,7 +60,8 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
     private Property<String> key;
 
     @Schema(
-        title = "Format of the data contained in Redis"
+        title = "Format of the data contained in Redis",
+        description = SERDE_TYPE_DESCRIPTION
     )
     @Builder.Default
     @NotNull
@@ -100,18 +99,11 @@ public class RealtimeTrigger extends AbstractTrigger implements RealtimeTriggerI
             {
                 try (AbstractRedisConnection.RedisFactory factory = task.redisFactory(runContext)) {
                     String renderedKey = runContext.render(this.key).as(String.class).orElseThrow();
+                    var rSerdeType = runContext.render(this.serdeType).as(SerdeType.class).orElse(SerdeType.STRING);
 
                     while (isActive.get()) {
                         factory.getSyncCommands().lpop(renderedKey, 1)
-                            .forEach(
-                                throwConsumer(
-                                    s -> fluxSink.next(
-                                        runContext.render(this.serdeType)
-                                            .as(SerdeType.class)
-                                            .orElse(SerdeType.STRING).deserialize(s)
-                                    )
-                                )
-                            );
+                            .forEach(s -> fluxSink.next(ListPop.deserialize(runContext, renderedKey, rSerdeType, s)));
                         try {
                             Thread.sleep(100);
                         } catch (InterruptedException e) {

@@ -71,7 +71,8 @@ public class Trigger extends AbstractTrigger implements PollingTriggerInterface,
     private Property<Integer> count = Property.ofValue(100);
 
     @Schema(
-        title = "Format of the data contained in Redis"
+        title = "Format of the data contained in Redis",
+        description = SERDE_TYPE_DESCRIPTION
     )
     @Builder.Default
     @NotNull
