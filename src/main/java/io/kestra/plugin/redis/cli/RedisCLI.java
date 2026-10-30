@@ -114,6 +114,28 @@ import lombok.experimental.SuperBuilder;
 public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, NamespaceFilesInterface, InputFilesInterface, OutputFilesInterface {
 
     private static final String DEFAULT_IMAGE = "redis:7-alpine";
+    private static final String OUTPUT_ESCAPE_AWK = """
+        BEGIN {
+            ORS = "";
+            backslash = sprintf("%c", 92);
+            for (i = 0; i < 32; i++) {
+                escapes[sprintf("%c", i)] = sprintf("%su%04x", backslash, i);
+            }
+        }
+        {
+            if (NR > 1) printf "%sn", backslash;
+            for (i = 1; i <= length($0); i++) {
+                character = substr($0, i, 1);
+                if (character == backslash || character == sprintf("%c", 34)) {
+                    printf "%s%s", backslash, character;
+                } else if (character in escapes) {
+                    printf "%s", escapes[character];
+                } else {
+                    printf "%s", character;
+                }
+            }
+        }
+        """;
 
     @Getter(AccessLevel.NONE)
     @JsonIgnore
@@ -185,7 +207,11 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
     @PluginProperty(group = "destination")
     @Schema(
         title = "Enable JSON output",
-        description = "Adds redis-cli --json; requires Redis 7+."
+        description = """
+            Adds redis-cli --json; requires Redis 7+.
+            Each vars.command_N value remains a string containing the command output,
+            including quoted JSON strings and multiline replies.
+            """
     )
     @Builder.Default
     private Property<Boolean> jsonOutput = Property.ofValue(false);
@@ -364,15 +390,7 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
                     // 2) some redis-cli errors still exit 0 -> force RC=1 if output looks like an error
                     "printf '%s' \"$OUT\" | grep -Eiq '^(\\(error\\)|ERR )' && RC=1; " +
 
-                    // 3) escape and flatten output to ONE line (no real newlines) using awk (busybox-friendly)
-                    "OUT_ESC=$(printf '%s' \"$OUT\" | " +
-                    "awk 'BEGIN{ORS=\"\"} {" +
-                    "gsub(/\\\\\\\\/,\"\\\\\\\\\\\\\\\\\"); " + // \  -> \\
-                    "gsub(/\\\"/,\"\\\\\\\\\\\"\"); " + // \" -> \"
-                    "sub(/\\r$/,\"\"); " + // strip CR
-                    "if (NR>1) printf \"\\\\\\\\n\"; " + // join lines with literal \\n
-                    "printf \"%s\", $0" +
-                    "}'); " +
+                    "OUT_ESC=$(printf '%s' \"$OUT\" | awk " + shellQuote(OUTPUT_ESCAPE_AWK) + "); " +
 
                     // 4) print the JSON marker on a single line so TaskLogLineMatcher can parse it
                     "printf '::{\"outputs\":{\"%s\":\"%s\"}}::\\n' \"" + key + "\" \"$OUT_ESC\"; " +

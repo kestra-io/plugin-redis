@@ -61,7 +61,9 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
     @PluginProperty(group = "advanced")
     @Schema(
         title = "Increment amount",
-        description = "Optional; defaults to 1. Integer uses INCR/INCRBY, decimal uses INCRBYFLOAT."
+        description = """
+            Optional, defaults to 1. A whole number (for example `2`) uses INCRBY and needs the key to hold an integer.
+            Write a decimal (for example `2.0`) to use INCRBYFLOAT."""
     )
     private Property<Number> amount;
 
@@ -80,7 +82,7 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
             Number increment = runContext.render(amount).as(Number.class)
                 .map(number ->
                 {
-                    if (number instanceof Long) {
+                    if (number instanceof Integer || number instanceof Long) {
                         return factory.getSyncCommands().incrby(renderedKey, number.longValue());
                     } else {
                         return factory.getSyncCommands().incrbyfloat(renderedKey, number.doubleValue());
@@ -146,7 +148,8 @@ public class Increment extends AbstractRedisConnection implements RunnableTask<I
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Incremented value"
+            title = "Incremented value",
+            description = "A Long when the increment used INCR/INCRBY, a Double when it used INCRBYFLOAT."
         )
         private Number value;
 

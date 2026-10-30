@@ -1,0 +1,8 @@
+group: io.kestra.plugin.redis.stream
+name: "stream"
+title: "Redis Stream"
+description: "Tasks that consume Redis Streams with consumer groups."
+body: "Provide Redis connection settings, a stream key and a consumer group to create the group, read bounded batches with XREADGROUP and acknowledge the exact stream IDs with XACK, so workflows get durable at-least-once event processing with the delivery state kept in Redis."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

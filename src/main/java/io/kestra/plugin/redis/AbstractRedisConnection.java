@@ -1,5 +1,7 @@
 package io.kestra.plugin.redis;
 
+import java.time.Duration;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
@@ -42,6 +44,16 @@ public abstract class AbstractRedisConnection extends Task implements RedisConne
             redisClient = RedisClient.create(runContext.render(url).as(String.class).orElseThrow());
             redisConnection = redisClient.connect();
             syncCommands = redisConnection.sync();
+        }
+
+        // lets a blocking command such as XREADGROUP BLOCK outlast Lettuce's default command timeout
+        public void setTimeout(Duration timeout) {
+            this.redisConnection.setTimeout(timeout);
+        }
+
+        // non-blocking: fails in-flight commands without waiting for the client shutdown done by close()
+        public void closeAsync() {
+            this.redisConnection.closeAsync();
         }
 
         public void close() {
