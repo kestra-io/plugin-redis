@@ -73,8 +73,41 @@ class DeleteTest {
             .failedOnMissing(Property.ofValue(true))
             .build();
 
-        Exception e = Assertions.assertThrows(NullPointerException.class, () -> task.run(runContext));
-        assertThat(e.getMessage(), is("Missing keys or path, only 1 deleted out of 2"));
+        Exception e = Assertions.assertThrows(IllegalStateException.class, () -> task.run(runContext));
+        assertThat(e.getMessage(), is(
+            "1 of 2 requested paths deleted nothing: nonExistingKey $. Paths that exist were still deleted. Set `failedOnMissing` to false to accept that."
+        ));
+    }
+
+    @Test
+    void testDeleteWithMissingPathOnExistingKeyAndFail() throws Exception {
+        var runContext = runContextFactory.of(Map.of());
+
+        createSetTask("keyDeletePaths", Map.of("field", "value4", "keep", "value5")).run(runContext);
+
+        var task = Delete.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .keys(
+                Property.ofValue(
+                    Map.of(
+                        "keyDeletePaths", List.of("$.field", "$.missingField")
+                    )
+                )
+            )
+            .failedOnMissing(Property.ofValue(true))
+            .build();
+
+        var e = Assertions.assertThrows(IllegalStateException.class, () -> task.run(runContext));
+        assertThat(e.getMessage(), is(
+            "1 of 2 requested paths deleted nothing: keyDeletePaths $.missingField. Paths that exist were still deleted. Set `failedOnMissing` to false to accept that."
+        ));
+
+        var remaining = Get.builder()
+            .url(Property.ofValue(REDIS_URI))
+            .key(Property.ofValue("keyDeletePaths"))
+            .build()
+            .run(runContext);
+        assertThat(remaining.getData(), is(Map.of("keep", "value5")));
     }
 
     static Set createSetTask(String key, Object value) {
