@@ -249,7 +249,6 @@ public class RedisCLI extends AbstractExecScript implements RunnableTask<ScriptO
     @JsonProperty("docker")
     protected Property<DockerOptions> dockerOptions = Property.ofValue(DockerOptions.builder().build());
 
-    // Kestra 1.x exposes a legacy DockerOptions getter with the same YAML name.
     @JsonIgnore
     public DockerOptions getDocker() {
         return null;
