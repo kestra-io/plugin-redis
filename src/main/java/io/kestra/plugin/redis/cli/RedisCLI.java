@@ -356,7 +356,7 @@ public class RedisCLI extends AbstractExecScript implements RunnableTask<ScriptO
             String key = "command_" + idx++;
 
             // `if` keeps set -e from exiting before the output marker is printed, the last line stops at the first failure whatever failFast is
-            String cmd = """
+            var cmd = """
                 if OUT=$(%s %s 2>&1); then RC=0; else RC=$?; fi; \
                 OUT_ESC=$(printf '%%s' "$OUT" | awk %s); \
                 printf '::{"outputs":{"%%s":"%%s"}}::\\n' "%s" "$OUT_ESC"; \
