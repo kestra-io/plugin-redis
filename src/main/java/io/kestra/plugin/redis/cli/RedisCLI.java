@@ -8,19 +8,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Metric;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.models.tasks.*;
+import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.runners.TaskRunner;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
+import io.kestra.plugin.scripts.exec.AbstractExecScript;
 import io.kestra.plugin.scripts.exec.scripts.models.DockerOptions;
 import io.kestra.plugin.scripts.exec.scripts.models.ScriptOutput;
-import io.kestra.plugin.scripts.exec.scripts.runners.CommandsWrapper;
 import io.kestra.plugin.scripts.runner.docker.Docker;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -30,7 +32,8 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @SuperBuilder
-@ToString
+// callSuper = false keeps the inherited env out of toString, it can hold credentials
+@ToString(callSuper = false)
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
@@ -38,7 +41,8 @@ import lombok.experimental.SuperBuilder;
     title = "Run Redis CLI commands in a container",
     description = """
         Executes the provided redis-cli commands sequentially using the configured task runner (Docker by default with image redis:7-alpine).
-        Uses redis-cli -e to fail on every Redis error reply and stops before running later commands.
+        Uses redis-cli -e to fail on every Redis error reply and stops before running later commands, whatever `failFast` is.
+        All commands run in one container, after `beforeCommands`.
         Ordinary string replies remain successful even when their text resembles an error message.
         Supports TLS, username/password auth via REDISCLI_AUTH, and optional JSON output (Redis 7+).
         """
@@ -113,7 +117,7 @@ import lombok.experimental.SuperBuilder;
         )
     }
 )
-public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, NamespaceFilesInterface, InputFilesInterface, OutputFilesInterface {
+public class RedisCLI extends AbstractExecScript implements RunnableTask<ScriptOutput> {
 
     private static final String DEFAULT_IMAGE = "redis:7-alpine";
     private static final String OUTPUT_ESCAPE_AWK = """
@@ -244,24 +248,18 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
         description = "Applied when using the Docker task runner; its image overrides containerImage if set."
     )
     @Builder.Default
-    protected Property<DockerOptions> docker = Property.ofValue(DockerOptions.builder().build());
+    @JsonProperty("docker")
+    protected Property<DockerOptions> dockerOptions = Property.ofValue(DockerOptions.builder().build());
 
-    @PluginProperty(group = "execution")
-    @Schema(
-        title = "Additional environment variables",
-        description = "Merged with REDISCLI_AUTH when password is provided."
-    )
-    protected Property<Map<String, String>> env;
-
-    @PluginProperty(group = "source")
-    private NamespaceFiles namespaceFiles;
-    @PluginProperty(group = "source")
-    private Object inputFiles;
-    @PluginProperty(group = "destination")
-    private Property<List<String>> outputFiles;
+    // Core 1.3.x has its own non-Property `docker`, kept null so YAML `docker` only binds to dockerOptions
+    @Override
+    @JsonIgnore
+    public DockerOptions getDocker() {
+        return null;
+    }
 
     TaskRunner<?> freshTaskRunner(TaskRunner<?> runner) throws Exception {
-        // TaskRunner keeps isKilled across runs, so copy it per command.
+        // TaskRunner keeps isKilled across runs, so copy it per run.
         return JacksonMapper.ofJson().readValue(
             JacksonMapper.ofJson().writeValueAsString(runner),
             TaskRunner.class
@@ -303,68 +301,40 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
             baseCommand.append(" --json");
         }
 
-        List<String> wrappedShellCommands = extractWrappedShellCommands(rCommands, baseCommand);
-
-        Map<String, String> envVars = new HashMap<>();
-        var rEnvMap = runContext.render(env).asMap(String.class, String.class);
+        var commandsWrapper = this.commands(runContext);
         if (rPassword != null && !rPassword.isEmpty()) {
-            envVars.put("REDISCLI_AUTH", rPassword);
-        }
-        if (!rEnvMap.isEmpty()) {
-            envVars.putAll(rEnvMap);
-        }
-
-        var rOutputFiles = runContext.render(outputFiles).asList(String.class);
-
-        DockerOptions dockerOptions = runContext.render(docker).as(DockerOptions.class).orElse(DockerOptions.builder().build());
-        var dockerBuilder = dockerOptions.toBuilder();
-        if (dockerOptions.getImage() == null) {
-            dockerBuilder.image(rContainerImage);
+            // an explicit REDISCLI_AUTH in env wins over password
+            var envVars = new HashMap<>(commandsWrapper.getEnv());
+            envVars.putIfAbsent("REDISCLI_AUTH", rPassword);
+            commandsWrapper = commandsWrapper.withEnv(envVars);
         }
 
-        ScriptOutput lastOutput = null;
-        Map<String, Object> mergedVars = new HashMap<>();
+        var rDockerOptions = runContext.render(dockerOptions).as(DockerOptions.class).orElse(DockerOptions.builder().build());
+        if (rDockerOptions.getImage() == null) {
+            rDockerOptions = rDockerOptions.toBuilder().image(rContainerImage).build();
+        }
 
-        for (String wrappedShellCommand : wrappedShellCommands) {
-            if (isKilled.get()) {
-                break;
-            }
-            var commandsWrapper = new CommandsWrapper(runContext)
-                .withEnv(envVars)
-                .withNamespaceFiles(namespaceFiles)
-                .withInputFiles(inputFiles)
-                .withOutputFiles(rOutputFiles.isEmpty() ? null : rOutputFiles)
-                .withContainerImage(rContainerImage)
-                .withTaskRunner(freshTaskRunner(taskRunner))
-                .withDockerOptions(dockerBuilder.build())
-                .withInterpreter(Property.ofValue(List.of("/bin/sh", "-c")))
-                .withCommands(Property.ofValue(List.of(wrappedShellCommand)));
+        if (isKilled.get()) {
+            return ScriptOutput.builder().vars(Map.of()).exitCode(0).build();
+        }
 
-            currentRunner.set(commandsWrapper.getTaskRunner());
-            lastOutput = commandsWrapper.run();
+        commandsWrapper = commandsWrapper
+            .withContainerImage(rContainerImage)
+            .withTaskRunner(freshTaskRunner(this.getTaskRunner()))
+            .withDockerOptions(rDockerOptions)
+            .withInterpreter(this.getInterpreter())
+            .withBeforeCommands(this.getBeforeCommands())
+            .withBeforeCommandsWithOptions(true)
+            .withCommands(Property.ofValue(extractWrappedShellCommands(rCommands, baseCommand)));
+
+        currentRunner.set(commandsWrapper.getTaskRunner());
+        try {
+            var output = commandsWrapper.run();
+            runContext.metric(Counter.of("executed.commands.count", rCommands.size()));
+            return output;
+        } finally {
             currentRunner.set(null);
-
-            if (lastOutput.getExitCode() != 0) {
-                throw new IllegalStateException("Redis CLI command failed with exit code: " + lastOutput.getExitCode());
-            }
-
-            if (lastOutput.getVars() != null && !lastOutput.getVars().isEmpty()) {
-                mergedVars.putAll(lastOutput.getVars());
-            }
         }
-
-        runContext.metric(Counter.of("executed.commands.count", rCommands.size()));
-
-        return lastOutput == null
-            ? ScriptOutput.builder().vars(Map.of()).exitCode(0).build()
-            : ScriptOutput.builder()
-                .vars(mergedVars)
-                .exitCode(lastOutput.getExitCode())
-                .outputFiles(lastOutput.getOutputFiles())
-                .stdOutLineCount(lastOutput.getStdOutLineCount())
-                .stdErrLineCount(lastOutput.getStdErrLineCount())
-                .taskRunner(lastOutput.getTaskRunner())
-                .build();
     }
 
     @Override
@@ -385,18 +355,17 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
             String key = "command_" + idx++;
 
             String cmd =
-                // 1) run redis-cli, capture stdout+stderr
-                "OUT=$(" + baseCommand + " " + shellQuoteRedisCommand(redisCommand) + " 2>&1); " +
-                    "RC=$?; " +
+                // 1) run redis-cli, capture stdout+stderr, inside `if` so set -e does not exit before step 3
+                "if OUT=$(%s %s 2>&1); then RC=0; else RC=$?; fi; ".formatted(baseCommand, shellQuoteRedisCommand(redisCommand)) +
 
-                    // 2) escape and flatten output to ONE line (no real newlines) using awk (busybox-friendly)
+                // 2) escape and flatten output to ONE line (no real newlines) using awk (busybox-friendly)
                     "OUT_ESC=$(printf '%s' \"$OUT\" | awk " + shellQuote(OUTPUT_ESCAPE_AWK) + "); " +
 
                     // 3) print the JSON marker on a single line so TaskLogLineMatcher can parse it
                     "printf '::{\"outputs\":{\"%s\":\"%s\"}}::\\n' \"" + key + "\" \"$OUT_ESC\"; " +
 
-                    // 4) propagate RC so CommandsWrapper can throw RunnableTaskException
-                    "exit $RC";
+                    // 4) stop at the first failed command, whatever failFast is, so CommandsWrapper throws RunnableTaskException
+                    "[ \"$RC\" -eq 0 ] || exit \"$RC\"";
 
             wrappedShellCommands.add(cmd);
         }
@@ -424,7 +393,8 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
      * from being interpreted by the /bin/sh -c wrapper (CWE-78 / OWASP
      * A03:2021).
      *
-     * <p>Because every token is passed as a literal, shell/variable expansion
+     * <p>
+     * Because every token is passed as a literal, shell/variable expansion
      * ({@code $VAR}, {@code $(...)}, backticks) is intentionally NOT performed
      * on command values; use the {@code env} property for dynamic values.
      */
@@ -498,20 +468,5 @@ public class RedisCLI extends Task implements RunnableTask<ScriptOutput>, Namesp
         }
 
         return tokens;
-    }
-
-    @Override
-    public NamespaceFiles getNamespaceFiles() {
-        return namespaceFiles;
-    }
-
-    @Override
-    public Object getInputFiles() {
-        return inputFiles;
-    }
-
-    @Override
-    public Property<List<String>> getOutputFiles() {
-        return outputFiles;
     }
 }
