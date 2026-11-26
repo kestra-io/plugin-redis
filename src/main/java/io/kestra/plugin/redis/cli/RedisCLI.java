@@ -314,12 +314,9 @@ public class RedisCLI extends AbstractExecScript implements RunnableTask<ScriptO
             rDockerOptions = rDockerOptions.toBuilder().image(rContainerImage).build();
         }
 
-        if (isKilled.get()) {
-            return ScriptOutput.builder().vars(Map.of()).exitCode(0).build();
-        }
-
         commandsWrapper = commandsWrapper
-            .withContainerImage(rContainerImage)
+            // Core 2.x ignores docker options, so their image is passed as the container image
+            .withContainerImage(rDockerOptions.getImage())
             .withTaskRunner(freshTaskRunner(this.getTaskRunner()))
             .withDockerOptions(rDockerOptions)
             .withInterpreter(this.getInterpreter())
@@ -327,8 +324,12 @@ public class RedisCLI extends AbstractExecScript implements RunnableTask<ScriptO
             .withBeforeCommandsWithOptions(true)
             .withCommands(Property.ofValue(extractWrappedShellCommands(rCommands, baseCommand)));
 
+        // Registered before the kill check so a kill in between still reaches this runner
         currentRunner.set(commandsWrapper.getTaskRunner());
         try {
+            if (isKilled.get()) {
+                return ScriptOutput.builder().vars(Map.of()).exitCode(0).build();
+            }
             var output = commandsWrapper.run();
             runContext.metric(Counter.of("executed.commands.count", rCommands.size()));
             return output;
@@ -354,18 +355,12 @@ public class RedisCLI extends AbstractExecScript implements RunnableTask<ScriptO
         for (String redisCommand : rCommands) {
             String key = "command_" + idx++;
 
-            String cmd =
-                // 1) run redis-cli, capture stdout+stderr, inside `if` so set -e does not exit before step 3
-                "if OUT=$(%s %s 2>&1); then RC=0; else RC=$?; fi; ".formatted(baseCommand, shellQuoteRedisCommand(redisCommand)) +
-
-                // 2) escape and flatten output to ONE line (no real newlines) using awk (busybox-friendly)
-                    "OUT_ESC=$(printf '%s' \"$OUT\" | awk " + shellQuote(OUTPUT_ESCAPE_AWK) + "); " +
-
-                    // 3) print the JSON marker on a single line so TaskLogLineMatcher can parse it
-                    "printf '::{\"outputs\":{\"%s\":\"%s\"}}::\\n' \"" + key + "\" \"$OUT_ESC\"; " +
-
-                    // 4) stop at the first failed command, whatever failFast is, so CommandsWrapper throws RunnableTaskException
-                    "[ \"$RC\" -eq 0 ] || exit \"$RC\"";
+            // `if` keeps set -e from exiting before the output marker is printed, the last line stops at the first failure whatever failFast is
+            String cmd = """
+                if OUT=$(%s %s 2>&1); then RC=0; else RC=$?; fi; \
+                OUT_ESC=$(printf '%%s' "$OUT" | awk %s); \
+                printf '::{"outputs":{"%%s":"%%s"}}::\\n' "%s" "$OUT_ESC"; \
+                [ "$RC" -eq 0 ] || exit "$RC\"""".formatted(baseCommand, shellQuoteRedisCommand(redisCommand), shellQuote(OUTPUT_ESCAPE_AWK), key);
 
             wrappedShellCommands.add(cmd);
         }

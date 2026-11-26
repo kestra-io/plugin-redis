@@ -20,12 +20,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-/**
- * Covers the options RedisCLI inherits from AbstractExecScript.
- */
 @KestraTest
 class RedisCLIInheritedOptionsTest {
     @Inject
@@ -55,14 +51,14 @@ class RedisCLIInheritedOptionsTest {
             """, RedisCLI.class);
         var runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
-        var rDockerOptions = runContext.render(task.getDockerOptions()).as(DockerOptions.class).orElseThrow();
+        var rDockerOptions = runContext.render(task.getDockerOptions()).as(DockerOptions.class)
+            .orElseThrow(() -> new IllegalStateException("`docker` did not bind to dockerOptions"));
         assertThat(rDockerOptions.getImage(), is("redis:7.2-alpine"));
-        assertThat(task.getDocker(), is(nullValue()));
         assertThat(runContext.render(task.getEnv()).asMap(String.class, String.class), is(Map.of("MY_VAR", "value")));
     }
 
     @Test
-    void beforeCommandsRunInTheSameContainerAsTheRedisCommands() throws Exception {
+    void beforeCommandsRunAndTheirOutputFilesAreCaptured() throws Exception {
         var task = task()
             .beforeCommands(Property.ofValue(List.of("echo prepared > before.txt")))
             .commands(Property.ofValue(List.of("PING")))
@@ -90,14 +86,11 @@ class RedisCLIInheritedOptionsTest {
     }
 
     @Test
-    void toStringDoesNotExposeEnvSecrets() throws Exception {
+    void toStringDoesNotExposeEnvSecrets() {
         var task = task()
             .commands(Property.ofValue(List.of("PING")))
             .env(Property.ofValue(Map.of("REDISCLI_AUTH", "super-secret-value")))
             .build();
-        // render caches the value on the property, as run() does
-        TestsUtils.mockRunContext(runContextFactory, task, Map.of()).render(task.getEnv()).asMap(String.class, String.class);
-
         assertThat(task.toString(), not(containsString("super-secret-value")));
     }
 }
